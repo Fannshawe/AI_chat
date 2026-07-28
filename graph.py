@@ -2,6 +2,7 @@ import os
 
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
+from langchain_protocol import TypedDict
 from langgraph.graph import END, MessagesState, StateGraph
 from dotenv import load_dotenv
 
@@ -25,8 +26,14 @@ def debug_log(message: str) -> None:
 
 
 # 定义状态结构
-class State(MessagesState):
-    final_answer: str | None
+class WorkflowState(TypedDict):
+    user_request: str
+
+    agent1: str
+    agent2: str
+    agent3: str
+
+    final_answer: str
 
 
 llm1 = ChatOpenAI(
@@ -67,34 +74,34 @@ agent_3 = create_agent(
 
 
 # 节点函数
-def node_input(state: State) -> State:
-    debug_log(f"node_input start, messages={len(state['messages'])}")
-    response = agent_1.invoke({"messages": state["messages"]})
-    state["messages"] = response["messages"]
-    debug_log(f"node_input end, messages={len(state['messages'])}")
+def node_input(state: WorkflowState) -> WorkflowState:
+    debug_log(f"node_input start, user_request={state['user_request']}")
+    response = agent_1.invoke({"messages": [state["user_request"]]})
+    state["agent1"] = response["messages"][-1].content
+    debug_log(f"node_input end, agent1={(state['agent1'])}")
     return state
 
 
-def node_process(state: State) -> State:
-    debug_log(f"node_process start, messages={len(state['messages'])}")
-    response = agent_2.invoke({"messages": state["messages"]})
-    state["messages"] = response["messages"]
-    debug_log(f"node_process end, messages={len(state['messages'])}")
+def node_process(state: WorkflowState) -> WorkflowState:
+    debug_log(f"node_process start, agent1={len(state['agent1'])}")
+    response = agent_2.invoke({"messages": [state["agent1"]]})
+    state["agent2"] = response["messages"][-1].content
+    debug_log(f"node_process end, agent2={(state['agent2'])}")
     return state
 
 
-def node_output(state: State) -> State:
-    debug_log(f"node_output start, messages={len(state['messages'])}")
-    response = agent_3.invoke({"messages": state["messages"]})
-    state["messages"] = response["messages"]
-    state["final_answer"] = response["messages"][-1].content
-    debug_log(f"node_output end, final_answer_len={len(state['final_answer'])}")
+def node_output(state: WorkflowState) -> WorkflowState:
+    debug_log(f"node_output start, agent2={len(state['agent2'])}")
+    response = agent_3.invoke({"messages": [state["agent2"]]})
+    state["agent3"] = response["messages"][-1].content
+    state["final_answer"] = state["agent3"]
+    debug_log(f"node_output end, final_answer_len={(state['final_answer'])}")
     return state
 
 
 # 构建图
 def build_graph() -> StateGraph:
-    graph = StateGraph(State)
+    graph = StateGraph(WorkflowState)
 
     # 添加节点
     graph.add_node("input", node_input)
@@ -116,8 +123,12 @@ if __name__ == "__main__":
     debug_log("starting graph execution")
     app = build_graph()
 
-    initial_state: State = {
-        "messages": ["你是第几个agent？"],
+    initial_state: WorkflowState = {
+        "user_request": "写一句话，描述一个美丽的女孩。",
+        "agent1": "",
+        "agent2": "",
+        "agent3": "",
+        "final_answer": "",
     }
 
     final_state = app.invoke(initial_state)
