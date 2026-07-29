@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Persona Chat</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script defer src="/static/index.js"></script>
+</head>
+<body class="chat-page">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">P</span><div><strong>Persona Chat</strong><small>像你一样聊天</small></div></div>
+      <div class="section-label">当前会话</div>
+      <button class="contact active" id="contactButton"><span class="avatar">TA</span><span><b id="contactName">聊天对象</b><small>长期记忆已开启</small></span></button>
+      <div class="sidebar-bottom">
+        <button class="ghost full" id="proactiveButton">✦ 生成主动聊天草稿</button>
+        <a class="ghost full center" href="/admin">⚙ 进入管理后台</a>
+        <p class="privacy-note">数据保存在本机 SQLite 中，候选回复只有确认后才会记为已发送。</p>
+      </div>
+    </aside>
+
+    <main class="conversation">
+      <header class="topbar">
+        <div><h1 id="chatTitle">聊天对象</h1><p>AI 生成候选 · 由你确认发送</p></div>
+        <span class="status-pill" id="relationshipBadge">关系：认识</span>
+      </header>
+      <section class="messages" id="messages" aria-live="polite"></section>
+      <section class="draft-zone hidden" id="draftZone">
+        <div class="strategy"><span>聊天指导</span><p id="strategyText"></p></div>
+        <div class="candidate-grid" id="candidateGrid"></div>
+      </section>
+      <section class="composer-wrap">
+        <div class="image-preview" id="imagePreview"></div>
+        <div class="composer">
+          <label class="icon-button" title="添加图片">＋<input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden></label>
+          <textarea id="messageInput" rows="1" placeholder="粘贴对方发来的消息，Enter 生成…"></textarea>
+          <button class="primary" id="generateButton">生成 3 个回复</button>
+        </div>
+        <p class="composer-hint">Shift + Enter 换行 · 支持最多 4 张图片 · 当前不连接外部聊天平台</p>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast"></div>
+</body>
+</html>

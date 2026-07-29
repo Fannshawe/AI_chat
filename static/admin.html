@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Persona Chat · 管理后台</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script defer src="/static/admin.js"></script>
+</head>
+<body class="admin-page">
+  <main class="admin-shell">
+    <header class="admin-header"><div class="admin-title"><h1>管理后台</h1><p>统一检查人格、记忆、情绪、关系和指导依据</p></div><a class="ghost" href="/">← 返回聊天</a></header>
+    <div class="admin-layout">
+      <nav class="admin-nav">
+        <button class="tab-button active" data-tab="persona">人格档案</button>
+        <button class="tab-button" data-tab="memory">长期记忆</button>
+        <button class="tab-button" data-tab="state">情绪与关系</button>
+        <button class="tab-button" data-tab="guidance">指导文档</button>
+        <button class="tab-button" data-tab="data">导入与导出</button>
+        <button class="tab-button" data-tab="model">模型配置</button>
+      </nav>
+      <section class="admin-content">
+        <div class="tab-panel active" id="tab-persona">
+          <article class="panel-card"><h2>我的稳定人格</h2><p>手工档案优先级高于自动观察；指导策略与人格冲突时，以指导为准。</p><form id="selfPersonaForm" class="form-grid persona-form" data-scope="self"></form></article>
+          <article class="panel-card"><h2>对方画像</h2><p>可人工修正对方特征，避免模型把临时情绪当成长期性格。</p><form id="otherPersonaForm" class="form-grid persona-form" data-scope="other"></form></article>
+        </div>
+        <div class="tab-panel" id="tab-memory">
+          <article class="panel-card"><h2>长期记忆</h2><p>AI 自动提取后可在此编辑或删除；SQLite 数据同时可通过导出功能直观检查。</p><form id="memoryForm" class="form-grid"><div class="field"><label>分类</label><select id="memoryCategory"></select></div><div class="field"><label>内容</label><input id="memoryContent" required placeholder="例如：对方喜欢猫"></div><div class="field"><label><input id="memorySensitive" type="checkbox"> 标记为敏感信息</label></div><div class="form-actions"><button class="primary">添加记忆</button></div></form><div class="list" id="memoryList"></div></article>
+        </div>
+        <div class="tab-panel" id="tab-state">
+          <article class="panel-card"><h2>关系状态机</h2><p>AI 只提出建议，关系阶段始终由你确认。</p><div class="form-grid"><div class="field"><label>当前阶段</label><select id="relationshipLevel"></select></div><div class="field"><label>待确认建议</label><div id="relationshipSuggestion" class="code-note">暂无建议</div></div></div><div class="form-actions"><button id="saveRelationship" class="primary">确认当前阶段</button></div></article>
+          <article class="panel-card"><h2>情绪记录</h2><p>置信度低于 0.75 的情绪默认等待人工确认。</p><div class="list" id="emotionList"></div></article>
+        </div>
+        <div class="tab-panel" id="tab-guidance">
+          <article class="panel-card"><h2>聊天指导文档</h2><p>当前支持 Markdown。本地关键词检索会按章节选取最相关片段。</p><div class="split"><div><div class="list" id="guidanceList"></div></div><form id="guidanceForm"><div class="field"><label>文件名</label><input id="guidanceName" placeholder="聊天原则.md" required></div><div class="field"><label>Markdown 内容</label><textarea id="guidanceContent" rows="15" placeholder="# 聊天原则"></textarea></div><div class="form-actions"><button class="primary">保存文档</button></div></form></div></article>
+        </div>
+        <div class="tab-panel" id="tab-data">
+          <article class="panel-card"><h2>导入历史聊天</h2><p>每行格式为“我: 内容”或“对方: 内容”。“我”会记为已发送，“对方”会记为收到。</p><form id="importForm"><div class="field"><textarea id="importText" rows="13" placeholder="对方: 今天好累呀&#10;我: 那你先休息会儿"></textarea></div><div class="form-actions"><button class="primary">导入聊天记录</button></div></form></article>
+          <article class="panel-card"><h2>数据导出</h2><p>导出联系人、真实聊天、人格、记忆、情绪、关系与生成记录为一个 JSON 文件。</p><a class="primary" href="/api/export" download>导出全部数据</a></article>
+        </div>
+        <div class="tab-panel" id="tab-model">
+          <article class="panel-card"><h2>模型供应商</h2><p>沿用现有 .env 配置；额外供应商通过 MODEL_PROVIDERS_JSON 声明，密钥不会写入数据库。</p><div id="modelList" class="list"></div><div class="code-note">默认变量：MODEL_BASE_URL、MODEL_BASE_URL_API_KEY、QWEN_MODEL<br>可选变量：MODEL_PROVIDERS_JSON</div></article>
+        </div>
+      </section>
+    </div>
+  </main>
+  <div class="toast" id="toast"></div>
+</body>
+</html>
