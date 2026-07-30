@@ -22,6 +22,7 @@ from .prompt_loader import load_prompt
 EmotionName = Literal["开心", "委屈", "吃醋", "疲惫", "期待", "紧张", "害羞", "平静", "其他"]
 RelationshipLevel = Literal["陌生人", "认识", "朋友", "暧昧", "恋人", "长期伴侣"]
 MemoryCategory = Literal["人物事实与偏好", "共同经历与纪念日", "情绪事件与冲突", "承诺和待办事项", "敏感信息"]
+DialogueMode = Literal["分享自己", "开玩笑/调侃", "回忆共同经历", "简短回应", "提问", "转移或发起话题", "暂不回复"]
 
 
 class EmotionItem(BaseModel):
@@ -65,6 +66,37 @@ class GuidanceAnalysis(BaseModel):
     document_basis: list[str] = Field(default_factory=list, max_length=5)
 
 
+class DialoguePolicyAnalysis(BaseModel):
+    """Turn-level behavior plan that prevents interview-like replies."""
+
+    primary_mode: DialogueMode
+    candidate_modes: list[DialogueMode] = Field(min_length=3, max_length=3)
+    question_probability: float = Field(ge=0, le=1)
+    question_budget: int = Field(ge=0, le=1)
+    should_resist: bool = False
+    rationale: str
+
+
+class CandidateCritique(BaseModel):
+    """Human-likeness scores for one generated candidate."""
+
+    candidate_index: int = Field(ge=0, le=2)
+    ai_taste: float = Field(ge=0, le=10, description="AI味/客服味，越低越好")
+    interview_taste: float = Field(ge=0, le=10, description="采访味，越低越好")
+    empathy_excess: float = Field(ge=0, le=10, description="空洞或过度共情，越低越好")
+    naturalness: float = Field(ge=0, le=10, description="长度与措辞自然度，越高越好")
+    passed: bool
+    issues: list[str] = Field(default_factory=list, max_length=5)
+
+
+class ReplyCriticAnalysis(BaseModel):
+    """Post-generation review used to trigger at most one rewrite."""
+
+    candidates: list[CandidateCritique] = Field(min_length=3, max_length=3)
+    passed: bool
+    rewrite_instruction: str = ""
+
+
 class ResponseCandidates(BaseModel):
     """Exactly three editable candidate messages."""
 
@@ -97,7 +129,9 @@ AGENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "relationship": RelationshipAnalysis,
     "persona": PersonaAnalysis,
     "guidance": GuidanceAnalysis,
+    "dialogue_policy": DialoguePolicyAnalysis,
     "response": ResponseCandidates,
+    "critic": ReplyCriticAnalysis,
     "memory": MemoryAnalysis,
     "proactive": ProactiveDraft,
 }

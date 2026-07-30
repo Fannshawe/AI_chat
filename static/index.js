@@ -59,38 +59,60 @@ function renderMessages(messages) {
   container.scrollTop = container.scrollHeight;
 }
 
-function renderCandidates(candidates, strategy) {
+function finalCritiques(critic) {
+  const review = critic?.final_review || critic?.first_review;
+  return review?.candidates || [];
+}
+
+function renderCandidates(candidates, strategy, modes = [], critic = {}) {
   $("#strategyText").textContent = strategy;
   const grid = $("#candidateGrid");
   grid.innerHTML = "";
   candidates.forEach((candidate, index) => {
     const card = document.createElement("article");
     card.className = "candidate-card";
+    const mode = document.createElement("span");
+    mode.className = "candidate-mode";
+    mode.textContent = modes[index] || "候选回复";
     const textarea = document.createElement("textarea");
     textarea.value = candidate;
     textarea.setAttribute("aria-label", `候选回复 ${index + 1}`);
+    const isSilence = candidate === "（暂不回复）" || modes[index] === "暂不回复";
+    if (isSilence) textarea.readOnly = true;
+    card.append(mode, textarea);
+    const critique = finalCritiques(critic).find(item => item.candidate_index === index);
+    if (critique && !critique.passed) {
+      const warning = document.createElement("p");
+      warning.className = "candidate-warning";
+      warning.textContent = critique.issues?.join("；") || "该候选仍有真人感质量预警";
+      card.appendChild(warning);
+    }
     const actions = document.createElement("div");
     actions.className = "candidate-actions";
     const copy = document.createElement("button");
     copy.className = "secondary";
-    copy.textContent = "复制";
-    copy.onclick = async () => { await navigator.clipboard.writeText(textarea.value); toast("已复制候选回复"); };
+    copy.textContent = isSilence ? "采纳不回复" : "复制";
+    copy.onclick = async () => {
+      if (isSilence) { $("#draftZone").classList.add("hidden"); return toast("已采纳暂不回复建议"); }
+      await navigator.clipboard.writeText(textarea.value); toast("已复制候选回复");
+    };
     const send = document.createElement("button");
     send.className = "small-primary";
     send.textContent = "确认已发送";
-    send.onclick = () => confirmCandidate(textarea.value, send);
-    actions.append(copy, send);
-    card.append(textarea, actions);
+    send.onclick = () => confirmCandidate(textarea.value, index, send);
+    actions.append(copy);
+    if (!isSilence) actions.append(send);
+    card.append(actions);
     grid.appendChild(card);
   });
   $("#draftZone").classList.remove("hidden");
 }
 
-async function confirmCandidate(content, button) {
+async function confirmCandidate(content, candidateIndex, button) {
   if (!content.trim()) return toast("回复不能为空");
   button.disabled = true;
   try {
-    const saved = await api("/api/chat/confirm", { method: "POST", body: JSON.stringify({ contact_id: state.contactId, content, generation_id: state.generationId }) });
+    const saved = await api("/api/chat/confirm", { method: "POST", body: JSON.stringify({ contact_id: state.contactId, content, generation_id: state.generationId, candidate_index: candidateIndex }) });
     $("#messages").appendChild(messageElement(saved));
     $("#messages").scrollTop = $("#messages").scrollHeight;
     $("#draftZone").classList.add("hidden");
@@ -138,7 +160,7 @@ async function generate() {
     if (empty) empty.remove();
     $("#messages").appendChild(messageElement(result.message));
     state.generationId = result.generation_id;
-    renderCandidates(result.candidates, result.strategy);
+    renderCandidates(result.candidates, result.strategy, result.candidate_modes, result.critic);
     $("#relationshipBadge").textContent = `关系：${result.relationship.current_level}`;
     input.value = "";
     input.style.height = "auto";

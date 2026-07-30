@@ -2,7 +2,7 @@ import unittest
 
 from pydantic import ValidationError
 
-from src.agents import EmotionAnalysis, ResponseCandidates, get_agent
+from src.agents import DialoguePolicyAnalysis, EmotionAnalysis, ReplyCriticAnalysis, ResponseCandidates, get_agent
 
 
 class AgentHarnessTests(unittest.TestCase):
@@ -36,6 +36,33 @@ class AgentHarnessTests(unittest.TestCase):
             ResponseCandidates(candidates=["只有一条"])
         valid = ResponseCandidates(candidates=["一", "二", "三"])
         self.assertEqual(len(valid.candidates), 3)
+
+    def test_dialogue_policy_supports_silence_and_dynamic_question_probability(self):
+        policy = DialoguePolicyAnalysis.model_validate({
+            "primary_mode": "简短回应",
+            "candidate_modes": ["简短回应", "分享自己", "暂不回复"],
+            "question_probability": 0.1,
+            "question_budget": 0,
+            "should_resist": False,
+            "rationale": "最近问句较多",
+        })
+        self.assertEqual(policy.candidate_modes[-1], "暂不回复")
+
+    def test_critic_schema_has_three_candidate_reviews(self):
+        review = ReplyCriticAnalysis.model_validate({
+            "candidates": [{
+                "candidate_index": index,
+                "ai_taste": 2,
+                "interview_taste": 1,
+                "empathy_excess": 1,
+                "naturalness": 8,
+                "passed": True,
+                "issues": [],
+            } for index in range(3)],
+            "passed": True,
+            "rewrite_instruction": "",
+        })
+        self.assertTrue(review.passed)
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@
     <div class="admin-layout">
       <nav class="admin-nav">
         <button class="tab-button active" data-tab="persona">人格档案</button>
+        <button class="tab-button" data-tab="life">我的生活</button>
         <button class="tab-button" data-tab="memory">长期记忆</button>
         <button class="tab-button" data-tab="state">情绪与关系</button>
         <button class="tab-button" data-tab="guidance">指导文档</button>
@@ -24,11 +25,15 @@
           <article class="panel-card"><h2>我的稳定人格</h2><p>手工档案优先级高于自动观察；指导策略与人格冲突时，以指导为准。</p><form id="selfPersonaForm" class="form-grid persona-form" data-scope="self"></form></article>
           <article class="panel-card"><h2>对方画像</h2><p>可人工修正对方特征，避免模型把临时情绪当成长期性格。</p><form id="otherPersonaForm" class="form-grid persona-form" data-scope="other"></form></article>
         </div>
+        <div class="tab-panel" id="tab-life">
+          <article class="panel-card"><h2>每日 Life State</h2><p>内容完全由你手工填写并按日保留。回复只能低频引用这些事实，不会自行补充具体经历。</p><form id="lifeStateForm" class="form-grid"><div class="field"><label>日期</label><input id="lifeDate" type="date" required></div><div class="field"><label>今日心情</label><input id="lifeMood" placeholder="例如：有点疲惫，但挺放松"></div><div class="field"><label>精力 0–100</label><input id="lifeEnergy" type="number" min="0" max="100" value="50"></div><div class="field"><label>好奇心 0–100</label><input id="lifeCuriosity" type="number" min="0" max="100" value="50"></div><div class="field"><label>依恋感 0–100</label><input id="lifeAttachment" type="number" min="0" max="100" value="20"></div><div class="field"><label>当前在做什么</label><input id="lifeActivity" placeholder="例如：在整理项目"></div><div class="field full-row"><label>最近在关注什么</label><textarea id="lifeFocus" placeholder="工作、学习、兴趣或正在想的事"></textarea></div><div class="field"><label>今天发生的事（每行一条）</label><textarea id="lifeTodayEvents"></textarea></div><div class="field"><label>昨天发生的事（每行一条）</label><textarea id="lifeYesterdayEvents"></textarea></div><div class="field full-row"><label>自由扩展字段（每行“名称: 内容”）</label><textarea id="lifeExtras" placeholder="天气: 下雨\n最近在学: 摄影"></textarea></div><div class="form-actions full-row"><button class="primary">保存当天状态</button></div></form></article>
+          <article class="panel-card"><h2>历史状态</h2><div class="list" id="lifeStateList"></div></article>
+        </div>
         <div class="tab-panel" id="tab-memory">
           <article class="panel-card"><h2>长期记忆</h2><p>AI 自动提取后可在此编辑或删除；SQLite 数据同时可通过导出功能直观检查。</p><form id="memoryForm" class="form-grid"><div class="field"><label>分类</label><select id="memoryCategory"></select></div><div class="field"><label>内容</label><input id="memoryContent" required placeholder="例如：对方喜欢猫"></div><div class="field"><label><input id="memorySensitive" type="checkbox"> 标记为敏感信息</label></div><div class="form-actions"><button class="primary">添加记忆</button></div></form><div class="list" id="memoryList"></div></article>
         </div>
         <div class="tab-panel" id="tab-state">
-          <article class="panel-card"><h2>关系状态机</h2><p>AI 只提出建议，关系阶段始终由你确认。</p><div class="form-grid"><div class="field"><label>当前阶段</label><select id="relationshipLevel"></select></div><div class="field"><label>待确认建议</label><div id="relationshipSuggestion" class="code-note">暂无建议</div></div></div><div class="form-actions"><button id="saveRelationship" class="primary">确认当前阶段</button></div></article>
+          <article class="panel-card"><h2>关系状态机</h2><p>置信度不低于 0.9 的相邻阶段变化会自动应用；其他可靠判断保留为建议，也可在此手工调整。</p><div class="form-grid"><div class="field"><label>当前阶段</label><select id="relationshipLevel"></select></div><div class="field"><label>待确认建议</label><div id="relationshipSuggestion" class="code-note">暂无建议</div></div></div><div class="form-actions"><button id="saveRelationship" class="primary">保存当前阶段</button></div></article>
           <article class="panel-card"><h2>情绪记录</h2><p>置信度低于 0.75 的情绪默认等待人工确认。</p><div class="list" id="emotionList"></div></article>
         </div>
         <div class="tab-panel" id="tab-guidance">

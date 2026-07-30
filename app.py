@@ -6,6 +6,7 @@ import base64
 import binascii
 import re
 from contextlib import asynccontextmanager
+from datetime import date
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -39,11 +40,25 @@ class ConfirmRequest(BaseModel):
     contact_id: int
     content: str = Field(min_length=1, max_length=10000)
     generation_id: int | None = None
+    candidate_index: int | None = Field(default=None, ge=0, le=2)
 
 
 class PersonaRequest(BaseModel):
     content: dict[str, Any]
     examples: list[str] = Field(default_factory=list)
+
+
+class LifeStateRequest(BaseModel):
+    state_date: date
+    mood: str = Field(default="", max_length=120)
+    energy: int = Field(default=50, ge=0, le=100)
+    curiosity: int = Field(default=50, ge=0, le=100)
+    attachment: int = Field(default=20, ge=0, le=100)
+    current_activity: str = Field(default="", max_length=500)
+    current_focus: str = Field(default="", max_length=500)
+    today_events: list[str] = Field(default_factory=list, max_length=20)
+    yesterday_events: list[str] = Field(default_factory=list, max_length=20)
+    extras: dict[str, str] = Field(default_factory=dict)
 
 
 class MemoryRequest(BaseModel):
@@ -138,6 +153,7 @@ def bootstrap() -> dict[str, Any]:
         "active_contact": contact,
         "messages": store.list_messages(contact_id, 100),
         "relationship": store.get_relationship(contact_id),
+        "life_state": store.get_life_state(),
         "levels": RELATIONSHIP_LEVELS,
     }
 
@@ -183,6 +199,8 @@ async def generate(request: GenerateRequest) -> dict[str, Any]:
         "generation_id": result["generation_id"],
         "strategy": result["strategy"],
         "candidates": result["candidates"],
+        "candidate_modes": result.get("dialogue_policy", {}).get("candidate_modes", []),
+        "critic": result.get("critic_analysis", {}),
         "relationship": result["relationship"],
         "warnings": result.get("warnings", []),
     }
@@ -191,6 +209,13 @@ async def generate(request: GenerateRequest) -> dict[str, Any]:
 @app.post("/api/chat/confirm")
 def confirm_send(request: ConfirmRequest) -> dict[str, Any]:
     """Record only the candidate the user actually chose or edited."""
+    if request.generation_id is not None:
+        try:
+            store.select_generation_candidate(
+                request.generation_id, request.contact_id, request.candidate_index,
+            )
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(400, str(exc)) from exc
     return store.save_message(
         request.contact_id,
         "assistant",
@@ -220,6 +245,27 @@ def save_persona(scope: str, request: PersonaRequest) -> dict[str, Any]:
     if scope not in {"self", "other"}:
         raise HTTPException(400, "scope 只能是 self 或 other")
     return store.save_persona(scope, request.content, [item.strip() for item in request.examples if item.strip()])
+
+
+@app.get("/api/life-states")
+def list_life_states(limit: int = 30) -> list[dict[str, Any]]:
+    return store.list_life_states(min(max(limit, 1), 365))
+
+
+@app.put("/api/life-states/{state_date}")
+def save_life_state(state_date: date, request: LifeStateRequest) -> dict[str, Any]:
+    if request.state_date != state_date:
+        raise HTTPException(400, "路径日期与内容日期不一致")
+    payload = request.model_dump(mode="json")
+    payload["today_events"] = [item.strip() for item in request.today_events if item.strip()]
+    payload["yesterday_events"] = [item.strip() for item in request.yesterday_events if item.strip()]
+    payload["extras"] = {key.strip(): value.strip() for key, value in request.extras.items() if key.strip()}
+    return store.save_life_state(payload)
+
+
+@app.delete("/api/life-states/{state_date}", status_code=204)
+def delete_life_state(state_date: date) -> None:
+    store.delete_life_state(state_date.isoformat())
 
 
 @app.get("/api/memories/{contact_id}")

@@ -151,8 +151,24 @@ class ChatStore:
                     strategy TEXT NOT NULL DEFAULT '',
                     candidates TEXT NOT NULL DEFAULT '[]',
                     analysis TEXT NOT NULL DEFAULT '{}',
+                    selected_candidate_index INTEGER,
                     created_at TEXT NOT NULL,
                     FOREIGN KEY(contact_id) REFERENCES contacts(id) ON DELETE CASCADE
+                );
+                CREATE TABLE IF NOT EXISTS life_states (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    state_date TEXT NOT NULL UNIQUE,
+                    mood TEXT NOT NULL DEFAULT '',
+                    energy INTEGER NOT NULL DEFAULT 50,
+                    curiosity INTEGER NOT NULL DEFAULT 50,
+                    attachment INTEGER NOT NULL DEFAULT 20,
+                    current_activity TEXT NOT NULL DEFAULT '',
+                    current_focus TEXT NOT NULL DEFAULT '',
+                    today_events TEXT NOT NULL DEFAULT '[]',
+                    yesterday_events TEXT NOT NULL DEFAULT '[]',
+                    extras TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS settings (
                     key TEXT PRIMARY KEY,
@@ -162,8 +178,14 @@ class ChatStore:
                 CREATE INDEX IF NOT EXISTS idx_messages_contact ON messages(contact_id, id);
                 CREATE INDEX IF NOT EXISTS idx_memories_contact ON memories(contact_id, id);
                 CREATE INDEX IF NOT EXISTS idx_emotions_contact ON emotions(contact_id, id);
+                CREATE INDEX IF NOT EXISTS idx_life_states_date ON life_states(state_date DESC);
                 """
             )
+            generation_columns = {
+                row[1] for row in connection.execute("PRAGMA table_info(generations)").fetchall()
+            }
+            if "selected_candidate_index" not in generation_columns:
+                connection.execute("ALTER TABLE generations ADD COLUMN selected_candidate_index INTEGER")
             now = utc_now()
             if connection.execute("SELECT COUNT(*) FROM contacts").fetchone()[0] == 0:
                 cursor = connection.execute(
@@ -263,6 +285,75 @@ class ChatStore:
                 (scope, json.dumps(content, ensure_ascii=False), json.dumps(examples, ensure_ascii=False), utc_now()),
             )
         return self.get_persona(scope)
+
+    def list_life_states(self, limit: int = 30) -> list[dict[str, Any]]:
+        """Return manually maintained daily life states, newest first."""
+        with self.connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM life_states ORDER BY state_date DESC, id DESC LIMIT ?", (limit,)
+            ).fetchall()
+        return [self._life_state_dict(row) for row in rows]
+
+    def get_life_state(self, state_date: str | None = None) -> dict[str, Any] | None:
+        """Return one dated state, or the newest state when no date is supplied."""
+        with self.connect() as connection:
+            if state_date:
+                row = connection.execute(
+                    "SELECT * FROM life_states WHERE state_date=?", (state_date,)
+                ).fetchone()
+            else:
+                row = connection.execute(
+                    "SELECT * FROM life_states ORDER BY state_date DESC, id DESC LIMIT 1"
+                ).fetchone()
+        return self._life_state_dict(row) if row is not None else None
+
+    @staticmethod
+    def _life_state_dict(row: sqlite3.Row) -> dict[str, Any]:
+        result = dict(row)
+        result["today_events"] = _loads(result.get("today_events"), [])
+        result["yesterday_events"] = _loads(result.get("yesterday_events"), [])
+        result["extras"] = _loads(result.get("extras"), {})
+        return result
+
+    def save_life_state(self, state: dict[str, Any]) -> dict[str, Any]:
+        """Upsert a manually authored daily life state."""
+        state_date = str(state.get("state_date", "")).strip()
+        if not state_date:
+            raise ValueError("生活状态日期不能为空")
+        clamp = lambda value, default: max(0, min(100, int(value if value is not None else default)))
+        now = utc_now()
+        with self.connect() as connection:
+            connection.execute(
+                """INSERT INTO life_states(
+                       state_date, mood, energy, curiosity, attachment, current_activity,
+                       current_focus, today_events, yesterday_events, extras, created_at, updated_at
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(state_date) DO UPDATE SET
+                       mood=excluded.mood, energy=excluded.energy,
+                       curiosity=excluded.curiosity, attachment=excluded.attachment,
+                       current_activity=excluded.current_activity,
+                       current_focus=excluded.current_focus,
+                       today_events=excluded.today_events,
+                       yesterday_events=excluded.yesterday_events,
+                       extras=excluded.extras, updated_at=excluded.updated_at""",
+                (
+                    state_date, str(state.get("mood", "")).strip(), clamp(state.get("energy"), 50),
+                    clamp(state.get("curiosity"), 50), clamp(state.get("attachment"), 20),
+                    str(state.get("current_activity", "")).strip(),
+                    str(state.get("current_focus", "")).strip(),
+                    json.dumps(state.get("today_events") or [], ensure_ascii=False),
+                    json.dumps(state.get("yesterday_events") or [], ensure_ascii=False),
+                    json.dumps(state.get("extras") or {}, ensure_ascii=False), now, now,
+                ),
+            )
+        saved = self.get_life_state(state_date)
+        if saved is None:
+            raise RuntimeError("保存生活状态失败")
+        return saved
+
+    def delete_life_state(self, state_date: str) -> None:
+        with self.connect() as connection:
+            connection.execute("DELETE FROM life_states WHERE state_date=?", (state_date,))
 
     def list_memories(self, contact_id: int, limit: int = 300) -> list[dict[str, Any]]:
         """列出某联系人的记忆，按 id 倒序（最新在前）。"""
@@ -403,6 +494,20 @@ class ChatStore:
             )
         return self.get_relationship(contact_id)
 
+    def apply_relationship_analysis(
+        self, contact_id: int, level: str | None, confidence: float, reason: str,
+        auto_threshold: float = 0.9,
+    ) -> dict[str, Any]:
+        """Auto-apply a high-confidence adjacent stage change, otherwise save a suggestion."""
+        current = self.get_relationship(contact_id)
+        if level not in RELATIONSHIP_LEVELS or level == current["current_level"]:
+            return self.suggest_relationship(contact_id, None, reason)
+        current_index = RELATIONSHIP_LEVELS.index(current["current_level"])
+        target_index = RELATIONSHIP_LEVELS.index(level)
+        if confidence >= auto_threshold and abs(target_index - current_index) == 1:
+            return self.set_relationship(contact_id, level)
+        return self.suggest_relationship(contact_id, level if confidence >= 0.7 else None, reason)
+
     def save_generation(self, contact_id: int, input_message_id: int | None, strategy: str, candidates: list[str], analysis: dict[str, Any]) -> int:
         """保存一次生成快照，返回 generation_id。"""
         with self.connect() as connection:
@@ -414,6 +519,18 @@ class ChatStore:
         if cursor.lastrowid is None:
             raise RuntimeError("创建生成记录失败")
         return int(cursor.lastrowid)
+
+    def select_generation_candidate(self, generation_id: int, contact_id: int, candidate_index: int | None) -> None:
+        """Record only which generated candidate was selected; edited text is not copied here."""
+        if candidate_index is not None and candidate_index not in {0, 1, 2}:
+            raise ValueError("候选索引只能是 0、1 或 2")
+        with self.connect() as connection:
+            cursor = connection.execute(
+                "UPDATE generations SET selected_candidate_index=? WHERE id=? AND contact_id=?",
+                (candidate_index, generation_id, contact_id),
+            )
+        if cursor.rowcount == 0:
+            raise KeyError("生成记录不存在")
 
     def get_setting(self, key: str, default: str = "") -> str:
         """读取一个设置项，不存在时返回默认值。"""
@@ -432,7 +549,7 @@ class ChatStore:
 
     def export_all(self) -> dict[str, Any]:
         """导出所有业务表数据，用于备份或排查。"""
-        tables = ["contacts", "messages", "personas", "memories", "emotions", "relationships", "generations", "settings"]
+        tables = ["contacts", "messages", "personas", "life_states", "memories", "emotions", "relationships", "generations", "settings"]
         result: dict[str, Any] = {"exported_at": utc_now()}
         with self.connect() as connection:
             for table in tables:

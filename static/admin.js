@@ -37,6 +37,44 @@ async function savePersona(event) {
   await api(`/api/personas/${form.dataset.scope}`, { method: "PUT", body: JSON.stringify({ content, examples }) }); toast("人格档案已保存");
 }
 
+function lineValues(selector) {
+  return $(selector).value.split("\n").map(value => value.trim()).filter(Boolean);
+}
+function parseExtras() {
+  const extras = {};
+  lineValues("#lifeExtras").forEach(line => {
+    const separator = line.search(/[:：]/);
+    if (separator > 0) extras[line.slice(0, separator).trim()] = line.slice(separator + 1).trim();
+  });
+  return extras;
+}
+function fillLifeState(item = {}) {
+  $("#lifeDate").value = item.state_date || new Date().toLocaleDateString("sv-SE");
+  $("#lifeMood").value = item.mood || "";
+  $("#lifeEnergy").value = item.energy ?? 50;
+  $("#lifeCuriosity").value = item.curiosity ?? 50;
+  $("#lifeAttachment").value = item.attachment ?? 20;
+  $("#lifeActivity").value = item.current_activity || "";
+  $("#lifeFocus").value = item.current_focus || "";
+  $("#lifeTodayEvents").value = (item.today_events || []).join("\n");
+  $("#lifeYesterdayEvents").value = (item.yesterday_events || []).join("\n");
+  $("#lifeExtras").value = Object.entries(item.extras || {}).map(([key, value]) => `${key}: ${value}`).join("\n");
+}
+async function loadLifeStates() {
+  const items = await api("/api/life-states?limit=30");
+  const list = $("#lifeStateList"); list.innerHTML = "";
+  items.forEach(item => {
+    const row = document.createElement("div"); row.className = "list-item";
+    const body = document.createElement("div");
+    body.innerHTML = `<h3>${escapeText(item.state_date)} · ${escapeText(item.mood || "未填写心情")}</h3><p>精力 ${item.energy} · 好奇心 ${item.curiosity} · 依恋感 ${item.attachment}${item.current_activity ? ` · ${escapeText(item.current_activity)}` : ""}</p>`;
+    const actions = document.createElement("div"); actions.className = "list-actions";
+    const edit = document.createElement("button"); edit.className = "secondary"; edit.textContent = "编辑"; edit.onclick = () => { fillLifeState(item); window.scrollTo({ top: 0, behavior: "smooth" }); };
+    const remove = document.createElement("button"); remove.className = "danger"; remove.textContent = "删除"; remove.onclick = async () => { if (confirm(`删除 ${item.state_date} 的状态？`)) { await api(`/api/life-states/${item.state_date}`, { method: "DELETE" }); await loadLifeStates(); } };
+    actions.append(edit, remove); row.append(body, actions); list.appendChild(row);
+  });
+  if (!items.length) list.innerHTML = '<div class="code-note">暂无生活状态，请先填写今天的内容。</div>';
+}
+
 async function loadMemories() {
   const data = await api(`/api/memories/${contactId}`); categories = data.categories;
   $("#memoryCategory").innerHTML = categories.map(c => `<option>${escapeText(c)}</option>`).join("");
@@ -98,6 +136,11 @@ document.querySelectorAll(".tab-button").forEach(button => button.onclick = () =
   document.querySelectorAll(".tab-button,.tab-panel").forEach(e => e.classList.remove("active")); button.classList.add("active"); $(`#tab-${button.dataset.tab}`).classList.add("active");
 });
 $("#memoryForm").onsubmit = async event => { event.preventDefault(); await api("/api/memories", { method: "POST", body: JSON.stringify({ contact_id: contactId, category: $("#memoryCategory").value, content: $("#memoryContent").value, sensitive: $("#memorySensitive").checked }) }); event.target.reset(); await loadMemories(); toast("记忆已添加"); };
+$("#lifeStateForm").onsubmit = async event => {
+  event.preventDefault(); const stateDate = $("#lifeDate").value;
+  const payload = { state_date: stateDate, mood: $("#lifeMood").value.trim(), energy: Number($("#lifeEnergy").value), curiosity: Number($("#lifeCuriosity").value), attachment: Number($("#lifeAttachment").value), current_activity: $("#lifeActivity").value.trim(), current_focus: $("#lifeFocus").value.trim(), today_events: lineValues("#lifeTodayEvents"), yesterday_events: lineValues("#lifeYesterdayEvents"), extras: parseExtras() };
+  await api(`/api/life-states/${stateDate}`, { method: "PUT", body: JSON.stringify(payload) }); await loadLifeStates(); toast("当天生活状态已保存");
+};
 $("#saveRelationship").onclick = async () => { await api(`/api/relationship/${contactId}`, { method: "PUT", body: JSON.stringify({ level: $("#relationshipLevel").value }) }); await loadState(); toast("关系阶段已确认"); };
 $("#guidanceForm").onsubmit = async event => { event.preventDefault(); await api("/api/guidance/documents", { method: "POST", body: JSON.stringify({ name: $("#guidanceName").value, content: $("#guidanceContent").value }) }); await loadGuidance(); toast("指导文档已保存"); };
 $("#importForm").onsubmit = async event => { event.preventDefault(); const result = await api("/api/import", { method: "POST", body: JSON.stringify({ contact_id: contactId, text: $("#importText").value }) }); toast(`已导入 ${result.imported} 条聊天`); };
@@ -105,6 +148,7 @@ $("#importForm").onsubmit = async event => { event.preventDefault(); const resul
 (async function init() {
   try {
     const boot = await api("/api/bootstrap"); contactId = boot.active_contact.id; levels = boot.levels;
-    await Promise.all([loadPersona("self"), loadPersona("other"), loadMemories(), loadState(), loadGuidance(), loadModels()]);
+    fillLifeState();
+    await Promise.all([loadPersona("self"), loadPersona("other"), loadLifeStates(), loadMemories(), loadState(), loadGuidance(), loadModels()]);
   } catch (error) { toast(error.message); }
 })();

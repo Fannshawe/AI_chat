@@ -47,12 +47,16 @@ class WorkflowState(TypedDict):
     other_persona: dict[str, Any]
     relationship: dict[str, Any]
     recent_emotions: list[dict[str, Any]]
+    life_state: dict[str, Any] | None
+    life_state_history: list[dict[str, Any]]
     emotion_analysis: dict[str, Any]
     relationship_analysis: dict[str, Any]
     memories: list[dict[str, Any]]
     persona_analysis: dict[str, Any]
     guidance_chunks: list[dict[str, Any]]
     guidance_analysis: dict[str, Any]
+    dialogue_policy: dict[str, Any]
+    critic_analysis: dict[str, Any]
     memory_analysis: dict[str, Any]
     strategy: str
     candidates: list[str]
@@ -113,6 +117,8 @@ def node_load_context(state: WorkflowState) -> WorkflowState:
     state["other_persona"] = store.get_persona("other")
     state["relationship"] = store.get_relationship(contact_id)
     state["recent_emotions"] = store.list_emotions(contact_id, 12)
+    state["life_state"] = store.get_life_state()
+    state["life_state_history"] = store.list_life_states(7)
     state["provider_name"] = state.get("provider_name") or store.get_setting("active_model_provider", "default")
     state.setdefault("warnings", [])
     return state
@@ -169,6 +175,8 @@ def node_persona_engine(state: WorkflowState) -> WorkflowState:
         "relevant_memories": state.get("memories", []),
         "latest_message": state["user_request"],
         "recent_conversation": _history_text(state.get("history", [])),
+        "manually_authored_life_state": state.get("life_state"),
+        "recent_life_state_history": state.get("life_state_history", []),
     }
     state["persona_analysis"] = _run_structured_agent(state, "persona", payload, fallback)
     return state
@@ -196,19 +204,56 @@ def node_chat_guidance(state: WorkflowState) -> WorkflowState:
     return state
 
 
-def node_response_output(state: WorkflowState) -> WorkflowState:
+def _recent_question_density(history: list[dict[str, Any]], limit: int = 6) -> dict[str, int]:
+    own_messages = [item for item in history if item.get("role") == "assistant"][-limit:]
+    question_messages = sum(
+        1 for item in own_messages if "?" in str(item.get("content", "")) or "？" in str(item.get("content", ""))
+    )
+    return {"own_message_count": len(own_messages), "question_message_count": question_messages}
+
+
+def node_dialogue_policy(state: WorkflowState) -> WorkflowState:
+    fallback = {
+        "primary_mode": "简短回应",
+        "candidate_modes": ["简短回应", "分享自己", "开玩笑/调侃"],
+        "question_probability": 0.15,
+        "question_budget": 0,
+        "should_resist": False,
+        "rationale": "策略节点不可用，默认降低追问并保持自然简短",
+    }
     payload = {
+        "latest_message": state["user_request"],
+        "recent_conversation": _history_text(state.get("history", [])),
+        "recent_question_density": _recent_question_density(state.get("history", [])),
+        "current_relationship": state["relationship"],
+        "emotions": state["emotion_analysis"],
+        "chat_guidance": state["guidance_analysis"],
+        "retrieved_guidance": state["guidance_chunks"],
+        "manually_authored_life_state": state.get("life_state"),
+    }
+    state["dialogue_policy"] = _run_structured_agent(state, "dialogue_policy", payload, fallback)
+    return state
+
+
+def _response_payload(state: WorkflowState, rewrite_instruction: str = "") -> dict[str, Any]:
+    return {
         "latest_message": state["user_request"],
         "recent_conversation": _history_text(state.get("history", [])),
         "current_relationship": state["relationship"]["current_level"],
         "emotion_analysis": state["emotion_analysis"],
         "relevant_memories": state.get("memories", []),
         "persona_instruction": state["persona_analysis"],
+        "manually_authored_life_state": state.get("life_state"),
         "chat_guidance": state["guidance_analysis"],
+        "dialogue_policy": state["dialogue_policy"],
+        "rewrite_instruction": rewrite_instruction,
         "candidate_count": 3,
     }
+
+
+def _invoke_response_agent(state: WorkflowState, payload: dict[str, Any], include_images: bool) -> list[str]:
     response_agent = get_agent("response", state.get("provider_name", "default"))
-    images = state.get("image_data_urls") or []
+    images = state.get("image_data_urls") or [] if include_images else []
     message_content: str | list[dict[str, Any]] = _json(payload)
     if images:
         message_content = [{"type": "text", "text": _json(payload)}]
@@ -220,9 +265,42 @@ def node_response_output(state: WorkflowState) -> WorkflowState:
             raise
         state.setdefault("warnings", []).append(f"当前模型无法处理图片，已按文字重试: {exc}")
         result = response_agent.invoke({"messages": [{"role": "user", "content": _json(payload)}]})
+    return [str(item).strip() for item in _structured_dict(result)["candidates"]]
 
-    candidates = [str(item).strip() for item in _structured_dict(result)["candidates"]]
-    state["candidates"] = candidates
+
+def node_response_output(state: WorkflowState) -> WorkflowState:
+    state["candidates"] = _invoke_response_agent(state, _response_payload(state), include_images=True)
+    return state
+
+
+def node_reply_critic(state: WorkflowState) -> WorkflowState:
+    fallback = {"candidates": [], "passed": True, "rewrite_instruction": ""}
+    payload = {
+        "latest_message": state["user_request"],
+        "recent_conversation": _history_text(state.get("history", [])),
+        "dialogue_policy": state["dialogue_policy"],
+        "persona_instruction": state["persona_analysis"],
+        "candidates": state["candidates"],
+    }
+    first_review = _run_structured_agent(state, "critic", payload, fallback)
+    state["critic_analysis"] = {"first_review": first_review, "regenerated": False}
+    if first_review.get("passed", True):
+        return state
+
+    rewrite = str(first_review.get("rewrite_instruction", "降低AI味、追问和空洞共情，改得更短更口语。"))
+    try:
+        state["candidates"] = _invoke_response_agent(
+            state, _response_payload(state, rewrite_instruction=rewrite), include_images=False,
+        )
+        second_payload = {**payload, "candidates": state["candidates"], "previous_issues": first_review}
+        second_review = _run_structured_agent(state, "critic", second_payload, fallback)
+        state["critic_analysis"] = {
+            "first_review": first_review, "regenerated": True, "final_review": second_review,
+        }
+        if not second_review.get("passed", True):
+            state.setdefault("warnings", []).append("候选重写后仍有真人感质量预警，请发送前人工检查。")
+    except Exception as exc:
+        state.setdefault("warnings", []).append(f"候选自动重写失败，保留初稿: {exc}")
     return state
 
 
@@ -242,9 +320,9 @@ def node_content_save(state: WorkflowState) -> WorkflowState:
 
     relationship = state.get("relationship_analysis", {})
     confidence = float(relationship.get("confidence", 0) or 0)
-    suggested_level = relationship.get("suggested_level") if confidence >= 0.7 else None
-    state["relationship"] = store.suggest_relationship(
-        state["contact_id"], suggested_level, str(relationship.get("reason", "")),
+    state["relationship"] = store.apply_relationship_analysis(
+        state["contact_id"], relationship.get("suggested_level"), confidence,
+        str(relationship.get("reason", "")),
     )
 
     memory_fallback = {"memories": []}
@@ -271,6 +349,9 @@ def node_content_save(state: WorkflowState) -> WorkflowState:
         "relationship": state.get("relationship_analysis", {}),
         "persona": state.get("persona_analysis", {}),
         "guidance": state.get("guidance_analysis", {}),
+        "dialogue_policy": state.get("dialogue_policy", {}),
+        "critic": state.get("critic_analysis", {}),
+        "life_state": state.get("life_state"),
         "memory": state.get("memory_analysis", {}),
         "warnings": state.get("warnings", []),
     }
@@ -288,7 +369,9 @@ def build_graph():
     graph.add_node("memory", node_memory_retrieval)
     graph.add_node("persona", node_persona_engine)
     graph.add_node("guidance", node_chat_guidance)
+    graph.add_node("dialogue_policy", node_dialogue_policy)
     graph.add_node("output", node_response_output)
+    graph.add_node("critic", node_reply_critic)
     graph.add_node("save", node_content_save)
     graph.set_entry_point("context")
     graph.add_edge("context", "emotion")
@@ -296,8 +379,10 @@ def build_graph():
     graph.add_edge("relationship", "memory")
     graph.add_edge("memory", "persona")
     graph.add_edge("persona", "guidance")
-    graph.add_edge("guidance", "output")
-    graph.add_edge("output", "save")
+    graph.add_edge("guidance", "dialogue_policy")
+    graph.add_edge("dialogue_policy", "output")
+    graph.add_edge("output", "critic")
+    graph.add_edge("critic", "save")
     graph.add_edge("save", END)
     return graph.compile()
 
@@ -309,6 +394,7 @@ def generate_proactive_draft(contact_id: int, provider_name: str = "default") ->
         "recent_conversation": _history_text(history),
         "relationship": store.get_relationship(contact_id),
         "persona": store.get_persona("self"),
+        "manually_authored_life_state": store.get_life_state(),
         "memories": store.list_memories(contact_id, 80),
     }
     proactive_agent = get_agent("proactive", provider_name)
