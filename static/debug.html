@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Persona Chat · Debug</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    .debug-shell{max-width:1440px}
+    .debug-toolbar{display:grid;grid-template-columns:minmax(180px,280px) 160px minmax(180px,240px) auto;gap:14px;align-items:end;margin-bottom:18px}
+    .debug-layout{display:grid;grid-template-columns:360px minmax(0,1fr);gap:18px;align-items:start}
+    .debug-detail{min-width:0}
+    .debug-generation-item{width:100%;text-align:left;border:1px solid var(--line);cursor:pointer;background:#fff}
+    .debug-generation-item.active{border-color:#db6b55;box-shadow:0 0 0 2px rgba(219,107,85,.12)}
+    .debug-trace-item{border:1px solid var(--line);border-radius:16px;background:white;padding:0 16px 16px}
+    .debug-trace-item.has-warning{border-color:#d38a43;box-shadow:0 0 0 2px rgba(211,138,67,.12)}
+    .debug-trace-item + .debug-trace-item{margin-top:10px}
+    .debug-trace-item summary{display:flex;gap:12px;align-items:center;cursor:pointer;list-style:none;padding:14px 0;font-size:13px}
+    .debug-trace-item summary::-webkit-details-marker{display:none}
+    .debug-pill{display:inline-flex;align-items:center;justify-content:center;padding:4px 8px;border-radius:999px;background:#f4efe8;color:#5d5954;font-size:11px;font-weight:700}
+    .debug-pill.warn{background:#fff0db;color:#a55a23}
+    .debug-pill.error{background:#f8dfdc;color:#8d3026}
+    .debug-trace-content{display:grid;gap:12px}
+    .debug-block h3{margin:0 0 8px;font-size:13px}
+    .debug-block pre{margin:0;padding:12px;border-radius:12px;background:#f6f2ec;border:1px solid var(--line);white-space:pre-wrap;word-break:break-word;max-height:360px;overflow:auto;font-size:12px;line-height:1.55}
+    .debug-meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+    .debug-meta .code-note{padding:12px;border:1px solid var(--line);border-radius:12px;background:#f6f2ec}
+    .debug-banner{margin-top:12px;padding:12px 14px;border-radius:12px;background:#f4efe8;color:#5d5954;font-size:12px;line-height:1.6}
+    .debug-banner.warn{background:#fff0db;color:#a55a23}
+    .debug-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+    .debug-copy{border:0;border-radius:10px;padding:8px 10px;background:#f3ece6;color:#5d5954;font-size:12px;font-weight:700;cursor:pointer}
+    .debug-copy:hover{background:#eadfd4}
+    .debug-legacy{margin-top:6px;color:#a55a23;font-size:11px;line-height:1.5}
+    @media (max-width:960px){.debug-layout,.debug-toolbar,.debug-meta{grid-template-columns:1fr}}
+  </style>
+  <script defer src="/static/debug.js?v=20260731b"></script>
+</head>
+<body class="admin-page">
+  <main class="admin-shell debug-shell">
+    <header class="admin-header">
+      <div class="admin-title"><h1>Debug 面板</h1><p>查看每次生成的节点输入、输出、耗时、警告和状态变化</p></div>
+      <div class="list-actions">
+        <a class="ghost" href="/">返回聊天</a>
+        <a class="ghost" href="/admin">管理后台</a>
+      </div>
+    </header>
+    <section class="panel-card">
+      <div class="debug-toolbar">
+        <div class="field"><label>联系人</label><select id="contactSelect"></select></div>
+        <div class="field"><label>最近记录数</label><input id="limitInput" type="number" min="1" max="100" value="20"></div>
+        <div class="field"><label>节点筛选</label><select id="nodeFilter"><option value="">全部节点</option></select></div>
+        <div class="form-actions"><button class="primary" id="refreshDebugButton">刷新</button></div>
+      </div>
+      <div class="debug-layout">
+        <div class="list" id="generationList"></div>
+        <div class="debug-detail" id="debugDetail">
+          <div class="empty-state"><strong>选择一条生成记录</strong><span>左侧会列出最近 generation。点击后可展开每个 node 的输入、输出和状态变化。</span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div class="toast" id="toast"></div>
+</body>
+</html>

@@ -4,12 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Persona Chat</title>
-  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/styles.css?v=20260731a">
   <style>
     .candidate-mode{justify-self:start;background:#f5f1ec;color:#655f58;border-radius:99px;padding:3px 8px;font-size:10px;font-weight:700}
     .candidate-warning{margin:0;color:#a55a23;background:#fff0db;border-radius:8px;padding:7px 9px;font-size:11px;line-height:1.45}
+    .debug-tools{display:grid;gap:8px;padding:10px 8px;border:1px solid #e8e1d8;border-radius:14px;background:#fffaf4}
+    .debug-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:#5d5954}
+    .debug-toggle input{width:16px;height:16px}
+    .debug-link{display:inline-flex;align-items:center;justify-content:center;padding:9px 12px;border-radius:10px;background:#fff0db;color:#a55a23;text-decoration:none;font-size:12px;font-weight:700}
+    .debug-link.hidden{display:none}
+    .debug-note{margin:0;font-size:11px;line-height:1.5;color:#77736d}
   </style>
-  <script defer src="/static/index.js"></script>
+  <script defer src="/static/index.js?v=20260731b"></script>
 </head>
 <body class="chat-page">
   <div class="app-shell">
@@ -19,6 +25,12 @@
       <button class="contact active" id="contactButton"><span class="avatar">TA</span><span><b id="contactName">聊天对象</b><small>长期记忆已开启</small></span></button>
       <div class="sidebar-bottom">
         <button class="ghost full" id="proactiveButton">✦ 生成主动聊天草稿</button>
+        <div class="debug-tools">
+          <label class="debug-toggle"><span>记录详细 Debug</span><input id="debugEnabledToggle" type="checkbox"></label>
+          <a class="debug-link hidden" id="latestDebugLink" href="/debug">查看刚刚这次 Debug</a>
+          <p class="debug-note">关闭后只保留节点名、耗时、warning 和 error。</p>
+        </div>
+        <a class="ghost full center" href="/debug">查看 Debug 面板</a>
         <a class="ghost full center" href="/admin">⚙ 进入管理后台</a>
         <p class="privacy-note">数据保存在本机 SQLite 中，候选回复只有确认后才会记为已发送。</p>
       </div>

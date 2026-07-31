@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
 from src.config import GUIDANCE_DIR, MAX_IMAGE_BYTES, STATIC_DIR, UPLOAD_DIR, get_model_providers
-from src.graph import build_graph, generate_proactive_draft
+from src.graph import DEBUG, build_graph, generate_proactive_draft
 from src.guidance import guidance_retriever
 from src.prompt_loader import clear_prompt_cache
 from src.storage import MEMORY_CATEGORIES, RELATIONSHIP_LEVELS, store
@@ -72,6 +72,10 @@ class RelationshipRequest(BaseModel):
     level: str
 
 
+class ProposalDecisionRequest(BaseModel):
+    approved: bool
+
+
 class ContactRequest(BaseModel):
     name: str = Field(min_length=1, max_length=80)
 
@@ -97,6 +101,11 @@ class ModelSelectionRequest(BaseModel):
     provider: str
 
 
+class DebugSettingsRequest(BaseModel):
+    enabled: bool | None = None
+    keep_generations: int | None = Field(default=None, ge=1, le=200)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     store.initialize()
@@ -112,6 +121,12 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
+def _debug_settings() -> dict[str, Any]:
+    enabled = store.get_setting("debug_enabled", "true").strip().lower() in {"1", "true", "yes", "on"}
+    keep_generations = int(store.get_setting("debug_keep_generations", "30") or "30")
+    return {"enabled": enabled, "keep_generations": max(1, keep_generations)}
+
+
 @app.get("/", include_in_schema=False)
 def chat_page() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
@@ -120,6 +135,11 @@ def chat_page() -> FileResponse:
 @app.get("/admin", include_in_schema=False)
 def admin_page() -> FileResponse:
     return FileResponse(STATIC_DIR / "admin.html")
+
+
+@app.get("/debug", include_in_schema=False)
+def debug_page() -> FileResponse:
+    return FileResponse(STATIC_DIR / "debug.html")
 
 
 def _save_images(images: list[ImageInput]) -> tuple[list[str], list[str]]:
@@ -153,7 +173,6 @@ def bootstrap() -> dict[str, Any]:
         "active_contact": contact,
         "messages": store.list_messages(contact_id, 100),
         "relationship": store.get_relationship(contact_id),
-        "life_state": store.get_life_state(),
         "levels": RELATIONSHIP_LEVELS,
     }
 
@@ -189,21 +208,38 @@ async def generate(request: GenerateRequest) -> dict[str, Any]:
         "user_request": content or "对方发来了一张图片",
         "image_data_urls": image_data_urls,
         "warnings": [],
+        "debug_enabled": _debug_settings()["enabled"],
     }
     try:
         result = await run_in_threadpool(chat_graph.invoke, initial_state)
     except Exception as exc:
         raise HTTPException(502, f"生成失败，请检查模型配置或服务状态：{exc}") from exc
+    store.trim_generations(request.contact_id, _debug_settings()["keep_generations"])
     return {
         "message": saved,
         "generation_id": result["generation_id"],
         "strategy": result["strategy"],
         "candidates": result["candidates"],
-        "candidate_modes": result.get("dialogue_policy", {}).get("candidate_modes", []),
+        "dialogue_plan": result.get("dialogue_composition", {}),
         "critic": result.get("critic_analysis", {}),
         "relationship": result["relationship"],
         "warnings": result.get("warnings", []),
     }
+
+
+@app.get("/api/debug/settings")
+def get_debug_settings() -> dict[str, Any]:
+    return _debug_settings()
+
+
+@app.put("/api/debug/settings")
+def update_debug_settings(request: DebugSettingsRequest) -> dict[str, Any]:
+    current = _debug_settings()
+    enabled = current["enabled"] if request.enabled is None else bool(request.enabled)
+    keep_generations = current["keep_generations"] if request.keep_generations is None else int(request.keep_generations)
+    store.set_setting("debug_enabled", "true" if enabled else "false")
+    store.set_setting("debug_keep_generations", str(keep_generations))
+    return _debug_settings()
 
 
 @app.post("/api/chat/confirm")
@@ -233,39 +269,29 @@ async def proactive(contact_id: int) -> dict[str, str]:
         raise HTTPException(502, f"主动聊天草稿生成失败：{exc}") from exc
 
 
-@app.get("/api/personas/{scope}")
-def get_persona(scope: str) -> dict[str, Any]:
-    if scope not in {"self", "other"}:
-        raise HTTPException(400, "scope 只能是 self 或 other")
-    return store.get_persona(scope)
+@app.get("/api/persona-profile")
+def get_persona_profile() -> dict[str, Any]:
+    return store.get_persona_profile()
 
 
-@app.put("/api/personas/{scope}")
-def save_persona(scope: str, request: PersonaRequest) -> dict[str, Any]:
-    if scope not in {"self", "other"}:
-        raise HTTPException(400, "scope 只能是 self 或 other")
-    return store.save_persona(scope, request.content, [item.strip() for item in request.examples if item.strip()])
+@app.put("/api/persona-profile")
+def save_persona_profile(request: dict[str, Any]) -> dict[str, Any]:
+    return store.save_persona_profile(request)
 
 
-@app.get("/api/life-states")
-def list_life_states(limit: int = 30) -> list[dict[str, Any]]:
-    return store.list_life_states(min(max(limit, 1), 365))
+@app.get("/api/persona-proposals/{contact_id}")
+def list_persona_proposals(contact_id: int) -> list[dict[str, Any]]:
+    return store.list_core_update_proposals(contact_id)
 
 
-@app.put("/api/life-states/{state_date}")
-def save_life_state(state_date: date, request: LifeStateRequest) -> dict[str, Any]:
-    if request.state_date != state_date:
-        raise HTTPException(400, "路径日期与内容日期不一致")
-    payload = request.model_dump(mode="json")
-    payload["today_events"] = [item.strip() for item in request.today_events if item.strip()]
-    payload["yesterday_events"] = [item.strip() for item in request.yesterday_events if item.strip()]
-    payload["extras"] = {key.strip(): value.strip() for key, value in request.extras.items() if key.strip()}
-    return store.save_life_state(payload)
-
-
-@app.delete("/api/life-states/{state_date}", status_code=204)
-def delete_life_state(state_date: date) -> None:
-    store.delete_life_state(state_date.isoformat())
+@app.post("/api/persona-proposals/{proposal_id}/resolve")
+def resolve_persona_proposal(proposal_id: int, request: ProposalDecisionRequest) -> dict[str, Any]:
+    try:
+        return store.resolve_core_update_proposal(proposal_id, request.approved)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @app.get("/api/memories/{contact_id}")
@@ -308,6 +334,11 @@ def confirm_emotion(emotion_id: int) -> None:
 @app.get("/api/relationship/{contact_id}")
 def get_relationship(contact_id: int) -> dict[str, Any]:
     return store.get_relationship(contact_id)
+
+
+@app.get("/api/relationship/{contact_id}/events")
+def relationship_events(contact_id: int, limit: int = 100) -> list[dict[str, Any]]:
+    return store.list_relationship_events(contact_id, min(max(limit, 1), 500))
 
 
 @app.put("/api/relationship/{contact_id}")
@@ -386,6 +417,7 @@ def import_chat(request: ImportRequest) -> dict[str, int]:
 
 @app.get("/api/export")
 def export_data() -> JSONResponse:
+    store.export_yaml_files()
     return JSONResponse(
         store.export_all(),
         headers={"Content-Disposition": "attachment; filename=persona-chat-export.json"},
@@ -399,6 +431,35 @@ def models() -> dict[str, Any]:
     if active not in providers:
         active = "default"
     return {"active": active, "providers": [provider.public_dict() for provider in providers.values()]}
+
+
+@app.get("/api/debug/generations")
+def debug_generations(contact_id: int, limit: int = 20) -> list[dict[str, Any]]:
+    items = store.list_generations(contact_id, min(max(limit, 1), 100))
+    return [{
+        "id": item["id"],
+        "created_at": item["created_at"],
+        "strategy": item.get("strategy", ""),
+        "selected_candidate_index": item.get("selected_candidate_index"),
+        "candidate_count": len(item.get("candidates", [])),
+        "warning_count": len(item.get("analysis", {}).get("warnings", [])),
+        "trace_count": len(item.get("analysis", {}).get("debug_trace", [])),
+    } for item in items]
+
+
+@app.get("/api/debug/generations/{generation_id}")
+def debug_generation_detail(generation_id: int) -> dict[str, Any]:
+    for contact in store.list_contacts():
+        for item in store.list_generations(int(contact["id"]), 100):
+            if int(item["id"]) == generation_id:
+                analysis = item.get("analysis", {})
+                return {
+                    "debug": {"enabled": DEBUG, "detail_enabled": DEBUG},
+                    "generation": item,
+                    "debug_trace": analysis.get("debug_trace", []),
+                    "warnings": analysis.get("warnings", []),
+                }
+    raise HTTPException(404, "调试记录不存在")
 
 
 @app.put("/api/models")

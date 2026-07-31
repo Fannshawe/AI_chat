@@ -18,6 +18,7 @@ DATABASE_PATH = DATA_DIR / "chat.db"
 UPLOAD_DIR = DATA_DIR / "uploads"
 PROMPT_DIR = BASE_DIR / "prompt"
 GUIDANCE_DIR = BASE_DIR / "guidance_docs"
+PERSONA_PATH = Path(os.getenv("PERSONA_PATH", DATA_DIR / "persona.yaml")).resolve()
 STATIC_DIR = BASE_DIR / "static"
 MAX_IMAGE_BYTES = int(os.getenv("MAX_IMAGE_BYTES", str(5 * 1024 * 1024)))
 SHORT_TERM_MESSAGE_LIMIT = int(os.getenv("SHORT_TERM_MESSAGE_LIMIT", "100"))

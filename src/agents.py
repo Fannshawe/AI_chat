@@ -19,10 +19,13 @@ from .llm_service import get_model
 from .prompt_loader import load_prompt
 
 
-EmotionName = Literal["开心", "委屈", "吃醋", "疲惫", "期待", "紧张", "害羞", "平静", "其他"]
-RelationshipLevel = Literal["陌生人", "认识", "朋友", "暧昧", "恋人", "长期伴侣"]
-MemoryCategory = Literal["人物事实与偏好", "共同经历与纪念日", "情绪事件与冲突", "承诺和待办事项", "敏感信息"]
-DialogueMode = Literal["分享自己", "开玩笑/调侃", "回忆共同经历", "简短回应", "提问", "转移或发起话题", "暂不回复"]
+EmotionName = Literal["开心", "委屈", "吃醋", "疲惫", "期待", "紧张", "害羞", "平静", "其他", "unknown"]
+MoodName = Literal["放松", "开心", "孤单", "疲惫", "专注"]
+ShortEmotionDimension = Literal["喜悦", "惊喜", "害羞", "生气", "紧张", "好奇", "喜爱", "失落"]
+RelationshipLevel = Literal["陌生人", "熟人", "朋友", "亲密朋友", "暧昧", "恋人"]
+RelationshipDimension = Literal["trust", "familiarity", "intimacy", "attraction", "attachment", "comfort"]
+MemoryCategory = Literal["episodic", "semantic", "emotional", "shared_experience"]
+ConversationEventType = Literal["好消息", "道歉", "失联", "冲突", "示好", "求安慰", "日常分享", "其他"]
 
 
 class EmotionItem(BaseModel):
@@ -36,45 +39,89 @@ class EmotionItem(BaseModel):
 
 
 class EmotionAnalysis(BaseModel):
-    """Continuous emotional analysis for both participants."""
+    """User-only emotion detection with legacy fields preserved."""
 
     emotions: list[EmotionItem] = Field(default_factory=list, max_length=4)
 
 
-class RelationshipAnalysis(BaseModel):
-    """A relationship-stage suggestion that still requires human approval."""
+class ConversationEvent(BaseModel):
+    """A compact turn-level event extracted before AI emotion update."""
 
-    suggested_level: RelationshipLevel
-    confidence: float = Field(ge=0, le=1)
+    event: ConversationEventType
+    impact: float = Field(ge=0, le=1, description="事件影响强度，0 到 1")
+    reason: str = Field(description="事件判断依据")
+
+
+class AIDimensionState(BaseModel):
+    """One short-lived AI emotion dimension score."""
+
+    name: ShortEmotionDimension
+    value: int = Field(ge=0, le=100, description="短期情绪数值，0 到 100")
+
+
+class AIEmotionState(BaseModel):
+    """Persistent AI affective state used by later dialogue planning."""
+
+    mood: MoodName
+    energy: int = Field(ge=0, le=100)
+    dimensions: list[AIDimensionState] = Field(default_factory=list, max_length=8)
+    reason: str = Field(description="本轮更新的简短依据")
+
+
+class AIEmotionUpdateAnalysis(BaseModel):
+    """AI emotion update output combining event extraction and persistent state."""
+
+    events: list[ConversationEvent] = Field(default_factory=list, max_length=4)
+    ai_emotion: AIEmotionState
+
+
+class RelationshipChange(BaseModel):
+    """One evidence-based score adjustment proposed by the relationship model."""
+
+    dimension: RelationshipDimension
+    delta: int = Field(ge=-10, le=10)
     reason: str
 
 
-class PersonaAnalysis(BaseModel):
-    """Persona constraints consumed by the final response agent."""
+class RelationshipAnalysis(BaseModel):
+    """Relationship score events, stage judgment, and turn-level behavior boundaries."""
 
-    style_instruction: str
-    counterpart_observations: list[str] = Field(default_factory=list, max_length=8)
-    conflicts: list[str] = Field(default_factory=list, max_length=5)
-
-
-class GuidanceAnalysis(BaseModel):
-    """An actionable internal response strategy."""
-
-    strategy: str
-    tone: str
-    avoid: list[str] = Field(default_factory=list, max_length=8)
-    document_basis: list[str] = Field(default_factory=list, max_length=5)
+    changes: list[RelationshipChange] = Field(default_factory=list, max_length=6)
+    suggested_level: RelationshipLevel
+    stage_reason: str
+    serious_event: bool = False
+    behavior_boundaries: list[str] = Field(default_factory=list, max_length=8)
 
 
-class DialoguePolicyAnalysis(BaseModel):
-    """Turn-level behavior plan that prevents interview-like replies."""
+class MemoryPlanItem(BaseModel):
+    """One expanded retrieval intent produced before local memory search."""
 
-    primary_mode: DialogueMode
-    candidate_modes: list[DialogueMode] = Field(min_length=3, max_length=3)
-    question_probability: float = Field(ge=0, le=1)
-    question_budget: int = Field(ge=0, le=1)
-    should_resist: bool = False
-    rationale: str
+    memory_type: MemoryCategory
+    query: str
+    keywords: list[str] = Field(default_factory=list, max_length=10)
+    priority: int = Field(ge=1, le=5)
+    top_k: int = Field(ge=1, le=20)
+    time_range: str = "all"
+    reason: str
+
+
+class MemoryPlan(BaseModel):
+    """Topic-aware and associative memory retrieval plan."""
+
+    requests: list[MemoryPlanItem] = Field(default_factory=list, max_length=8)
+
+
+class DialogueComposerAnalysis(BaseModel):
+    """A response plan; this node never writes the final reply."""
+
+    goal: str
+    strategy: list[str] = Field(default_factory=list, max_length=8)
+    structure: list[str] = Field(default_factory=list, max_length=8)
+    memory_usage: list[str] = Field(default_factory=list, max_length=8)
+    persona_expression: list[str] = Field(default_factory=list, max_length=8)
+    emotion_expression: list[str] = Field(default_factory=list, max_length=8)
+    topic_plan: list[str] = Field(default_factory=list, max_length=8)
+    constraints: list[str] = Field(default_factory=list, max_length=12)
 
 
 class CandidateCritique(BaseModel):
@@ -90,7 +137,7 @@ class CandidateCritique(BaseModel):
 
 
 class ReplyCriticAnalysis(BaseModel):
-    """Post-generation review used to trigger at most one rewrite."""
+    """Post-generation review used to trigger bounded rewrites."""
 
     candidates: list[CandidateCritique] = Field(min_length=3, max_length=3)
     passed: bool
@@ -111,10 +158,28 @@ class MemoryItem(BaseModel):
     sensitive: bool = False
 
 
-class MemoryAnalysis(BaseModel):
-    """Long-term memories worth persisting."""
+class HabitUpdate(BaseModel):
+    """One automatically applicable persona habit update."""
+
+    key: str
+    value: str
+    reason: str
+
+
+class CoreUpdateProposal(BaseModel):
+    """A core identity change that requires explicit human confirmation."""
+
+    key: str
+    value: str
+    reason: str
+
+
+class ReflectionAnalysis(BaseModel):
+    """Post-response decisions about durable memory and persona updates."""
 
     memories: list[MemoryItem] = Field(default_factory=list, max_length=8)
+    habit_updates: list[HabitUpdate] = Field(default_factory=list, max_length=6)
+    core_update_proposals: list[CoreUpdateProposal] = Field(default_factory=list, max_length=4)
 
 
 class ProactiveDraft(BaseModel):
@@ -126,13 +191,13 @@ class ProactiveDraft(BaseModel):
 
 AGENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "emotion": EmotionAnalysis,
+    "ai_emotion": AIEmotionUpdateAnalysis,
     "relationship": RelationshipAnalysis,
-    "persona": PersonaAnalysis,
-    "guidance": GuidanceAnalysis,
-    "dialogue_policy": DialoguePolicyAnalysis,
-    "response": ResponseCandidates,
+    "memory_planner": MemoryPlan,
+    "dialogue_composer": DialogueComposerAnalysis,
+    "prompt_composer": ResponseCandidates,
     "critic": ReplyCriticAnalysis,
-    "memory": MemoryAnalysis,
+    "reflection": ReflectionAnalysis,
     "proactive": ProactiveDraft,
 }
 

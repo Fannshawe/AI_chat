@@ -1,5 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
-const state = { contactId: null, images: [], generationId: null };
+const state = { contactId: null, images: [], generationId: null, debugEnabled: true };
 
 async function api(url, options = {}) {
   const response = await fetch(url, { headers: { "Content-Type": "application/json", ...(options.headers || {}) }, ...options });
@@ -17,6 +17,32 @@ function toast(message) {
   element.classList.add("show");
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => element.classList.remove("show"), 3600);
+}
+
+function updateLatestDebugLink() {
+  const link = $("#latestDebugLink");
+  if (!state.generationId) {
+    link.classList.add("hidden");
+    link.href = "/debug";
+    return;
+  }
+  link.href = `/debug?generation_id=${state.generationId}`;
+  link.classList.remove("hidden");
+}
+
+async function loadDebugSettings() {
+  const settings = await api("/api/debug/settings");
+  state.debugEnabled = Boolean(settings.enabled);
+  $("#debugEnabledToggle").checked = state.debugEnabled;
+}
+
+async function updateDebugSettings(enabled) {
+  const settings = await api("/api/debug/settings", {
+    method: "PUT",
+    body: JSON.stringify({ enabled }),
+  });
+  state.debugEnabled = Boolean(settings.enabled);
+  $("#debugEnabledToggle").checked = state.debugEnabled;
 }
 
 function formatTime(value) {
@@ -60,7 +86,8 @@ function renderMessages(messages) {
 }
 
 function finalCritiques(critic) {
-  const review = critic?.final_review || critic?.first_review;
+  const reviews = critic?.reviews || [];
+  const review = reviews[reviews.length - 1];
   return review?.candidates || [];
 }
 
@@ -160,7 +187,8 @@ async function generate() {
     if (empty) empty.remove();
     $("#messages").appendChild(messageElement(result.message));
     state.generationId = result.generation_id;
-    renderCandidates(result.candidates, result.strategy, result.candidate_modes, result.critic);
+    updateLatestDebugLink();
+    renderCandidates(result.candidates, result.strategy, result.dialogue_plan?.strategy || [], result.critic);
     $("#relationshipBadge").textContent = `关系：${result.relationship.current_level}`;
     input.value = "";
     input.style.height = "auto";
@@ -178,6 +206,7 @@ async function generate() {
 async function load() {
   try {
     const data = await api("/api/bootstrap");
+    await loadDebugSettings();
     state.contactId = data.active_contact.id;
     $("#contactName").textContent = data.active_contact.name;
     $("#chatTitle").textContent = data.active_contact.name;
@@ -185,6 +214,19 @@ async function load() {
     renderMessages(data.messages);
   } catch (error) { toast(error.message); }
 }
+
+$("#debugEnabledToggle").addEventListener("change", async (event) => {
+  event.currentTarget.disabled = true;
+  try {
+    await updateDebugSettings(event.currentTarget.checked);
+    toast(state.debugEnabled ? "已开启详细 Debug 记录" : "已关闭详细 Debug 记录");
+  } catch (error) {
+    event.currentTarget.checked = state.debugEnabled;
+    toast(error.message);
+  } finally {
+    event.currentTarget.disabled = false;
+  }
+});
 
 $("#generateButton").onclick = generate;
 $("#messageInput").addEventListener("keydown", (event) => {
