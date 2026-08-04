@@ -65,7 +65,7 @@ class GraphPipelineTests(unittest.TestCase):
             }]},
             "relationship": {
                 "changes": [{"dimension": "familiarity", "delta": 2, "reason": "自然分享近况"}],
-                "suggested_level": "熟人",
+                "suggested_level": "认识",
                 "stage_reason": "保持当前阶段",
                 "serious_event": False,
                 "behavior_boundaries": ["保持自然称呼"],

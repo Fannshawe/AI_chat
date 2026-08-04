@@ -19,13 +19,26 @@ from .llm_service import get_model
 from .prompt_loader import load_prompt
 
 
-EmotionName = Literal["开心", "委屈", "吃醋", "疲惫", "期待", "紧张", "害羞", "平静", "其他", "unknown"]
-MoodName = Literal["放松", "开心", "孤单", "疲惫", "专注"]
-ShortEmotionDimension = Literal["喜悦", "惊喜", "害羞", "生气", "紧张", "好奇", "喜爱", "失落"]
-RelationshipLevel = Literal["陌生人", "熟人", "朋友", "亲密朋友", "暧昧", "恋人"]
+EmotionName = Literal[
+    "开心", "兴奋", "满足", "感动", "安心", "平静", "放松", "期待", "好奇",
+    "紧张", "焦虑", "害羞", "尴尬", "困惑", "犹豫", "疲惫", "无聊", "失望",
+    "难过", "委屈", "吃醋", "生气", "沮丧", "内疚", "想念", "其他", "unknown",
+]
+MoodName = Literal[
+    "放松", "开心", "兴奋", "平静", "专注", "好奇", "孤单", "疲惫", "焦虑", "低落",
+]
+ShortEmotionDimension = Literal[
+    "喜悦", "惊喜", "安心", "好奇", "期待", "害羞", "紧张", "焦虑", "生气",
+    "失落", "思念", "依恋",
+]
+RelationshipLevel = Literal["陌生人", "认识", "朋友", "亲密朋友", "暧昧", "恋人"]
 RelationshipDimension = Literal["trust", "familiarity", "intimacy", "attraction", "attachment", "comfort"]
 MemoryCategory = Literal["episodic", "semantic", "emotional", "shared_experience"]
-ConversationEventType = Literal["好消息", "道歉", "失联", "冲突", "示好", "求安慰", "日常分享", "其他"]
+ConversationEventType = Literal[
+    "好消息", "坏消息", "道歉", "感谢", "夸奖", "失联", "冷淡", "冲突", "和解",
+    "示好", "试探", "边界确认", "表达想念", "邀约", "拒绝", "求安慰", "求建议",
+    "日常分享", "工作压力", "学业压力", "家庭压力", "健康困扰", "节日问候", "其他",
+]
 
 
 class EmotionItem(BaseModel):
@@ -232,7 +245,7 @@ def get_agent(agent_name: str, provider_name: str = "default"):
     if schema is None:
         raise KeyError(f"未知 Agent: {agent_name}")
     return create_agent(
-        model=get_model(provider_name),
+        model=get_model(provider_name, agent_name=agent_name),
         tools=[],
         system_prompt=load_prompt(agent_name),
         response_format=_structured_output(schema),

@@ -42,6 +42,31 @@ class ModelProvider:
         }
 
 
+AGENT_MODEL_NAMES: tuple[str, ...] = (
+    "emotion",
+    "ai_emotion",
+    "relationship",
+    "memory_planner",
+    "dialogue_composer",
+    "prompt_composer",
+    "critic",
+    "reflection",
+    "proactive",
+)
+
+
+def _read_env(name: str) -> str | None:
+    value = os.getenv(name)
+    if value is None:
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
+def _agent_env_prefix(agent_name: str) -> str:
+    return f"AGENT_{agent_name.upper()}"
+
+
 def _extra_providers() -> dict[str, ModelProvider]:
     """Load optional providers without persisting secrets in SQLite.
 
@@ -73,14 +98,54 @@ def _extra_providers() -> dict[str, ModelProvider]:
     return providers
 
 
+def _default_provider_from_agent_env() -> ModelProvider:
+    """Build the admin-visible default provider from per-agent settings."""
+    return ModelProvider(
+        name="default",
+        model=_read_env("AGENT_PROMPT_COMPOSER_MODEL") or "not-configured",
+        base_url=_read_env("AGENT_PROMPT_COMPOSER_BASE_URL"),
+        api_key=_read_env("AGENT_PROMPT_COMPOSER_API_KEY"),
+    )
+
+
 def get_model_providers() -> dict[str, ModelProvider]:
-    providers = {
-        "default": ModelProvider(
-            name="default",
-            model=os.getenv("QWEN_MODEL", "Qwen3.5-27B-FP16"),
-            base_url=os.getenv("MODEL_BASE_URL"),
-            api_key=os.getenv("MODEL_BASE_URL_API_KEY"),
-        )
-    }
+    providers = {"default": _default_provider_from_agent_env()}
     providers.update(_extra_providers())
     return providers
+
+
+def get_agent_model_provider(agent_name: str, provider_name: str = "default") -> ModelProvider:
+    """Resolve one agent's dedicated model config from .env.
+
+    Required env vars per agent:
+    - AGENT_<NAME>_MODEL
+    - AGENT_<NAME>_BASE_URL
+    - AGENT_<NAME>_API_KEY
+    """
+    normalized = agent_name.strip()
+    if normalized not in AGENT_MODEL_NAMES:
+        raise KeyError(f"未知 Agent: {agent_name}")
+
+    prefix = _agent_env_prefix(normalized)
+    model = _read_env(f"{prefix}_MODEL")
+    base_url = _read_env(f"{prefix}_BASE_URL")
+    api_key = _read_env(f"{prefix}_API_KEY")
+
+    missing = [
+        key
+        for key, value in (
+            (f"{prefix}_MODEL", model),
+            (f"{prefix}_BASE_URL", base_url),
+            (f"{prefix}_API_KEY", api_key),
+        )
+        if value is None
+    ]
+    if missing:
+        raise RuntimeError(f"{normalized} 的独立模型配置缺失: {', '.join(missing)}")
+
+    return ModelProvider(
+        name=f"{provider_name}:{normalized}",
+        model=model,
+        base_url=base_url,
+        api_key=api_key,
+    )

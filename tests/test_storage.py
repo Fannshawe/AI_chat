@@ -55,7 +55,7 @@ class ChatStoreTests(unittest.TestCase):
 
     def test_relationship_requires_manual_confirmation(self):
         suggested = self.store.suggest_relationship(self.contact_id, "朋友", "互动稳定")
-        self.assertEqual(suggested["current_level"], "熟人")
+        self.assertEqual(suggested["current_level"], "认识")
         self.assertEqual(suggested["suggested_level"], "朋友")
         confirmed = self.store.set_relationship(self.contact_id, "朋友")
         self.assertEqual(confirmed["current_level"], "朋友")
@@ -76,18 +76,18 @@ class ChatStoreTests(unittest.TestCase):
 
         unchanged = self.store.apply_relationship_analysis(self.contact_id, {
             "changes": [],
-            "suggested_level": "熟人",
+            "suggested_level": "认识",
             "stage_reason": "普通分歧不足以降级",
             "serious_event": False,
         })
         self.assertEqual(unchanged["current_level"], "朋友")
         downgraded = self.store.apply_relationship_analysis(self.contact_id, {
             "changes": [{"dimension": "trust", "delta": -8, "reason": "严重欺骗"}],
-            "suggested_level": "熟人",
+            "suggested_level": "认识",
             "stage_reason": "发生严重信任破坏",
             "serious_event": True,
         })
-        self.assertEqual(downgraded["current_level"], "熟人")
+        self.assertEqual(downgraded["current_level"], "认识")
 
     def test_memory_plan_filters_categories(self):
         self.store.add_memory(self.contact_id, "semantic", "对方喜欢人工智能")

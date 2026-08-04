@@ -15,7 +15,7 @@
 - Persona YAML 模板：Core 与 Personality 人工维护，Habit 可由 Reflection 自动更新
 - 四类长期记忆：episodic、semantic、emotional、shared_experience
 - 六维关系状态：trust、familiarity、intimacy、attraction、attachment、comfort
-- 六阶段关系状态机：陌生人、熟人、朋友、亲密朋友、暧昧、恋人；严重事件才允许降级
+- 六阶段关系状态机：陌生人、认识、朋友、亲密朋友、暧昧、恋人；严重事件才允许降级
 - User Emotion 与 AI Emotion 分离：用户情绪保留旧字段输出，AI Emotion 作为持久内部状态单独更新
 - AI Emotion 持久化：Mood、Energy 与多维短期 Emotion 按轮保存，并记录 Conversation Event
 - Markdown 指导文档本地关键词检索
@@ -32,9 +32,15 @@
 ## 启动
 
 1. 保持现有 `.env` 中以下变量可用：
-   - `MODEL_BASE_URL`
-   - `MODEL_BASE_URL_API_KEY`
-   - `QWEN_MODEL`
+   - `AGENT_EMOTION_BASE_URL` / `AGENT_EMOTION_API_KEY` / `AGENT_EMOTION_MODEL`
+   - `AGENT_AI_EMOTION_BASE_URL` / `AGENT_AI_EMOTION_API_KEY` / `AGENT_AI_EMOTION_MODEL`
+   - `AGENT_RELATIONSHIP_BASE_URL` / `AGENT_RELATIONSHIP_API_KEY` / `AGENT_RELATIONSHIP_MODEL`
+   - `AGENT_MEMORY_PLANNER_BASE_URL` / `AGENT_MEMORY_PLANNER_API_KEY` / `AGENT_MEMORY_PLANNER_MODEL`
+   - `AGENT_DIALOGUE_COMPOSER_BASE_URL` / `AGENT_DIALOGUE_COMPOSER_API_KEY` / `AGENT_DIALOGUE_COMPOSER_MODEL`
+   - `AGENT_PROMPT_COMPOSER_BASE_URL` / `AGENT_PROMPT_COMPOSER_API_KEY` / `AGENT_PROMPT_COMPOSER_MODEL`
+   - `AGENT_CRITIC_BASE_URL` / `AGENT_CRITIC_API_KEY` / `AGENT_CRITIC_MODEL`
+   - `AGENT_REFLECTION_BASE_URL` / `AGENT_REFLECTION_API_KEY` / `AGENT_REFLECTION_MODEL`
+   - `AGENT_PROACTIVE_BASE_URL` / `AGENT_PROACTIVE_API_KEY` / `AGENT_PROACTIVE_MODEL`
 2. 安装依赖：`pip install -r requirements.txt`
 3. 启动：`python app.py`
 4. 浏览器打开 `http://127.0.0.1:8000`
@@ -61,7 +67,7 @@ Reflection 只保存有长期价值且有明确证据的内容。Habit 会自动
 
 ## 模型供应商
 
-现有 `.env` 配置自动成为 `default` 供应商。可选的多供应商配置使用 `MODEL_PROVIDERS_JSON`，密钥仍从独立环境变量读取：
+`default` 供应商由 `AGENT_PROMPT_COMPOSER_*` 自动映射。可选的多供应商配置使用 `MODEL_PROVIDERS_JSON`，密钥仍从独立环境变量读取：
 
 ```json
 {"deepseek":{"model":"deepseek-chat","base_url":"https://api.example.com/v1","api_key_env":"DEEPSEEK_API_KEY"}}

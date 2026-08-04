@@ -10,7 +10,7 @@ from typing import Any
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
-from .config import ModelProvider, get_model_providers
+from .config import ModelProvider, get_agent_model_provider, get_model_providers
 
 
 @lru_cache(maxsize=16)
@@ -20,7 +20,11 @@ def _build_model(name: str, model: str, base_url: str | None, api_key: str | Non
     return ChatOpenAI(model=model, api_key=api_key, base_url=base_url, temperature=0.7)
 
 
-def get_model(provider_name: str = "default") -> ChatOpenAI:
+def get_model(provider_name: str = "default", agent_name: str | None = None) -> ChatOpenAI:
+    if agent_name:
+        provider = get_agent_model_provider(agent_name, provider_name)
+        return _build_model(provider.name, provider.model, provider.base_url, provider.api_key)
+
     providers = get_model_providers()
     provider: ModelProvider = providers.get(provider_name) or providers["default"]
     return _build_model(provider.name, provider.model, provider.base_url, provider.api_key)

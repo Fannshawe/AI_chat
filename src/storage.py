@@ -26,7 +26,7 @@ import yaml
 from .config import DATABASE_PATH, PERSONA_PATH, UPLOAD_DIR
 
 
-RELATIONSHIP_LEVELS = ["陌生人", "熟人", "朋友", "亲密朋友", "暧昧", "恋人"]
+RELATIONSHIP_LEVELS = ["陌生人", "认识", "朋友", "亲密朋友", "暧昧", "恋人"]
 RELATIONSHIP_DIMENSIONS = ("trust", "familiarity", "intimacy", "attraction", "attachment", "comfort")
 MEMORY_CATEGORIES = ["episodic", "semantic", "emotional", "shared_experience"]
 USER_MEMORY_CATEGORIES = ["episodic", "semantic", "emotional"]
@@ -291,8 +291,10 @@ class ChatStore:
                     connection.execute(
                         f"ALTER TABLE relationships ADD COLUMN {column} INTEGER NOT NULL DEFAULT {default}"
                     )
-            connection.execute("UPDATE relationships SET current_level='熟人' WHERE current_level='认识'")
+            connection.execute("UPDATE relationships SET current_level='认识' WHERE current_level='熟人'")
+            connection.execute("UPDATE relationships SET suggested_level='认识' WHERE suggested_level='熟人'")
             connection.execute("UPDATE relationships SET current_level='恋人' WHERE current_level='长期伴侣'")
+            connection.execute("UPDATE relationships SET suggested_level='恋人' WHERE suggested_level='长期伴侣'")
             for old_category, new_category in LEGACY_MEMORY_CATEGORY_MAP.items():
                 connection.execute(
                     "UPDATE memories SET category=? WHERE category=?", (new_category, old_category)
@@ -308,7 +310,7 @@ class ChatStore:
                 contact_id = int(cursor.lastrowid)
                 connection.execute(
                     "INSERT INTO relationships(contact_id, current_level, updated_at) VALUES (?, ?, ?)",
-                    (contact_id, "熟人", now),
+                    (contact_id, "认识", now),
                 )
                 connection.execute(
                     """INSERT INTO ai_emotion_states(contact_id, mood, energy, dimensions, updated_at)
@@ -737,7 +739,7 @@ class ChatStore:
             if row is None:
                 now = utc_now()
                 connection.execute(
-                    "INSERT INTO relationships(contact_id, current_level, updated_at) VALUES (?, '熟人', ?)",
+                    "INSERT INTO relationships(contact_id, current_level, updated_at) VALUES (?, '认识', ?)",
                     (contact_id, now),
                 )
                 row = connection.execute("SELECT * FROM relationships WHERE contact_id=?", (contact_id,)).fetchone()
