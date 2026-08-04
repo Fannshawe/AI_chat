@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import operator
 import os
-from datetime import UTC, datetime
+from datetime import datetime
 from time import perf_counter
 from typing import Annotated, Any, TypedDict
 
@@ -98,7 +98,7 @@ def _state_delta(before: dict[str, Any], output: dict[str, Any]) -> dict[str, An
 
 def _trace_node(name: str, node_fn):
     def wrapped(state: WorkflowState) -> dict[str, Any]:
-        started_at = datetime.now(UTC)
+        started_at = datetime.now().astimezone()
         start_counter = perf_counter()
         include_details = _state_debug_enabled(state)
         before = _state_snapshot(state) if include_details else None
@@ -106,7 +106,7 @@ def _trace_node(name: str, node_fn):
         try:
             result = node_fn(state)
         except Exception as exc:
-            finished_at = datetime.now(UTC)
+            finished_at = datetime.now().astimezone()
             entry = {
                 "node": name,
                 "started_at": started_at.isoformat(),
@@ -121,7 +121,7 @@ def _trace_node(name: str, node_fn):
             }
             debug_log(f"node={name} error={exc}")
             raise
-        finished_at = datetime.now(UTC)
+        finished_at = datetime.now().astimezone()
         entry = {
             "node": name,
             "started_at": started_at.isoformat(),
@@ -183,41 +183,6 @@ def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, indent=2, default=str)
 
 
-def _history_text(history: list[dict[str, Any]], limit: int = 24) -> str:
-    labels = {"user": "对方", "assistant": "我", "system": "系统"}
-    lines = []
-    for message in history[-limit:]:
-        label = labels.get(str(message.get("role")), str(message.get("role", "未知")))
-        content = str(message.get("content", ""))
-        images = message.get("image_paths") or []
-        suffix = f" [附带{len(images)}张图片]" if images else ""
-        lines.append(f"{label}: {content}{suffix}")
-    return "\n".join(lines)
-
-
-def _parse_iso_time(value: Any) -> datetime | None:
-    try:
-        if not value:
-            return None
-        return datetime.fromisoformat(str(value))
-    except (TypeError, ValueError):
-        return None
-
-
-def _hours_since(value: Any, now: datetime) -> float | None:
-    parsed = _parse_iso_time(value)
-    if parsed is None:
-        return None
-    return round(max(0.0, (now - parsed).total_seconds() / 3600.0), 2)
-
-
-def _days_since(value: Any, now: datetime) -> float | None:
-    parsed = _parse_iso_time(value)
-    if parsed is None:
-        return None
-    return round(max(0.0, (now - parsed).total_seconds() / 86400.0), 2)
-
-
 def _history_with_time(history: list[dict[str, Any]], limit: int = 24) -> list[dict[str, Any]]:
     return [dict(message) for message in history[-limit:]]
 
@@ -228,23 +193,6 @@ def _emotions_with_time(emotions: list[dict[str, Any]], limit: int = 12) -> list
 
 def _events_with_time(events: list[dict[str, Any]], limit: int = 8) -> list[dict[str, Any]]:
     return [dict(event) for event in events[:limit]]
-
-
-def _time_context(state: WorkflowState) -> dict[str, Any]:
-    now = datetime.now(UTC)
-    history = state.get("history", [])
-    recent_emotions = state.get("recent_emotions", [])
-    ai_emotion_state = state.get("ai_emotion_state", {})
-    last_message_time = history[-1].get("created_at") if history else None
-    return {
-        "now": now.isoformat(),
-        "last_message_at": last_message_time,
-        "hours_since_last_message": _hours_since(last_message_time, now),
-        "days_since_ai_emotion_update": _days_since(ai_emotion_state.get("updated_at"), now),
-        "hours_since_latest_user_emotion": _hours_since(
-            recent_emotions[0].get("created_at") if recent_emotions else None, now,
-        ),
-    }
 
 
 def _structured_dict(result: dict[str, Any]) -> dict[str, Any]:
@@ -307,10 +255,8 @@ def node_emotion_detection(state: WorkflowState) -> dict[str, Any]:
     }]}
     result, warnings, llm_debug = _run_structured_agent(state, "emotion", {
         "latest_message": state["user_request"],
-        "recent_conversation": _history_text(state.get("history", [])),
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
         "recent_emotional_state": _emotions_with_time(state.get("recent_emotions", [])),
-        "time_context": _time_context(state),
         "instruction": "只分析对方当前情绪。证据不足时输出 emotion=unknown。保持 emotion/intensity/confidence/reason 字段。",
     }, fallback)
     emotions = [
@@ -337,10 +283,8 @@ def node_ai_emotion_update(state: WorkflowState) -> dict[str, Any]:
             "reason": "沿用上一轮 AI 情绪状态",
         },
     }
-    now = datetime.now(UTC)
     result, warnings, llm_debug = _run_structured_agent(state, "ai_emotion", {
         "latest_message": state["user_request"],
-        "recent_conversation": _history_text(state.get("history", [])),
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
         "user_emotion": state.get("emotion_analysis", {}),
         "previous_ai_emotion": previous,
@@ -348,13 +292,6 @@ def node_ai_emotion_update(state: WorkflowState) -> dict[str, Any]:
         "relationship_judgment": state.get("relationship_analysis", {}),
         "persona_emotion_profile": state.get("emotion_profile", {}),
         "recent_events": _events_with_time(store.list_conversation_events(state["contact_id"], 8)),
-        "time_context": _time_context(state),
-        "time_decay": {
-            "short_emotion_unit": "hour",
-            "mood_unit": "day",
-            "hours_since_last_message": _time_context(state).get("hours_since_last_message"),
-            "days_since_previous_ai_emotion": _time_context(state).get("days_since_ai_emotion_update"),
-        },
     }, fallback)
     return {"ai_emotion_analysis": result, "warnings": warnings, "_debug_llm": llm_debug}
 
@@ -371,9 +308,7 @@ def node_relationship_state(state: WorkflowState) -> dict[str, Any]:
         "allowed_levels": RELATIONSHIP_LEVELS,
         "current_relationship": current,
         "latest_message": state["user_request"],
-        "recent_conversation": _history_text(state.get("history", [])),
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
-        "time_context": _time_context(state),
     }, fallback)
     return {"relationship_analysis": result, "warnings": warnings, "_debug_llm": llm_debug}
 
@@ -410,13 +345,11 @@ def node_memory_planner(state: WorkflowState) -> dict[str, Any]:
     ]}
     result, warnings, llm_debug = _run_structured_agent(state, "memory_planner", {
         "latest_message": state["user_request"],
-        "recent_conversation": _history_text(state.get("history", [])),
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
         "emotion_analysis": state.get("emotion_analysis", {}),
         "ai_emotion": state.get("ai_emotion_analysis", {}).get("ai_emotion", state.get("ai_emotion_state", {})),
         "relationship_analysis": state.get("relationship_analysis", {}),
         "available_memory_types": USER_MEMORY_CATEGORIES,
-        "time_context": _time_context(state),
         "instruction": "扩展话题关键词和近义联想，但不要臆造事实。",
     }, fallback)
     return {"memory_plan": result, "warnings": warnings, "_debug_llm": llm_debug}
@@ -494,7 +427,7 @@ def node_dialogue_composer(state: WorkflowState) -> dict[str, Any]:
     }
     result, warnings, llm_debug = _run_structured_agent(state, "dialogue_composer", {
         "latest_message": state["user_request"],
-        "recent_conversation": _history_text(state.get("history", [])),
+        "recent_conversation_with_time": _history_with_time(state.get("history", [])),
         "persona": {"core": state.get("persona_core", {}), "personality": state.get("persona_personality", {})},
         "relevant_habits": state.get("relevant_habits", {}),
         "emotion": state.get("emotion_analysis", {}),
@@ -515,7 +448,6 @@ def node_dialogue_composer(state: WorkflowState) -> dict[str, Any]:
 def _prompt_composer_payload(state: WorkflowState) -> dict[str, Any]:
     return {
         "latest_message": state["user_request"],
-        "recent_conversation": _history_text(state.get("history", [])),
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
         "persona": {"core": state.get("persona_core", {}), "personality": state.get("persona_personality", {})},
         "relevant_habits": state.get("relevant_habits", {}),
@@ -526,7 +458,6 @@ def _prompt_composer_payload(state: WorkflowState) -> dict[str, Any]:
         "relevant_memories": state.get("memories", []),
         "dialogue_plan": state.get("dialogue_composition", {}),
         "rewrite_instruction": state.get("rewrite_instruction", ""),
-        "time_context": _time_context(state),
         "candidate_count": 3,
     }
 
@@ -579,7 +510,7 @@ def node_reply_critic(state: WorkflowState) -> dict[str, Any]:
     fallback = {"candidates": [], "passed": True, "rewrite_instruction": ""}
     review, warnings, llm_debug = _run_structured_agent(state, "critic", {
         "latest_message": state["user_request"],
-        "recent_conversation": _history_text(state.get("history", [])),
+        "recent_conversation_with_time": _history_with_time(state.get("history", [])),
         "persona": {"core": state.get("persona_core", {}), "personality": state.get("persona_personality", {})},
         "relevant_memories": state.get("memories", []),
         "dialogue_plan": state.get("dialogue_composition", {}),
@@ -619,7 +550,7 @@ def node_reflection(state: WorkflowState) -> dict[str, Any]:
     fallback = {"memories": [], "habit_updates": [], "core_update_proposals": []}
     result, warnings, llm_debug = _run_structured_agent(state, "reflection", {
         "latest_real_message": {"speaker": "对方", "content": state["user_request"]},
-        "recent_conversation": _history_text(state.get("history", [])),
+        "recent_conversation_with_time": _history_with_time(state.get("history", [])),
         "generated_candidates": state.get("candidates", []),
         "existing_relevant_memories": state.get("memories", []),
         "ai_emotion": state.get("ai_emotion_analysis", {}).get("ai_emotion", state.get("ai_emotion_state", {})),
@@ -658,7 +589,6 @@ def node_content_save(state: WorkflowState) -> dict[str, Any]:
             category = "semantic"
         store.add_memory(state["contact_id"], category, str(item["content"]),
                          bool(item.get("sensitive", False)), input_message_id,
-                         occurred_at=item.get("occurred_at"),
                          owner_type=MEMORY_OWNER_CONTACT)
     store.update_persona_habits(reflection.get("habit_updates", []))
     store.add_core_update_proposals(state["contact_id"], reflection.get("core_update_proposals", []))
@@ -720,7 +650,7 @@ def build_graph():
 def generate_proactive_draft(contact_id: int, provider_name: str = "default") -> dict[str, str]:
     store.initialize()
     payload = {
-        "recent_conversation": _history_text(store.list_messages(contact_id, 30)),
+        "recent_conversation_with_time": _history_with_time(store.list_messages(contact_id, 30), 30),
         "relationship": store.get_relationship(contact_id),
         "persona": store.get_persona_profile(),
         "memories": store.list_memories(contact_id, 80, owner_type=MEMORY_OWNER_CONTACT),

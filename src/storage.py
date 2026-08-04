@@ -16,7 +16,7 @@ import json
 import sqlite3
 import threading
 from contextlib import contextmanager
-from datetime import UTC, datetime
+from datetime import datetime
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Iterator
@@ -50,19 +50,8 @@ LEGACY_MEMORY_CATEGORY_MAP = {
 
 
 def utc_now() -> str:
-    """返回统一使用的 UTC ISO-8601 时间戳。"""
-    return datetime.now(UTC).isoformat()
-
-
-def normalize_memory_occurred_at(occurred_at: str | None, fallback: str) -> str:
-    """Normalize explicit memory event time and preserve backward compatibility."""
-    if occurred_at is None:
-        return fallback
-    cleaned = occurred_at.strip()
-    if not cleaned:
-        return fallback
-    datetime.fromisoformat(cleaned)
-    return cleaned
+    """返回统一使用的本地时区 ISO-8601 时间戳。"""
+    return datetime.now().astimezone().isoformat()
 
 
 def _loads(value: str | None, fallback: Any) -> Any:
@@ -167,7 +156,6 @@ class ChatStore:
                     role TEXT NOT NULL,
                     content TEXT NOT NULL DEFAULT '',
                     image_paths TEXT NOT NULL DEFAULT '[]',
-                    source_generation_id INTEGER,
                     created_at TEXT NOT NULL,
                     FOREIGN KEY(contact_id) REFERENCES contacts(id) ON DELETE CASCADE
                 );
@@ -180,7 +168,6 @@ class ChatStore:
                     content TEXT NOT NULL,
                     sensitive INTEGER NOT NULL DEFAULT 0,
                     source_message_id INTEGER,
-                    occurred_at TEXT NOT NULL,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     FOREIGN KEY(contact_id) REFERENCES contacts(id) ON DELETE CASCADE
@@ -296,11 +283,6 @@ class ChatStore:
                 )
             if "owner_id" not in memory_columns:
                 connection.execute("ALTER TABLE memories ADD COLUMN owner_id INTEGER")
-            if "occurred_at" not in memory_columns:
-                connection.execute("ALTER TABLE memories ADD COLUMN occurred_at TEXT")
-                connection.execute(
-                    "UPDATE memories SET occurred_at = COALESCE(created_at, updated_at) WHERE occurred_at IS NULL"
-                )
             connection.execute(
                 "UPDATE memories SET owner_type='contact', owner_id=contact_id WHERE owner_type IS NULL OR owner_type=''"
             )
@@ -341,7 +323,6 @@ class ChatStore:
                     (int(contact["id"]), json.dumps({}, ensure_ascii=False), now),
                 )
             connection.execute("DROP TABLE IF EXISTS personas")
-            connection.execute("DROP TABLE IF EXISTS life_states")
 
     def list_contacts(self) -> list[dict[str, Any]]:
         """按 id 升序返回所有联系人。"""
@@ -371,7 +352,6 @@ class ChatStore:
         role: str,
         content: str,
         image_paths: list[str] | None = None,
-        source_generation_id: int | None = None,
         created_at: str | None = None,
     ) -> dict[str, Any]:
         """插入一条消息并返回可直接给 API 使用的字典。
@@ -381,9 +361,9 @@ class ChatStore:
         """
         with self.connect() as connection:
             cursor = connection.execute(
-                """INSERT INTO messages(contact_id, role, content, image_paths, source_generation_id, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (contact_id, role, content, json.dumps(image_paths or [], ensure_ascii=False), source_generation_id, created_at or utc_now()),
+                     """INSERT INTO messages(contact_id, role, content, image_paths, created_at)
+                         VALUES (?, ?, ?, ?, ?)""",
+                     (contact_id, role, content, json.dumps(image_paths or [], ensure_ascii=False), created_at or utc_now()),
             )
             self._mark_exports(connection, "03_messages.yaml")
             row = connection.execute("SELECT * FROM messages WHERE id = ?", (cursor.lastrowid,)).fetchone()
@@ -403,6 +383,7 @@ class ChatStore:
         """将消息行标准化，并反序列化 JSON 字段。"""
         result = dict(row)
         result["image_paths"] = _loads(result.get("image_paths"), [])
+        result.pop("source_generation_id", None)
         return result
 
     def get_persona_profile(self) -> dict[str, Any]:
@@ -584,8 +565,6 @@ class ChatStore:
                    ORDER BY id DESC LIMIT ?""",
                 (contact_id, owner_type, limit),
             )]
-        for item in items:
-            item["occurred_at"] = item.get("occurred_at") or item.get("created_at")
         return items
 
     def search_memories(
@@ -607,10 +586,10 @@ class ChatStore:
         if time_range != "all":
             try:
                 days = max(1, int(time_range.removesuffix("d")))
-                cutoff = datetime.now(UTC).timestamp() - days * 86400
+                cutoff = datetime.now().astimezone().timestamp() - days * 86400
                 memories = [
                     item for item in memories
-                    if datetime.fromisoformat(str(item.get("occurred_at") or item["created_at"])).timestamp() >= cutoff
+                    if datetime.fromisoformat(str(item["created_at"])).timestamp() >= cutoff
                 ]
             except (TypeError, ValueError):
                 pass
@@ -659,7 +638,6 @@ class ChatStore:
         source_message_id: int | None = None,
         owner_type: str = MEMORY_OWNER_CONTACT,
         owner_id: int | None = None,
-        occurred_at: str | None = None,
     ) -> dict[str, Any]:
         """新增记忆；若同联系人+分类+内容已存在，则直接返回已存在记录。"""
         cleaned = content.strip()
@@ -673,26 +651,21 @@ class ChatStore:
                 (contact_id, owner_type, category, cleaned),
             ).fetchone()
             if existing is not None:
-                result = dict(existing)
-                result["occurred_at"] = result.get("occurred_at") or result.get("created_at")
-                return result
+                return dict(existing)
             now = utc_now()
-            normalized_occurred_at = normalize_memory_occurred_at(occurred_at, now)
             cursor = connection.execute(
                 """INSERT INTO memories(
                        contact_id, owner_type, owner_id, category, content, sensitive,
-                       source_message_id, occurred_at, created_at, updated_at
-                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                       source_message_id, created_at, updated_at
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     contact_id, owner_type, resolved_owner_id, category, cleaned, int(sensitive),
-                    source_message_id, normalized_occurred_at, now, now,
+                    source_message_id, now, now,
                 ),
             )
             self._mark_exports(connection, "04_contact_memories.yaml")
             row = connection.execute("SELECT * FROM memories WHERE id = ?", (cursor.lastrowid,)).fetchone()
-        result = dict(row)
-        result["occurred_at"] = result.get("occurred_at") or result.get("created_at")
-        return result
+        return dict(row)
 
     def update_memory(
         self,
@@ -700,7 +673,6 @@ class ChatStore:
         category: str,
         content: str,
         sensitive: bool,
-        occurred_at: str | None = None,
     ) -> dict[str, Any]:
         """更新一条记忆并返回更新后的记录。
 
@@ -711,20 +683,13 @@ class ChatStore:
             existing = connection.execute("SELECT * FROM memories WHERE id = ?", (memory_id,)).fetchone()
             if existing is None:
                 raise KeyError("记忆不存在")
-            existing_record = dict(existing)
-            normalized_occurred_at = normalize_memory_occurred_at(
-                occurred_at,
-                str(existing_record.get("occurred_at") or existing_record.get("created_at") or utc_now()),
-            )
             connection.execute(
-                "UPDATE memories SET category=?, content=?, sensitive=?, occurred_at=?, updated_at=? WHERE id=?",
-                (category, content.strip(), int(sensitive), normalized_occurred_at, utc_now(), memory_id),
+                "UPDATE memories SET category=?, content=?, sensitive=?, updated_at=? WHERE id=?",
+                (category, content.strip(), int(sensitive), utc_now(), memory_id),
             )
             self._mark_exports(connection, "04_contact_memories.yaml")
             row = connection.execute("SELECT * FROM memories WHERE id = ?", (memory_id,)).fetchone()
-        result = dict(row)
-        result["occurred_at"] = result.get("occurred_at") or result.get("created_at")
-        return result
+        return dict(row)
 
     def delete_memory(self, memory_id: int) -> None:
         """按 id 删除一条记忆（不存在时为无操作）。"""
@@ -1161,6 +1126,7 @@ class ChatStore:
     def _deserialize_message_row(row: dict[str, Any]) -> dict[str, Any]:
         result = dict(row)
         result["image_paths"] = _loads(result.get("image_paths"), [])
+        result.pop("source_generation_id", None)
         return result
 
     @staticmethod

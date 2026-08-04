@@ -252,7 +252,6 @@ def confirm_send(request: ConfirmRequest) -> dict[str, Any]:
         request.contact_id,
         "assistant",
         request.content.strip(),
-        source_generation_id=request.generation_id,
     )
 
 

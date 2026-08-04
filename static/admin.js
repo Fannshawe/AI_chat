@@ -4,15 +4,6 @@ let categories = [];
 let aiCategories = [];
 let levels = [];
 
-function fromDatetimeLocalValue(value) {
-  const cleaned = String(value || "").trim();
-  if (!cleaned) return null;
-  const normalized = cleaned.length === 16 ? `${cleaned}:00` : cleaned;
-  const date = new Date(normalized);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toISOString();
-}
-
 const dimensionLabels = {
   trust: "Trust",
   familiarity: "Familiarity",
@@ -234,7 +225,7 @@ async function loadMemories() {
     const row = document.createElement("div");
     row.className = "list-item";
     const body = document.createElement("div");
-    body.innerHTML = `<h3>${escapeText(item.category)} ${item.sensitive ? '<span class="badge-sensitive">敏感</span>' : ""}</h3><p>${escapeText(item.content)}</p><div class="code-note">事件时间：${escapeText(item.occurred_at || item.created_at || "")}</div><div class="code-note">来源：${escapeText(item.source_label || "contact memory / reflection")}</div>`;
+    body.innerHTML = `<h3>${escapeText(item.category)} ${item.sensitive ? '<span class="badge-sensitive">敏感</span>' : ""}</h3><p>${escapeText(item.content)}</p><div class="code-note">创建时间：${escapeText(item.created_at || "")}</div><div class="code-note">来源：${escapeText(item.source_label || "contact memory / reflection")}</div>`;
     const actions = document.createElement("div");
     actions.className = "list-actions";
     const edit = document.createElement("button");
@@ -243,7 +234,6 @@ async function loadMemories() {
     edit.onclick = async () => {
       const content = prompt("修改记忆", item.content);
       if (content === null || !content.trim()) return;
-      const occurredAt = prompt("事件时间（ISO 8601，可留空）", item.occurred_at || item.created_at || "");
       await api(`/api/memories/${item.id}`, {
         method: "PUT",
         body: JSON.stringify({
@@ -251,7 +241,6 @@ async function loadMemories() {
           category: item.category,
           content,
           sensitive: Boolean(item.sensitive),
-          occurred_at: occurredAt && occurredAt.trim() ? occurredAt.trim() : null,
         }),
       });
       await loadMemories();
@@ -279,13 +268,11 @@ function normalizeAiMemoryItem(item) {
     return {
       content: String(item.content || "").trim(),
       source: String(item.source || "admin").trim() || "admin",
-      occurred_at: String(item.occurred_at || "").trim(),
     };
   }
   return {
     content: String(item || "").trim(),
     source: "admin",
-    occurred_at: "",
   };
 }
 
@@ -302,7 +289,7 @@ function renderAiMemories(profile) {
       const row = document.createElement("div");
       row.className = "list-item";
       const body = document.createElement("div");
-      body.innerHTML = `<h3>${escapeText(category)}</h3><p>${escapeText(item.content)}</p><div class="code-note">事件时间：${escapeText(item.occurred_at || "")}</div><div class="code-note">来源：${escapeText(item.source)}</div>`;
+      body.innerHTML = `<h3>${escapeText(category)}</h3><p>${escapeText(item.content)}</p><div class="code-note">来源：${escapeText(item.source)}</div>`;
       const actions = document.createElement("div");
       actions.className = "list-actions";
       const edit = document.createElement("button");
@@ -312,12 +299,10 @@ function renderAiMemories(profile) {
         const content = prompt("修改 AI memory", item.content);
         if (content === null || !content.trim()) return;
         const source = prompt("来源", item.source) || item.source;
-        const occurredAt = prompt("事件时间（ISO 8601，可留空）", item.occurred_at || "") || item.occurred_at;
         const latest = await api("/api/ai-memory");
         latest[category][index] = {
           content: content.trim(),
           source: source.trim() || "admin",
-          occurred_at: occurredAt.trim(),
         };
         await api("/api/ai-memory", {
           method: "PUT",
@@ -482,7 +467,6 @@ $("#memoryForm").onsubmit = async (event) => {
       category: $("#memoryCategory").value,
       content: $("#memoryContent").value,
       sensitive: $("#memorySensitive").checked,
-      occurred_at: fromDatetimeLocalValue($("#memoryOccurredAt").value),
     }),
   });
   event.target.reset();
@@ -495,10 +479,9 @@ $("#aiMemoryForm").onsubmit = async (event) => {
   const latest = await api("/api/ai-memory");
   const category = $("#aiMemoryCategory").value;
   const content = $("#aiMemoryContent").value.trim();
-  const occurredAt = fromDatetimeLocalValue($("#aiMemoryOccurredAt").value);
   const source = $("#aiMemorySource").value.trim() || "admin";
   latest[category] = Array.isArray(latest[category]) ? latest[category] : [];
-  latest[category].push({ content, source, occurred_at: occurredAt || "" });
+  latest[category].push({ content, source });
   await api("/api/ai-memory", {
     method: "PUT",
     body: JSON.stringify(latest),

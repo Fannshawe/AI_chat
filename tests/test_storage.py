@@ -25,6 +25,8 @@ class ChatStoreTests(unittest.TestCase):
         messages = self.store.list_messages(self.contact_id)
         self.assertEqual(saved["content"], "喜欢猫")
         self.assertEqual(messages[0]["image_paths"], ["/uploads/a.jpg"])
+        self.assertNotIn("source_generation_id", saved)
+        self.assertNotIn("source_generation_id", messages[0])
 
     def test_memory_deduplication_and_search(self):
         first = self.store.add_memory(self.contact_id, "semantic", "对方喜欢猫")
@@ -32,22 +34,22 @@ class ChatStoreTests(unittest.TestCase):
         self.assertEqual(first["id"], second["id"])
         self.assertEqual(self.store.search_memories(self.contact_id, "猫")[0]["content"], "对方喜欢猫")
 
-    def test_memory_occurrence_time_round_trip_and_time_filter(self):
-        recent = self.store.add_memory(
-            self.contact_id,
-            "episodic",
-            "今天一起吃了晚饭",
-            occurred_at="2026-08-01T10:00:00+00:00",
-        )
-        older = self.store.add_memory(
-            self.contact_id,
-            "episodic",
-            "上个月一起逛街",
-            occurred_at="2026-06-01T10:00:00+00:00",
-        )
-        self.assertEqual(recent["occurred_at"], "2026-08-01T10:00:00+00:00")
+    def test_memory_created_at_round_trip_and_time_filter(self):
+        recent = self.store.add_memory(self.contact_id, "episodic", "今天一起吃了晚饭")
+        older = self.store.add_memory(self.contact_id, "episodic", "上个月一起逛街")
+
+        with self.store.connect() as connection:
+            connection.execute(
+                "UPDATE memories SET created_at=? WHERE id=?",
+                ("2026-06-01T10:00:00+00:00", older["id"]),
+            )
+            connection.execute(
+                "UPDATE memories SET created_at=? WHERE id=?",
+                ("2026-08-01T10:00:00+00:00", recent["id"]),
+            )
+
         listed = self.store.list_memories(self.contact_id)
-        self.assertEqual(listed[0]["occurred_at"], "2026-06-01T10:00:00+00:00")
+        self.assertTrue(all("created_at" in item for item in listed))
         filtered = self.store.search_memories(self.contact_id, "一起", time_range="40d")
         self.assertEqual([item["id"] for item in filtered], [recent["id"]])
 
