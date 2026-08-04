@@ -94,7 +94,12 @@ class GraphPipelineTests(unittest.TestCase):
             "prompt_composer": {"candidates": ["好呀", "可以", "听起来不错"]},
             "critic": critique(True),
             "reflection": {
-                "memories": [{"category": "semantic", "content": "用户喜欢手冲咖啡", "sensitive": False}],
+                "memories": [{
+                    "category": "semantic",
+                    "content": "用户喜欢手冲咖啡",
+                    "sensitive": False,
+                    "occurred_at": "2026-08-01T09:30:00+00:00",
+                }],
                 "habit_updates": [], "core_update_proposals": [],
             },
         }
@@ -122,6 +127,7 @@ class GraphPipelineTests(unittest.TestCase):
         self.assertEqual(self.store.get_relationship(self.contact_id)["familiarity"], 12)
         self.assertEqual(self.store.get_ai_emotion_state(self.contact_id)["mood"], "开心")
         self.assertEqual(self.store.list_memories(self.contact_id)[0]["category"], "semantic")
+        self.assertEqual(self.store.list_memories(self.contact_id)[0]["occurred_at"], "2026-08-01T09:30:00+00:00")
         self.assertGreater(result["generation_id"], 0)
 
     def test_critic_allows_two_rewrites_and_returns_best_candidates(self):

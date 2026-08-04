@@ -5,5 +5,4 @@
 这份文件只保留现状提醒：
 
 - 旧的 `persona`、`dialogue_policy`、`response` 节点说明已经过期。
-- `Life State` 与旧版 `personas(self/other)` 兼容层已经从当前工程移除。
 - 当前应以 [src/graph.py](c:/Users/fix1wx/Documents/python/Chat_LangChain/src/graph.py)、[src/agents.py](c:/Users/fix1wx/Documents/python/Chat_LangChain/src/agents.py) 和 [requirement/improvement/7.30 pipline.md](c:/Users/fix1wx/Documents/python/Chat_LangChain/requirement/improvement/7.30%20pipline.md) 为准。

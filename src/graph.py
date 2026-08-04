@@ -15,7 +15,13 @@ from pydantic import BaseModel
 from .agents import get_agent
 from .config import SHORT_TERM_MESSAGE_LIMIT
 from .guidance import guidance_retriever
-from .storage import MEMORY_CATEGORIES, RELATIONSHIP_LEVELS, store
+from .storage import (
+    MEMORY_CATEGORIES,
+    MEMORY_OWNER_CONTACT,
+    RELATIONSHIP_LEVELS,
+    USER_MEMORY_CATEGORIES,
+    store,
+)
 
 
 def _env_to_bool(name: str, default: bool = False) -> bool:
@@ -409,7 +415,7 @@ def node_memory_planner(state: WorkflowState) -> dict[str, Any]:
         "emotion_analysis": state.get("emotion_analysis", {}),
         "ai_emotion": state.get("ai_emotion_analysis", {}).get("ai_emotion", state.get("ai_emotion_state", {})),
         "relationship_analysis": state.get("relationship_analysis", {}),
-        "available_memory_types": MEMORY_CATEGORIES,
+        "available_memory_types": USER_MEMORY_CATEGORIES,
         "time_context": _time_context(state),
         "instruction": "扩展话题关键词和近义联想，但不要臆造事实。",
     }, fallback)
@@ -419,7 +425,50 @@ def node_memory_planner(state: WorkflowState) -> dict[str, Any]:
 def node_memory_retrieval(state: WorkflowState) -> dict[str, Any]:
     """Responsibility: execute Memory Plan against categorized storage. Persistence: none."""
     requests = state.get("memory_plan", {}).get("requests", [])
-    return {"memories": store.search_memories_by_plan(state["contact_id"], requests)}
+    contact_memories = store.search_memories_by_plan(state["contact_id"], requests)
+    ai_profile = store.get_ai_memory_profile()
+    ai_memories: list[dict[str, Any]] = []
+    for category in MEMORY_CATEGORIES:
+        for index, item in enumerate(ai_profile.get(category, []) or []):
+            if isinstance(item, dict):
+                content = str(item.get("content", "")).strip()
+                if not content:
+                    continue
+                ai_memories.append({
+                    "id": f"ai:{category}:{index}",
+                    "category": category,
+                    "content": content,
+                    "source": str(item.get("source", "admin")),
+                    "source_label": f"AI memory / {item.get('source', 'admin')}",
+                    "owner_type": "ai",
+                    "owner_label": "ai",
+                    "retrieval_priority": 6,
+                })
+            else:
+                content = str(item).strip()
+                if not content:
+                    continue
+                ai_memories.append({
+                    "id": f"ai:{category}:{index}",
+                    "category": category,
+                    "content": content,
+                    "source": "admin",
+                    "source_label": "AI memory / admin",
+                    "owner_type": "ai",
+                    "owner_label": "ai",
+                    "retrieval_priority": 6,
+                })
+    labeled_contact = [
+        {
+            **item,
+            "source": "reflection",
+            "source_label": "contact memory / reflection",
+            "owner_type": item.get("owner_type", MEMORY_OWNER_CONTACT),
+            "owner_label": item.get("owner_label", "contact"),
+        }
+        for item in contact_memories
+    ]
+    return {"memories": [*ai_memories, *labeled_contact]}
 
 
 def node_chat_guidance(state: WorkflowState) -> dict[str, Any]:
@@ -575,7 +624,7 @@ def node_reflection(state: WorkflowState) -> dict[str, Any]:
         "existing_relevant_memories": state.get("memories", []),
         "ai_emotion": state.get("ai_emotion_analysis", {}).get("ai_emotion", state.get("ai_emotion_state", {})),
         "current_habits": state.get("persona_habits", {}),
-        "allowed_memory_types": MEMORY_CATEGORIES,
+        "allowed_memory_types": USER_MEMORY_CATEGORIES,
         "rules": {"memory": "只保存值得长期记住且有明确证据的内容", "habits": "可自动更新",
                   "core": "只能生成待人工确认的提案", "personality": "禁止修改"},
     }, fallback)
@@ -605,10 +654,12 @@ def node_content_save(state: WorkflowState) -> dict[str, Any]:
         if not isinstance(item, dict) or not str(item.get("content", "")).strip():
             continue
         category = str(item.get("category", "semantic"))
-        if category not in MEMORY_CATEGORIES:
+        if category not in USER_MEMORY_CATEGORIES:
             category = "semantic"
         store.add_memory(state["contact_id"], category, str(item["content"]),
-                         bool(item.get("sensitive", False)), input_message_id)
+                         bool(item.get("sensitive", False)), input_message_id,
+                         occurred_at=item.get("occurred_at"),
+                         owner_type=MEMORY_OWNER_CONTACT)
     store.update_persona_habits(reflection.get("habit_updates", []))
     store.add_core_update_proposals(state["contact_id"], reflection.get("core_update_proposals", []))
     analysis = {
@@ -672,7 +723,7 @@ def generate_proactive_draft(contact_id: int, provider_name: str = "default") ->
         "recent_conversation": _history_text(store.list_messages(contact_id, 30)),
         "relationship": store.get_relationship(contact_id),
         "persona": store.get_persona_profile(),
-        "memories": store.list_memories(contact_id, 80),
+        "memories": store.list_memories(contact_id, 80, owner_type=MEMORY_OWNER_CONTACT),
     }
     result = get_agent("proactive", provider_name).invoke({
         "messages": [{"role": "user", "content": _json(payload)}]

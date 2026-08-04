@@ -8,7 +8,7 @@ import re
 from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
@@ -18,10 +18,17 @@ from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
 from src.config import GUIDANCE_DIR, MAX_IMAGE_BYTES, STATIC_DIR, UPLOAD_DIR, get_model_providers
+from src.graph import WorkflowState
 from src.graph import DEBUG, build_graph, generate_proactive_draft
 from src.guidance import guidance_retriever
 from src.prompt_loader import clear_prompt_cache
-from src.storage import MEMORY_CATEGORIES, RELATIONSHIP_LEVELS, store
+from src.storage import (
+    MEMORY_CATEGORIES,
+    MEMORY_OWNER_CONTACT,
+    USER_MEMORY_CATEGORIES,
+    RELATIONSHIP_LEVELS,
+    store,
+)
 
 
 class ImageInput(BaseModel):
@@ -43,29 +50,18 @@ class ConfirmRequest(BaseModel):
     candidate_index: int | None = Field(default=None, ge=0, le=2)
 
 
-class PersonaRequest(BaseModel):
-    content: dict[str, Any]
-    examples: list[str] = Field(default_factory=list)
-
-
-class LifeStateRequest(BaseModel):
-    state_date: date
-    mood: str = Field(default="", max_length=120)
-    energy: int = Field(default=50, ge=0, le=100)
-    curiosity: int = Field(default=50, ge=0, le=100)
-    attachment: int = Field(default=20, ge=0, le=100)
-    current_activity: str = Field(default="", max_length=500)
-    current_focus: str = Field(default="", max_length=500)
-    today_events: list[str] = Field(default_factory=list, max_length=20)
-    yesterday_events: list[str] = Field(default_factory=list, max_length=20)
-    extras: dict[str, str] = Field(default_factory=dict)
-
-
 class MemoryRequest(BaseModel):
     contact_id: int
     category: str
     content: str = Field(min_length=1, max_length=2000)
     sensitive: bool = False
+
+
+class AiMemoryProfileRequest(BaseModel):
+    episodic: list[Any] = Field(default_factory=list)
+    semantic: list[Any] = Field(default_factory=list)
+    emotional: list[Any] = Field(default_factory=list)
+    shared_experience: list[Any] = Field(default_factory=list)
 
 
 class RelationshipRequest(BaseModel):
@@ -211,7 +207,7 @@ async def generate(request: GenerateRequest) -> dict[str, Any]:
         "debug_enabled": _debug_settings()["enabled"],
     }
     try:
-        result = await run_in_threadpool(chat_graph.invoke, initial_state)
+        result = cast(WorkflowState, await run_in_threadpool(chat_graph.invoke, initial_state))
     except Exception as exc:
         raise HTTPException(502, f"生成失败，请检查模型配置或服务状态：{exc}") from exc
     store.trim_generations(request.contact_id, _debug_settings()["keep_generations"])
@@ -296,19 +292,40 @@ def resolve_persona_proposal(proposal_id: int, request: ProposalDecisionRequest)
 
 @app.get("/api/memories/{contact_id}")
 def list_memories(contact_id: int) -> dict[str, Any]:
-    return {"categories": MEMORY_CATEGORIES, "items": store.list_memories(contact_id)}
+    return {
+        "contact_categories": USER_MEMORY_CATEGORIES,
+        "ai_categories": MEMORY_CATEGORIES,
+        "contact_items": store.list_memories(contact_id, owner_type=MEMORY_OWNER_CONTACT),
+        "ai_profile": store.get_ai_memory_profile(),
+    }
+
+
+@app.get("/api/ai-memory")
+def get_ai_memory_profile() -> dict[str, Any]:
+    return store.get_ai_memory_profile()
+
+
+@app.put("/api/ai-memory")
+def save_ai_memory_profile(request: AiMemoryProfileRequest) -> dict[str, Any]:
+    return store.save_ai_memory_profile(request.model_dump())
 
 
 @app.post("/api/memories")
 def add_memory(request: MemoryRequest) -> dict[str, Any]:
-    if request.category not in MEMORY_CATEGORIES:
+    if request.category not in USER_MEMORY_CATEGORIES:
         raise HTTPException(400, "未知记忆分类")
-    return store.add_memory(request.contact_id, request.category, request.content, request.sensitive)
+    return store.add_memory(
+        request.contact_id,
+        request.category,
+        request.content,
+        request.sensitive,
+        owner_type=MEMORY_OWNER_CONTACT,
+    )
 
 
 @app.put("/api/memories/{memory_id}")
 def update_memory(memory_id: int, request: MemoryRequest) -> dict[str, Any]:
-    if request.category not in MEMORY_CATEGORIES:
+    if request.category not in USER_MEMORY_CATEGORIES:
         raise HTTPException(400, "未知记忆分类")
     try:
         return store.update_memory(memory_id, request.category, request.content, request.sensitive)

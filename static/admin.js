@@ -1,7 +1,17 @@
 const $ = (selector) => document.querySelector(selector);
 let contactId = null;
 let categories = [];
+let aiCategories = [];
 let levels = [];
+
+function fromDatetimeLocalValue(value) {
+  const cleaned = String(value || "").trim();
+  if (!cleaned) return null;
+  const normalized = cleaned.length === 16 ? `${cleaned}:00` : cleaned;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+}
 
 const dimensionLabels = {
   trust: "Trust",
@@ -212,17 +222,19 @@ async function loadProposals() {
 
 async function loadMemories() {
   const data = await api(`/api/memories/${contactId}`);
-  categories = data.categories;
+  categories = data.contact_categories;
+  aiCategories = data.ai_categories;
   $("#memoryCategory").innerHTML = categories
     .map((category) => `<option>${escapeText(category)}</option>`)
     .join("");
+  renderAiMemories(data.ai_profile || {});
   const list = $("#memoryList");
   list.innerHTML = "";
-  data.items.forEach((item) => {
+  data.contact_items.forEach((item) => {
     const row = document.createElement("div");
     row.className = "list-item";
     const body = document.createElement("div");
-    body.innerHTML = `<h3>${escapeText(item.category)} ${item.sensitive ? '<span class="badge-sensitive">敏感</span>' : ""}</h3><p>${escapeText(item.content)}</p>`;
+    body.innerHTML = `<h3>${escapeText(item.category)} ${item.sensitive ? '<span class="badge-sensitive">敏感</span>' : ""}</h3><p>${escapeText(item.content)}</p><div class="code-note">事件时间：${escapeText(item.occurred_at || item.created_at || "")}</div><div class="code-note">来源：${escapeText(item.source_label || "contact memory / reflection")}</div>`;
     const actions = document.createElement("div");
     actions.className = "list-actions";
     const edit = document.createElement("button");
@@ -231,6 +243,7 @@ async function loadMemories() {
     edit.onclick = async () => {
       const content = prompt("修改记忆", item.content);
       if (content === null || !content.trim()) return;
+      const occurredAt = prompt("事件时间（ISO 8601，可留空）", item.occurred_at || item.created_at || "");
       await api(`/api/memories/${item.id}`, {
         method: "PUT",
         body: JSON.stringify({
@@ -238,6 +251,7 @@ async function loadMemories() {
           category: item.category,
           content,
           sensitive: Boolean(item.sensitive),
+          occurred_at: occurredAt && occurredAt.trim() ? occurredAt.trim() : null,
         }),
       });
       await loadMemories();
@@ -255,8 +269,82 @@ async function loadMemories() {
     row.append(body, actions);
     list.appendChild(row);
   });
-  if (!data.items.length) {
-    list.innerHTML = '<div class="code-note">暂无长期记忆。聊天后系统会自动提取，也可手工添加。</div>';
+  if (!data.contact_items.length) {
+    list.innerHTML = '<div class="code-note">暂无 Contact memory。聊天后系统会自动提取，也可手工添加。</div>';
+  }
+}
+
+function normalizeAiMemoryItem(item) {
+  if (item && typeof item === "object") {
+    return {
+      content: String(item.content || "").trim(),
+      source: String(item.source || "admin").trim() || "admin",
+      occurred_at: String(item.occurred_at || "").trim(),
+    };
+  }
+  return {
+    content: String(item || "").trim(),
+    source: "admin",
+    occurred_at: "",
+  };
+}
+
+function renderAiMemories(profile) {
+  const list = $("#aiMemoryList");
+  list.innerHTML = "";
+  let count = 0;
+  aiCategories.forEach((category) => {
+    const items = Array.isArray(profile[category]) ? profile[category] : [];
+    items.forEach((rawItem, index) => {
+      const item = normalizeAiMemoryItem(rawItem);
+      if (!item.content) return;
+      count += 1;
+      const row = document.createElement("div");
+      row.className = "list-item";
+      const body = document.createElement("div");
+      body.innerHTML = `<h3>${escapeText(category)}</h3><p>${escapeText(item.content)}</p><div class="code-note">事件时间：${escapeText(item.occurred_at || "")}</div><div class="code-note">来源：${escapeText(item.source)}</div>`;
+      const actions = document.createElement("div");
+      actions.className = "list-actions";
+      const edit = document.createElement("button");
+      edit.className = "secondary";
+      edit.textContent = "编辑";
+      edit.onclick = async () => {
+        const content = prompt("修改 AI memory", item.content);
+        if (content === null || !content.trim()) return;
+        const source = prompt("来源", item.source) || item.source;
+        const occurredAt = prompt("事件时间（ISO 8601，可留空）", item.occurred_at || "") || item.occurred_at;
+        const latest = await api("/api/ai-memory");
+        latest[category][index] = {
+          content: content.trim(),
+          source: source.trim() || "admin",
+          occurred_at: occurredAt.trim(),
+        };
+        await api("/api/ai-memory", {
+          method: "PUT",
+          body: JSON.stringify(latest),
+        });
+        await loadMemories();
+      };
+      const remove = document.createElement("button");
+      remove.className = "danger";
+      remove.textContent = "删除";
+      remove.onclick = async () => {
+        if (!confirm("确定删除这条 AI memory？")) return;
+        const latest = await api("/api/ai-memory");
+        latest[category] = (Array.isArray(latest[category]) ? latest[category] : []).filter((_, itemIndex) => itemIndex !== index);
+        await api("/api/ai-memory", {
+          method: "PUT",
+          body: JSON.stringify(latest),
+        });
+        await loadMemories();
+      };
+      actions.append(edit, remove);
+      row.append(body, actions);
+      list.appendChild(row);
+    });
+  });
+  if (!count) {
+    list.innerHTML = '<div class="code-note">暂无 AI memory。这里只显示人工维护或导入的 AI 事实记忆。</div>';
   }
 }
 
@@ -394,11 +482,30 @@ $("#memoryForm").onsubmit = async (event) => {
       category: $("#memoryCategory").value,
       content: $("#memoryContent").value,
       sensitive: $("#memorySensitive").checked,
+      occurred_at: fromDatetimeLocalValue($("#memoryOccurredAt").value),
     }),
   });
   event.target.reset();
   await loadMemories();
   toast("记忆已添加");
+};
+
+$("#aiMemoryForm").onsubmit = async (event) => {
+  event.preventDefault();
+  const latest = await api("/api/ai-memory");
+  const category = $("#aiMemoryCategory").value;
+  const content = $("#aiMemoryContent").value.trim();
+  const occurredAt = fromDatetimeLocalValue($("#aiMemoryOccurredAt").value);
+  const source = $("#aiMemorySource").value.trim() || "admin";
+  latest[category] = Array.isArray(latest[category]) ? latest[category] : [];
+  latest[category].push({ content, source, occurred_at: occurredAt || "" });
+  await api("/api/ai-memory", {
+    method: "PUT",
+    body: JSON.stringify(latest),
+  });
+  event.target.reset();
+  await loadMemories();
+  toast("AI memory 已添加");
 };
 
 $("#saveRelationship").onclick = async () => {

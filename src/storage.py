@@ -29,6 +29,9 @@ from .config import DATABASE_PATH, PERSONA_PATH, UPLOAD_DIR
 RELATIONSHIP_LEVELS = ["陌生人", "熟人", "朋友", "亲密朋友", "暧昧", "恋人"]
 RELATIONSHIP_DIMENSIONS = ("trust", "familiarity", "intimacy", "attraction", "attachment", "comfort")
 MEMORY_CATEGORIES = ["episodic", "semantic", "emotional", "shared_experience"]
+USER_MEMORY_CATEGORIES = ["episodic", "semantic", "emotional"]
+MEMORY_OWNER_AI = "ai"
+MEMORY_OWNER_CONTACT = "contact"
 DEFAULT_EMOTION_PROFILE = {
     "sensitivity": 0.5,
     "warmth": 0.5,
@@ -49,6 +52,17 @@ LEGACY_MEMORY_CATEGORY_MAP = {
 def utc_now() -> str:
     """返回统一使用的 UTC ISO-8601 时间戳。"""
     return datetime.now(UTC).isoformat()
+
+
+def normalize_memory_occurred_at(occurred_at: str | None, fallback: str) -> str:
+    """Normalize explicit memory event time and preserve backward compatibility."""
+    if occurred_at is None:
+        return fallback
+    cleaned = occurred_at.strip()
+    if not cleaned:
+        return fallback
+    datetime.fromisoformat(cleaned)
+    return cleaned
 
 
 def _loads(value: str | None, fallback: Any) -> Any:
@@ -77,6 +91,7 @@ class ChatStore:
         self.db_path = Path(db_path)
         self.upload_dir = Path(upload_dir)
         self.persona_path = PERSONA_PATH
+        self.ai_memory_path = self.db_path.parent / "ai_memory.yaml"
         self.export_dir = self.db_path.parent / "export"
         self._persona_lock = threading.Lock()
         self._transaction_state = threading.local()
@@ -84,13 +99,13 @@ class ChatStore:
 
     EXPORT_FILE_TABLES = {
         "01_contacts.yaml": frozenset({"contacts"}),
-        "02_personas.yaml": frozenset({"personas", "persona_update_proposals", "persona_profile"}),
+        "02_personas.yaml": frozenset({"persona_update_proposals", "persona_profile"}),
         "03_messages.yaml": frozenset({"messages"}),
-        "04_memories.yaml": frozenset({"memories"}),
-        "05_emotions.yaml": frozenset({"emotions", "ai_emotion_states", "conversation_events"}),
-        "06_relationships.yaml": frozenset({"relationships", "relationship_events"}),
-        "07_generations.yaml": frozenset({"generations"}),
-        "08_life_states.yaml": frozenset({"life_states"}),
+        "04_contact_memories.yaml": frozenset({"memories"}),
+        "05_ai_memory.yaml": frozenset({"ai_memory_profile"}),
+        "06_emotions.yaml": frozenset({"emotions", "ai_emotion_states", "conversation_events"}),
+        "07_relationships.yaml": frozenset({"relationships", "relationship_events"}),
+        "08_generations.yaml": frozenset({"generations"}),
         "09_settings.yaml": frozenset({"settings"}),
     }
 
@@ -134,7 +149,7 @@ class ChatStore:
         会创建缺失的表和索引，并确保：
         - 至少有一个默认联系人；
         - 该联系人存在一条关系记录；
-        - personas 表存在 self / other 两个作用域占位记录。
+        - 各联系人存在对应的 AI emotion 初始状态。
         """
         self.upload_dir.mkdir(parents=True, exist_ok=True)
         with self.connect() as connection:
@@ -156,19 +171,16 @@ class ChatStore:
                     created_at TEXT NOT NULL,
                     FOREIGN KEY(contact_id) REFERENCES contacts(id) ON DELETE CASCADE
                 );
-                CREATE TABLE IF NOT EXISTS personas (
-                    scope TEXT PRIMARY KEY,
-                    content TEXT NOT NULL DEFAULT '{}',
-                    examples TEXT NOT NULL DEFAULT '[]',
-                    updated_at TEXT NOT NULL
-                );
                 CREATE TABLE IF NOT EXISTS memories (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     contact_id INTEGER NOT NULL,
+                    owner_type TEXT NOT NULL DEFAULT 'contact',
+                    owner_id INTEGER,
                     category TEXT NOT NULL,
                     content TEXT NOT NULL,
                     sensitive INTEGER NOT NULL DEFAULT 0,
                     source_message_id INTEGER,
+                    occurred_at TEXT NOT NULL,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     FOREIGN KEY(contact_id) REFERENCES contacts(id) ON DELETE CASCADE
@@ -250,21 +262,6 @@ class ChatStore:
                     created_at TEXT NOT NULL,
                     FOREIGN KEY(contact_id) REFERENCES contacts(id) ON DELETE CASCADE
                 );
-                CREATE TABLE IF NOT EXISTS life_states (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    state_date TEXT NOT NULL UNIQUE,
-                    mood TEXT NOT NULL DEFAULT '',
-                    energy INTEGER NOT NULL DEFAULT 50,
-                    curiosity INTEGER NOT NULL DEFAULT 50,
-                    attachment INTEGER NOT NULL DEFAULT 20,
-                    current_activity TEXT NOT NULL DEFAULT '',
-                    current_focus TEXT NOT NULL DEFAULT '',
-                    today_events TEXT NOT NULL DEFAULT '[]',
-                    yesterday_events TEXT NOT NULL DEFAULT '[]',
-                    extras TEXT NOT NULL DEFAULT '{}',
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                );
                 CREATE TABLE IF NOT EXISTS settings (
                     key TEXT PRIMARY KEY,
                     value TEXT NOT NULL,
@@ -276,7 +273,6 @@ class ChatStore:
                 CREATE INDEX IF NOT EXISTS idx_conversation_events_contact ON conversation_events(contact_id, id);
                 CREATE INDEX IF NOT EXISTS idx_relationship_events_contact ON relationship_events(contact_id, id);
                 CREATE INDEX IF NOT EXISTS idx_persona_proposals_contact ON persona_update_proposals(contact_id, id);
-                CREATE INDEX IF NOT EXISTS idx_life_states_date ON life_states(state_date DESC);
                 """
             )
             generation_columns = {
@@ -291,6 +287,23 @@ class ChatStore:
                 "trust": 20, "familiarity": 10, "intimacy": 5,
                 "attraction": 0, "attachment": 5, "comfort": 20,
             }
+            memory_columns = {
+                row[1] for row in connection.execute("PRAGMA table_info(memories)").fetchall()
+            }
+            if "owner_type" not in memory_columns:
+                connection.execute(
+                    "ALTER TABLE memories ADD COLUMN owner_type TEXT NOT NULL DEFAULT 'contact'"
+                )
+            if "owner_id" not in memory_columns:
+                connection.execute("ALTER TABLE memories ADD COLUMN owner_id INTEGER")
+            if "occurred_at" not in memory_columns:
+                connection.execute("ALTER TABLE memories ADD COLUMN occurred_at TEXT")
+                connection.execute(
+                    "UPDATE memories SET occurred_at = COALESCE(created_at, updated_at) WHERE occurred_at IS NULL"
+                )
+            connection.execute(
+                "UPDATE memories SET owner_type='contact', owner_id=contact_id WHERE owner_type IS NULL OR owner_type=''"
+            )
             for column, default in defaults.items():
                 if column not in relationship_columns:
                     connection.execute(
@@ -320,11 +333,6 @@ class ChatStore:
                        VALUES (?, '放松', 60, ?, ?)""",
                     (contact_id, json.dumps({}, ensure_ascii=False), now),
                 )
-            for scope in ("self", "other"):
-                connection.execute(
-                    "INSERT OR IGNORE INTO personas(scope, content, examples, updated_at) VALUES (?, '{}', '[]', ?)",
-                    (scope, now),
-                )
             contacts = [dict(row) for row in connection.execute("SELECT id FROM contacts")]
             for contact in contacts:
                 connection.execute(
@@ -332,6 +340,8 @@ class ChatStore:
                        VALUES (?, '放松', 60, ?, ?)""",
                     (int(contact["id"]), json.dumps({}, ensure_ascii=False), now),
                 )
+            connection.execute("DROP TABLE IF EXISTS personas")
+            connection.execute("DROP TABLE IF EXISTS life_states")
 
     def list_contacts(self) -> list[dict[str, Any]]:
         """按 id 升序返回所有联系人。"""
@@ -395,28 +405,6 @@ class ChatStore:
         result["image_paths"] = _loads(result.get("image_paths"), [])
         return result
 
-    def get_persona(self, scope: str) -> dict[str, Any]:
-        """读取 self 或 other 作用域的人格数据。"""
-        with self.connect() as connection:
-            row = connection.execute("SELECT * FROM personas WHERE scope = ?", (scope,)).fetchone()
-        if row is None:
-            return {"scope": scope, "content": {}, "examples": []}
-        result = dict(row)
-        result["content"] = _loads(result["content"], {})
-        result["examples"] = _loads(result["examples"], [])
-        return result
-
-    def save_persona(self, scope: str, content: dict[str, Any], examples: list[str]) -> dict[str, Any]:
-        """按作用域写入人格内容与示例（upsert）。"""
-        with self.connect() as connection:
-            connection.execute(
-                """INSERT INTO personas(scope, content, examples, updated_at) VALUES (?, ?, ?, ?)
-                   ON CONFLICT(scope) DO UPDATE SET content=excluded.content, examples=excluded.examples, updated_at=excluded.updated_at""",
-                (scope, json.dumps(content, ensure_ascii=False), json.dumps(examples, ensure_ascii=False), utc_now()),
-            )
-            self._mark_exports(connection, "02_personas.yaml")
-        return self.get_persona(scope)
-
     def get_persona_profile(self) -> dict[str, Any]:
         """Load the manually maintained Core, Personality, and Habits YAML profile."""
         if not self.persona_path.exists():
@@ -444,6 +432,35 @@ class ChatStore:
             temporary.replace(self.persona_path)
         self.refresh_yaml_snapshots({"02_personas.yaml"})
         return self.get_persona_profile()
+
+    def get_ai_memory_profile(self) -> dict[str, Any]:
+        if not self.ai_memory_path.exists():
+            return {category: [] for category in MEMORY_CATEGORIES}
+        try:
+            loaded = yaml.safe_load(self.ai_memory_path.read_text(encoding="utf-8")) or {}
+        except (OSError, yaml.YAMLError):
+            return {category: [] for category in MEMORY_CATEGORIES}
+        profile = loaded if isinstance(loaded, dict) else {}
+        normalized: dict[str, list[Any]] = {}
+        for category in MEMORY_CATEGORIES:
+            value = profile.get(category, [])
+            normalized[category] = value if isinstance(value, list) else []
+        return normalized
+
+    def save_ai_memory_profile(self, profile: dict[str, Any]) -> dict[str, Any]:
+        normalized = {
+            category: list(profile.get(category) or [])
+            for category in MEMORY_CATEGORIES
+        }
+        with self._persona_lock:
+            self.ai_memory_path.parent.mkdir(parents=True, exist_ok=True)
+            temporary = self.ai_memory_path.with_suffix(self.ai_memory_path.suffix + ".tmp")
+            temporary.write_text(
+                yaml.safe_dump(normalized, allow_unicode=True, sort_keys=False), encoding="utf-8"
+            )
+            temporary.replace(self.ai_memory_path)
+        self.refresh_yaml_snapshots({"05_ai_memory.yaml"})
+        return self.get_ai_memory_profile()
 
     def get_emotion_profile(self) -> dict[str, float]:
         """Return persona-level emotion tuning with sane defaults."""
@@ -553,83 +570,23 @@ class ChatStore:
             ).fetchone()
         return dict(resolved)
 
-    def list_life_states(self, limit: int = 30) -> list[dict[str, Any]]:
-        """Return manually maintained daily life states, newest first."""
-        with self.connect() as connection:
-            rows = connection.execute(
-                "SELECT * FROM life_states ORDER BY state_date DESC, id DESC LIMIT ?", (limit,)
-            ).fetchall()
-        return [self._life_state_dict(row) for row in rows]
-
-    def get_life_state(self, state_date: str | None = None) -> dict[str, Any] | None:
-        """Return one dated state, or the newest state when no date is supplied."""
-        with self.connect() as connection:
-            if state_date:
-                row = connection.execute(
-                    "SELECT * FROM life_states WHERE state_date=?", (state_date,)
-                ).fetchone()
-            else:
-                row = connection.execute(
-                    "SELECT * FROM life_states ORDER BY state_date DESC, id DESC LIMIT 1"
-                ).fetchone()
-        return self._life_state_dict(row) if row is not None else None
-
-    @staticmethod
-    def _life_state_dict(row: sqlite3.Row) -> dict[str, Any]:
-        result = dict(row)
-        result["today_events"] = _loads(result.get("today_events"), [])
-        result["yesterday_events"] = _loads(result.get("yesterday_events"), [])
-        result["extras"] = _loads(result.get("extras"), {})
-        return result
-
-    def save_life_state(self, state: dict[str, Any]) -> dict[str, Any]:
-        """Upsert a manually authored daily life state."""
-        state_date = str(state.get("state_date", "")).strip()
-        if not state_date:
-            raise ValueError("生活状态日期不能为空")
-        clamp = lambda value, default: max(0, min(100, int(value if value is not None else default)))
-        now = utc_now()
-        with self.connect() as connection:
-            connection.execute(
-                """INSERT INTO life_states(
-                       state_date, mood, energy, curiosity, attachment, current_activity,
-                       current_focus, today_events, yesterday_events, extras, created_at, updated_at
-                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                   ON CONFLICT(state_date) DO UPDATE SET
-                       mood=excluded.mood, energy=excluded.energy,
-                       curiosity=excluded.curiosity, attachment=excluded.attachment,
-                       current_activity=excluded.current_activity,
-                       current_focus=excluded.current_focus,
-                       today_events=excluded.today_events,
-                       yesterday_events=excluded.yesterday_events,
-                       extras=excluded.extras, updated_at=excluded.updated_at""",
-                (
-                    state_date, str(state.get("mood", "")).strip(), clamp(state.get("energy"), 50),
-                    clamp(state.get("curiosity"), 50), clamp(state.get("attachment"), 20),
-                    str(state.get("current_activity", "")).strip(),
-                    str(state.get("current_focus", "")).strip(),
-                    json.dumps(state.get("today_events") or [], ensure_ascii=False),
-                    json.dumps(state.get("yesterday_events") or [], ensure_ascii=False),
-                    json.dumps(state.get("extras") or {}, ensure_ascii=False), now, now,
-                ),
-            )
-            self._mark_exports(connection, "08_life_states.yaml")
-        saved = self.get_life_state(state_date)
-        if saved is None:
-            raise RuntimeError("保存生活状态失败")
-        return saved
-
-    def delete_life_state(self, state_date: str) -> None:
-        with self.connect() as connection:
-            connection.execute("DELETE FROM life_states WHERE state_date=?", (state_date,))
-            self._mark_exports(connection, "08_life_states.yaml")
-
-    def list_memories(self, contact_id: int, limit: int = 300) -> list[dict[str, Any]]:
+    def list_memories(
+        self,
+        contact_id: int,
+        limit: int = 300,
+        owner_type: str = MEMORY_OWNER_CONTACT,
+    ) -> list[dict[str, Any]]:
         """列出某联系人的记忆，按 id 倒序（最新在前）。"""
         with self.connect() as connection:
-            return [dict(row) for row in connection.execute(
-                "SELECT * FROM memories WHERE contact_id = ? ORDER BY id DESC LIMIT ?", (contact_id, limit)
+            items = [dict(row) for row in connection.execute(
+                """SELECT * FROM memories
+                   WHERE contact_id = ? AND owner_type = ?
+                   ORDER BY id DESC LIMIT ?""",
+                (contact_id, owner_type, limit),
             )]
+        for item in items:
+            item["occurred_at"] = item.get("occurred_at") or item.get("created_at")
+        return items
 
     def search_memories(
         self, contact_id: int, query: str, limit: int = 12,
@@ -644,7 +601,7 @@ class ChatStore:
 
         若无命中，则回退返回少量最近记忆，保证下游仍有上下文可用。
         """
-        memories = self.list_memories(contact_id, limit=1000)
+        memories = self.list_memories(contact_id, limit=1000, owner_type=MEMORY_OWNER_CONTACT)
         if category in MEMORY_CATEGORIES:
             memories = [item for item in memories if item["category"] == category]
         if time_range != "all":
@@ -653,7 +610,7 @@ class ChatStore:
                 cutoff = datetime.now(UTC).timestamp() - days * 86400
                 memories = [
                     item for item in memories
-                    if datetime.fromisoformat(str(item["created_at"])).timestamp() >= cutoff
+                    if datetime.fromisoformat(str(item.get("occurred_at") or item["created_at"])).timestamp() >= cutoff
                 ]
             except (TypeError, ValueError):
                 pass
@@ -693,48 +650,87 @@ class ChatStore:
         ranked = sorted(selected.values(), key=lambda pair: (pair[0], int(pair[1]["id"])), reverse=True)
         return [item for _, item in ranked[:total_limit]]
 
-    def add_memory(self, contact_id: int, category: str, content: str, sensitive: bool = False, source_message_id: int | None = None) -> dict[str, Any]:
+    def add_memory(
+        self,
+        contact_id: int,
+        category: str,
+        content: str,
+        sensitive: bool = False,
+        source_message_id: int | None = None,
+        owner_type: str = MEMORY_OWNER_CONTACT,
+        owner_id: int | None = None,
+        occurred_at: str | None = None,
+    ) -> dict[str, Any]:
         """新增记忆；若同联系人+分类+内容已存在，则直接返回已存在记录。"""
         cleaned = content.strip()
+        if owner_type == MEMORY_OWNER_CONTACT and category not in USER_MEMORY_CATEGORIES:
+            raise ValueError("用户 memory 只允许 episodic / semantic / emotional")
+        resolved_owner_id = contact_id if owner_type == MEMORY_OWNER_CONTACT else owner_id
         with self.connect() as connection:
             existing = connection.execute(
-                "SELECT * FROM memories WHERE contact_id = ? AND category = ? AND content = ?",
-                (contact_id, category, cleaned),
+                """SELECT * FROM memories
+                   WHERE contact_id = ? AND owner_type = ? AND category = ? AND content = ?""",
+                (contact_id, owner_type, category, cleaned),
             ).fetchone()
             if existing is not None:
-                return dict(existing)
+                result = dict(existing)
+                result["occurred_at"] = result.get("occurred_at") or result.get("created_at")
+                return result
             now = utc_now()
+            normalized_occurred_at = normalize_memory_occurred_at(occurred_at, now)
             cursor = connection.execute(
-                """INSERT INTO memories(contact_id, category, content, sensitive, source_message_id, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (contact_id, category, cleaned, int(sensitive), source_message_id, now, now),
+                """INSERT INTO memories(
+                       contact_id, owner_type, owner_id, category, content, sensitive,
+                       source_message_id, occurred_at, created_at, updated_at
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    contact_id, owner_type, resolved_owner_id, category, cleaned, int(sensitive),
+                    source_message_id, normalized_occurred_at, now, now,
+                ),
             )
-            self._mark_exports(connection, "04_memories.yaml")
+            self._mark_exports(connection, "04_contact_memories.yaml")
             row = connection.execute("SELECT * FROM memories WHERE id = ?", (cursor.lastrowid,)).fetchone()
-        return dict(row)
+        result = dict(row)
+        result["occurred_at"] = result.get("occurred_at") or result.get("created_at")
+        return result
 
-    def update_memory(self, memory_id: int, category: str, content: str, sensitive: bool) -> dict[str, Any]:
+    def update_memory(
+        self,
+        memory_id: int,
+        category: str,
+        content: str,
+        sensitive: bool,
+        occurred_at: str | None = None,
+    ) -> dict[str, Any]:
         """更新一条记忆并返回更新后的记录。
 
         异常：
             KeyError: memory_id 不存在时抛出。
         """
         with self.connect() as connection:
-            connection.execute(
-                "UPDATE memories SET category=?, content=?, sensitive=?, updated_at=? WHERE id=?",
-                (category, content.strip(), int(sensitive), utc_now(), memory_id),
+            existing = connection.execute("SELECT * FROM memories WHERE id = ?", (memory_id,)).fetchone()
+            if existing is None:
+                raise KeyError("记忆不存在")
+            existing_record = dict(existing)
+            normalized_occurred_at = normalize_memory_occurred_at(
+                occurred_at,
+                str(existing_record.get("occurred_at") or existing_record.get("created_at") or utc_now()),
             )
-            self._mark_exports(connection, "04_memories.yaml")
+            connection.execute(
+                "UPDATE memories SET category=?, content=?, sensitive=?, occurred_at=?, updated_at=? WHERE id=?",
+                (category, content.strip(), int(sensitive), normalized_occurred_at, utc_now(), memory_id),
+            )
+            self._mark_exports(connection, "04_contact_memories.yaml")
             row = connection.execute("SELECT * FROM memories WHERE id = ?", (memory_id,)).fetchone()
-        if row is None:
-            raise KeyError("记忆不存在")
-        return dict(row)
+        result = dict(row)
+        result["occurred_at"] = result.get("occurred_at") or result.get("created_at")
+        return result
 
     def delete_memory(self, memory_id: int) -> None:
         """按 id 删除一条记忆（不存在时为无操作）。"""
         with self.connect() as connection:
             connection.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
-            self._mark_exports(connection, "04_memories.yaml")
+            self._mark_exports(connection, "04_contact_memories.yaml")
 
     def add_emotion(self, contact_id: int, item: dict[str, Any]) -> dict[str, Any]:
         """保存一条情绪分析记录，并对数值范围做钳制。
@@ -752,7 +748,7 @@ class ChatStore:
                     intensity, confidence, str(item.get("reason", "")), int(confidence >= 0.75), utc_now(),
                 ),
             )
-            self._mark_exports(connection, "05_emotions.yaml")
+            self._mark_exports(connection, "06_emotions.yaml")
             row = connection.execute("SELECT * FROM emotions WHERE id = ?", (cursor.lastrowid,)).fetchone()
         return dict(row)
 
@@ -767,7 +763,7 @@ class ChatStore:
         """将一条情绪记录标记为人工确认。"""
         with self.connect() as connection:
             connection.execute("UPDATE emotions SET confirmed=1 WHERE id=?", (emotion_id,))
-            self._mark_exports(connection, "05_emotions.yaml")
+            self._mark_exports(connection, "06_emotions.yaml")
 
     def get_relationship(self, contact_id: int) -> dict[str, Any]:
         """读取关系记录；若不存在则懒创建默认关系。"""
@@ -834,7 +830,7 @@ class ChatStore:
                        updated_at=excluded.updated_at""",
                 (contact_id, mood, energy, json.dumps(dimensions, ensure_ascii=False), now),
             )
-            self._mark_exports(connection, "05_emotions.yaml")
+            self._mark_exports(connection, "06_emotions.yaml")
         return self.get_ai_emotion_state(contact_id)
 
     def add_conversation_events(self, contact_id: int, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -859,7 +855,7 @@ class ChatStore:
                 ).fetchone()
                 created.append(dict(row))
             if created:
-                self._mark_exports(connection, "05_emotions.yaml")
+                self._mark_exports(connection, "06_emotions.yaml")
         return created
 
     def list_conversation_events(self, contact_id: int, limit: int = 20) -> list[dict[str, Any]]:
@@ -881,7 +877,7 @@ class ChatStore:
                 "UPDATE relationships SET suggested_level=?, reason=?, updated_at=? WHERE contact_id=?",
                 (suggestion, reason, utc_now(), contact_id),
             )
-            self._mark_exports(connection, "06_relationships.yaml")
+            self._mark_exports(connection, "07_relationships.yaml")
         return self.get_relationship(contact_id)
 
     def set_relationship(self, contact_id: int, level: str) -> dict[str, Any]:
@@ -893,7 +889,7 @@ class ChatStore:
                 "UPDATE relationships SET current_level=?, suggested_level=NULL, reason='', updated_at=? WHERE contact_id=?",
                 (level, utc_now(), contact_id),
             )
-            self._mark_exports(connection, "06_relationships.yaml")
+            self._mark_exports(connection, "07_relationships.yaml")
         return self.get_relationship(contact_id)
 
     def apply_relationship_analysis(
@@ -936,7 +932,7 @@ class ChatStore:
                    WHERE contact_id=?""",
                 (current_level, str(analysis.get("stage_reason", "")), now, contact_id),
             )
-            self._mark_exports(connection, "06_relationships.yaml")
+            self._mark_exports(connection, "07_relationships.yaml")
         return self.get_relationship(contact_id)
 
     def list_relationship_events(self, contact_id: int, limit: int = 100) -> list[dict[str, Any]]:
@@ -954,46 +950,10 @@ class ChatStore:
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 (contact_id, input_message_id, strategy, json.dumps(candidates, ensure_ascii=False), json.dumps(analysis, ensure_ascii=False), utc_now()),
             )
-            self._mark_exports(connection, "07_generations.yaml")
+            self._mark_exports(connection, "08_generations.yaml")
         if cursor.lastrowid is None:
             raise RuntimeError("创建生成记录失败")
         return int(cursor.lastrowid)
-
-    def list_generations(self, contact_id: int, limit: int = 20) -> list[dict[str, Any]]:
-        """列出某联系人的生成记录，按最新优先返回。"""
-        with self.connect() as connection:
-            rows = connection.execute(
-                "SELECT * FROM generations WHERE contact_id=? ORDER BY id DESC LIMIT ?",
-                (contact_id, limit),
-            ).fetchall()
-        return [self._deserialize_generation_row(dict(row)) for row in rows]
-
-    def trim_generations(self, contact_id: int, keep_latest: int) -> int:
-        """仅保留某联系人的最近 N 条 generation，返回删除数量。"""
-        keep = max(1, int(keep_latest))
-        with self.connect() as connection:
-            rows = connection.execute(
-                "SELECT id FROM generations WHERE contact_id=? ORDER BY id DESC LIMIT -1 OFFSET ?",
-                (contact_id, keep),
-            ).fetchall()
-            stale_ids = [int(row["id"]) for row in rows]
-            if not stale_ids:
-                return 0
-            placeholders = ",".join("?" for _ in stale_ids)
-            cursor = connection.execute(
-                f"DELETE FROM generations WHERE id IN ({placeholders})",
-                stale_ids,
-            )
-            self._mark_exports(connection, "07_generations.yaml")
-        return int(cursor.rowcount or 0)
-
-    @staticmethod
-    def _deserialize_generation_row(row: dict[str, Any]) -> dict[str, Any]:
-        """反序列化 generation 的 JSON 字段，供 API 直接返回。"""
-        result = dict(row)
-        result["candidates"] = _loads(result.get("candidates"), [])
-        result["analysis"] = _loads(result.get("analysis"), {})
-        return result
 
     def select_generation_candidate(self, generation_id: int, contact_id: int, candidate_index: int | None) -> None:
         """Record only which generated candidate was selected; edited text is not copied here."""
@@ -1004,9 +964,39 @@ class ChatStore:
                 "UPDATE generations SET selected_candidate_index=? WHERE id=? AND contact_id=?",
                 (candidate_index, generation_id, contact_id),
             )
-            self._mark_exports(connection, "07_generations.yaml")
+            self._mark_exports(connection, "08_generations.yaml")
         if cursor.rowcount == 0:
             raise KeyError("生成记录不存在")
+
+    def list_generations(self, contact_id: int, limit: int = 20) -> list[dict[str, Any]]:
+        """列出某联系人的生成记录，按最新优先返回。"""
+        with self.connect() as connection:
+            rows = [
+                dict(row)
+                for row in connection.execute(
+                    "SELECT * FROM generations WHERE contact_id=? ORDER BY id DESC LIMIT ?",
+                    (contact_id, limit),
+                )
+            ]
+        return [self._deserialize_generation_row(row) for row in rows]
+
+    def trim_generations(self, contact_id: int, keep: int) -> None:
+        """仅保留最近 keep 条生成记录，避免调试快照无限增长。"""
+        keep = max(1, int(keep))
+        with self.connect() as connection:
+            rows = connection.execute(
+                "SELECT id FROM generations WHERE contact_id=? ORDER BY id DESC LIMIT -1 OFFSET ?",
+                (contact_id, keep),
+            ).fetchall()
+            stale_ids = [int(row[0]) for row in rows]
+            if not stale_ids:
+                return
+            placeholders = ",".join("?" for _ in stale_ids)
+            connection.execute(
+                f"DELETE FROM generations WHERE id IN ({placeholders})",
+                stale_ids,
+            )
+            self._mark_exports(connection, "08_generations.yaml")
 
     def get_setting(self, key: str, default: str = "") -> str:
         """读取一个设置项，不存在时返回默认值。"""
@@ -1029,8 +1019,6 @@ class ChatStore:
         tables = [
             "contacts",
             "messages",
-            "personas",
-            "life_states",
             "memories",
             "emotions",
             "relationships",
@@ -1060,6 +1048,10 @@ class ChatStore:
         file_payloads = self._build_export_file_payloads(selected)
         for filename, payload in file_payloads.items():
             self._write_yaml_if_changed(self.export_dir / filename, payload)
+        managed_files = set(self.EXPORT_FILE_TABLES) | {"00_overview.yaml"}
+        for path in self.export_dir.glob("*.yaml"):
+            if path.name not in managed_files:
+                path.unlink(missing_ok=True)
         overview = self._build_overview_payload(exported_at)
         self._write_yaml_if_changed(self.export_dir / "00_overview.yaml", overview)
         return {"exported_at": exported_at, "export_dir": str(self.export_dir)}
@@ -1087,7 +1079,7 @@ class ChatStore:
         return payloads
 
     def _load_export_tables(self, tables: set[str]) -> dict[str, Any]:
-        actual_tables = [table for table in tables if table != "persona_profile"]
+        actual_tables = [table for table in tables if table not in {"persona_profile", "ai_memory_profile"}]
         loaded: dict[str, Any] = {}
         if actual_tables:
             with self.connect() as connection:
@@ -1096,6 +1088,8 @@ class ChatStore:
                     loaded[table] = self._deserialize_export_rows(table, rows)
         if "persona_profile" in tables:
             loaded["persona_profile"] = self.get_persona_profile()
+        if "ai_memory_profile" in tables:
+            loaded["ai_memory_profile"] = self.get_ai_memory_profile()
         return loaded
 
     def _compose_export_file(self, filename: str, table_data: dict[str, Any]) -> Any:
@@ -1104,28 +1098,27 @@ class ChatStore:
         if filename == "02_personas.yaml":
             return {
                 "persona_profile": table_data.get("persona_profile", {}),
-                "personas_table": table_data.get("personas", []),
                 "persona_update_proposals": table_data.get("persona_update_proposals", []),
             }
         if filename == "03_messages.yaml":
             return table_data.get("messages", [])
-        if filename == "04_memories.yaml":
+        if filename == "04_contact_memories.yaml":
             return table_data.get("memories", [])
-        if filename == "05_emotions.yaml":
+        if filename == "05_ai_memory.yaml":
+            return table_data.get("ai_memory_profile", {})
+        if filename == "06_emotions.yaml":
             return {
                 "user_emotions": table_data.get("emotions", []),
                 "ai_emotion_states": table_data.get("ai_emotion_states", []),
                 "conversation_events": table_data.get("conversation_events", []),
             }
-        if filename == "06_relationships.yaml":
+        if filename == "07_relationships.yaml":
             return {
                 "relationships": table_data.get("relationships", []),
                 "relationship_events": table_data.get("relationship_events", []),
             }
-        if filename == "07_generations.yaml":
+        if filename == "08_generations.yaml":
             return table_data.get("generations", [])
-        if filename == "08_life_states.yaml":
-            return table_data.get("life_states", [])
         if filename == "09_settings.yaml":
             return table_data.get("settings", [])
         raise KeyError(f"未知导出文件: {filename}")
@@ -1135,32 +1128,29 @@ class ChatStore:
             "01_contacts.yaml": exported["contacts"],
             "02_personas.yaml": {
                 "persona_profile": self.get_persona_profile(),
-                "personas_table": exported["personas"],
                 "persona_update_proposals": exported["persona_update_proposals"],
             },
             "03_messages.yaml": exported["messages"],
-            "04_memories.yaml": exported["memories"],
-            "05_emotions.yaml": {
+            "04_contact_memories.yaml": exported["memories"],
+            "05_ai_memory.yaml": self.get_ai_memory_profile(),
+            "06_emotions.yaml": {
                 "user_emotions": exported["emotions"],
                 "ai_emotion_states": exported["ai_emotion_states"],
                 "conversation_events": exported["conversation_events"],
             },
-            "06_relationships.yaml": {
+            "07_relationships.yaml": {
                 "relationships": exported["relationships"],
                 "relationship_events": exported["relationship_events"],
             },
-            "07_generations.yaml": exported["generations"],
-            "08_life_states.yaml": exported["life_states"],
+            "08_generations.yaml": exported["generations"],
             "09_settings.yaml": exported["settings"],
         }
 
     def _deserialize_export_rows(self, table: str, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if table == "messages":
             return [self._deserialize_message_row(row) for row in rows]
-        if table == "personas":
-            return [self._deserialize_persona_row(row) for row in rows]
-        if table == "life_states":
-            return [self._deserialize_life_state_row(row) for row in rows]
+        if table == "memories":
+            return [self._deserialize_memory_row(row) for row in rows]
         if table == "ai_emotion_states":
             return [self._deserialize_ai_emotion_state_row(row) for row in rows]
         if table == "generations":
@@ -1174,24 +1164,19 @@ class ChatStore:
         return result
 
     @staticmethod
-    def _deserialize_persona_row(row: dict[str, Any]) -> dict[str, Any]:
-        result = dict(row)
-        result["content"] = _loads(result.get("content"), {})
-        result["examples"] = _loads(result.get("examples"), [])
-        return result
-
-    @staticmethod
-    def _deserialize_life_state_row(row: dict[str, Any]) -> dict[str, Any]:
-        result = dict(row)
-        result["today_events"] = _loads(result.get("today_events"), [])
-        result["yesterday_events"] = _loads(result.get("yesterday_events"), [])
-        result["extras"] = _loads(result.get("extras"), {})
-        return result
-
-    @staticmethod
     def _deserialize_ai_emotion_state_row(row: dict[str, Any]) -> dict[str, Any]:
         result = dict(row)
         result["dimensions"] = _loads(result.get("dimensions"), {})
+        return result
+
+    @staticmethod
+    def _deserialize_memory_row(row: dict[str, Any]) -> dict[str, Any]:
+        result = dict(row)
+        result["owner_type"] = str(result.get("owner_type") or MEMORY_OWNER_CONTACT)
+        if result.get("owner_type") == MEMORY_OWNER_CONTACT:
+            result["owner_label"] = "contact"
+        else:
+            result["owner_label"] = result["owner_type"]
         return result
 
     @staticmethod

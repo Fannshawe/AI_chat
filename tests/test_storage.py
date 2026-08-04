@@ -32,6 +32,25 @@ class ChatStoreTests(unittest.TestCase):
         self.assertEqual(first["id"], second["id"])
         self.assertEqual(self.store.search_memories(self.contact_id, "猫")[0]["content"], "对方喜欢猫")
 
+    def test_memory_occurrence_time_round_trip_and_time_filter(self):
+        recent = self.store.add_memory(
+            self.contact_id,
+            "episodic",
+            "今天一起吃了晚饭",
+            occurred_at="2026-08-01T10:00:00+00:00",
+        )
+        older = self.store.add_memory(
+            self.contact_id,
+            "episodic",
+            "上个月一起逛街",
+            occurred_at="2026-06-01T10:00:00+00:00",
+        )
+        self.assertEqual(recent["occurred_at"], "2026-08-01T10:00:00+00:00")
+        listed = self.store.list_memories(self.contact_id)
+        self.assertEqual(listed[0]["occurred_at"], "2026-06-01T10:00:00+00:00")
+        filtered = self.store.search_memories(self.contact_id, "一起", time_range="40d")
+        self.assertEqual([item["id"] for item in filtered], [recent["id"]])
+
     def test_relationship_requires_manual_confirmation(self):
         suggested = self.store.suggest_relationship(self.contact_id, "朋友", "互动稳定")
         self.assertEqual(suggested["current_level"], "熟人")
@@ -39,23 +58,6 @@ class ChatStoreTests(unittest.TestCase):
         confirmed = self.store.set_relationship(self.contact_id, "朋友")
         self.assertEqual(confirmed["current_level"], "朋友")
         self.assertIsNone(confirmed["suggested_level"])
-
-    def test_life_state_daily_history_round_trip(self):
-        saved = self.store.save_life_state({
-            "state_date": "2026-07-29",
-            "mood": "有点疲惫",
-            "energy": 35,
-            "curiosity": 60,
-            "attachment": 25,
-            "current_activity": "整理项目",
-            "current_focus": "摄影",
-            "today_events": ["改了聊天程序"],
-            "yesterday_events": ["看了展"],
-            "extras": {"天气": "下雨"},
-        })
-        self.assertEqual(saved["today_events"], ["改了聊天程序"])
-        self.assertEqual(saved["extras"]["天气"], "下雨")
-        self.assertEqual(self.store.list_life_states()[0]["state_date"], "2026-07-29")
 
     def test_relationship_scores_are_bounded_and_changes_are_recorded(self):
         changed = self.store.apply_relationship_analysis(self.contact_id, {
@@ -130,12 +132,13 @@ class ChatStoreTests(unittest.TestCase):
 
         self.assertTrue((export_dir / "00_overview.yaml").exists())
         self.assertTrue((export_dir / "03_messages.yaml").exists())
-        self.assertTrue((export_dir / "05_emotions.yaml").exists())
+        self.assertTrue((export_dir / "05_ai_memory.yaml").exists())
+        self.assertTrue((export_dir / "06_emotions.yaml").exists())
 
         messages = yaml.safe_load((export_dir / "03_messages.yaml").read_text(encoding="utf-8"))
         self.assertEqual(messages[0]["image_paths"], ["/uploads/demo.png"])
 
-        emotions = yaml.safe_load((export_dir / "05_emotions.yaml").read_text(encoding="utf-8"))
+        emotions = yaml.safe_load((export_dir / "06_emotions.yaml").read_text(encoding="utf-8"))
         self.assertEqual(emotions["ai_emotion_states"][0]["dimensions"]["好奇"], 70)
 
     def test_write_operations_auto_refresh_yaml_snapshot(self):
@@ -150,11 +153,11 @@ class ChatStoreTests(unittest.TestCase):
 
     def test_message_write_does_not_rewrite_unrelated_memory_snapshot(self):
         export_dir = self.store.export_dir
-        memories_before = (export_dir / "04_memories.yaml").read_text(encoding="utf-8")
+        memories_before = (export_dir / "04_contact_memories.yaml").read_text(encoding="utf-8")
 
         self.store.save_message(self.contact_id, "user", "只影响消息快照")
 
-        memories_after = (export_dir / "04_memories.yaml").read_text(encoding="utf-8")
+        memories_after = (export_dir / "04_contact_memories.yaml").read_text(encoding="utf-8")
         messages = yaml.safe_load((export_dir / "03_messages.yaml").read_text(encoding="utf-8"))
         self.assertEqual(memories_before, memories_after)
         self.assertEqual(messages[0]["content"], "只影响消息快照")
