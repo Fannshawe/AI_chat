@@ -70,11 +70,14 @@ class AgentHarnessTests(unittest.TestCase):
                 "interview_taste": 1,
                 "empathy_excess": 1,
                 "naturalness": 8,
+                "persona_consistent": True,
+                "memory_consistent": True,
                 "passed": True,
                 "issues": [],
+                "rewrite_instruction": "",
             } for index in range(3)],
             "passed": True,
-            "rewrite_instruction": "",
+            "rewrite_candidate_indexes": [],
         })
         self.assertTrue(review.passed)
 

@@ -32,11 +32,34 @@ def critique(passed, naturalness=8, instruction=""):
             "interview_taste": 1,
             "empathy_excess": 1,
             "naturalness": naturalness,
+            "persona_consistent": True,
+            "memory_consistent": True,
             "passed": passed,
             "issues": [] if passed else ["需要更自然"],
+            "rewrite_instruction": instruction if not passed else "",
         } for index in range(3)],
         "passed": passed,
-        "rewrite_instruction": instruction,
+        "rewrite_candidate_indexes": [] if passed else [0, 1, 2],
+    }
+
+
+def partial_critique(failed_indexes, instruction_prefix="需要修改"):
+    failed = set(failed_indexes)
+    return {
+        "candidates": [{
+            "candidate_index": index,
+            "ai_taste": 6 if index in failed else 1,
+            "interview_taste": 6 if index in failed else 1,
+            "empathy_excess": 6 if index in failed else 1,
+            "naturalness": 4 if index in failed else 8,
+            "persona_consistent": True,
+            "memory_consistent": True,
+            "passed": index not in failed,
+            "issues": [f"{index} 需要更自然"] if index in failed else [],
+            "rewrite_instruction": f"{instruction_prefix}{index}" if index in failed else "",
+        } for index in range(3)],
+        "passed": not failed,
+        "rewrite_candidate_indexes": sorted(failed),
     }
 
 
@@ -129,7 +152,7 @@ class GraphPipelineTests(unittest.TestCase):
         self.assertIn("created_at", self.store.list_memories(self.contact_id)[0])
         self.assertGreater(result["generation_id"], 0)
 
-    def test_critic_allows_two_rewrites_and_returns_best_candidates(self):
+    def test_critic_allows_two_rewrites_and_returns_fallback_candidates(self):
         responses = self.base_responses()
         responses["prompt_composer"] = [
             {"candidates": ["初稿一", "初稿二", "初稿三"]},
@@ -146,6 +169,13 @@ class GraphPipelineTests(unittest.TestCase):
         self.assertEqual(counts["critic"], 3)
         self.assertEqual(result["candidates"], ["初稿一", "初稿二", "初稿三"])
         self.assertTrue(any("最佳候选" in warning for warning in result["warnings"]))
+
+    def test_critic_marks_only_failed_candidates_for_rewrite(self):
+        responses = self.base_responses()
+        responses["critic"] = partial_critique([1])
+        result, _counts = self.invoke(responses)
+        self.assertEqual(result["critic_analysis"]["rewrite_candidate_indexes"], [1])
+        self.assertIn("需要修改1", result["critic_analysis"]["rewrite_instruction"])
 
 
 if __name__ == "__main__":

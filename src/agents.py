@@ -145,8 +145,11 @@ class CandidateCritique(BaseModel):
     interview_taste: float = Field(ge=0, le=10, description="采访味，越低越好")
     empathy_excess: float = Field(ge=0, le=10, description="空洞或过度共情，越低越好")
     naturalness: float = Field(ge=0, le=10, description="长度与措辞自然度，越高越好")
+    persona_consistent: bool = True
+    memory_consistent: bool = True
     passed: bool
     issues: list[str] = Field(default_factory=list, max_length=5)
+    rewrite_instruction: str = ""
 
 
 class ReplyCriticAnalysis(BaseModel):
@@ -154,7 +157,7 @@ class ReplyCriticAnalysis(BaseModel):
 
     candidates: list[CandidateCritique] = Field(min_length=3, max_length=3)
     passed: bool
-    rewrite_instruction: str = ""
+    rewrite_candidate_indexes: list[int] = Field(default_factory=list, max_length=3)
 
 
 class ResponseCandidates(BaseModel):

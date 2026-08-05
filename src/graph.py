@@ -166,12 +166,10 @@ class WorkflowState(TypedDict, total=False):
     memories: list[dict[str, Any]]
     guidance_chunks: list[dict[str, Any]]
     dialogue_composition: dict[str, Any]
-    rewrite_instruction: str
     critic_attempts: int
     critic_analysis: dict[str, Any]
     candidates: list[str]
-    best_candidates: list[str]
-    best_candidate_score: float
+    fallback_candidates: list[str]
     reflection_analysis: dict[str, Any]
     strategy: str
     generation_id: int
@@ -241,9 +239,7 @@ def node_load_context(state: WorkflowState) -> dict[str, Any]:
         "provider_name": state.get("provider_name") or store.get_setting("active_model_provider", "default"),
         "critic_attempts": 0,
         "critic_analysis": {"reviews": []},
-        "best_candidates": [],
-        "best_candidate_score": float("-inf"),
-        "rewrite_instruction": "",
+        "fallback_candidates": [],
     }
 
 
@@ -446,6 +442,7 @@ def node_dialogue_composer(state: WorkflowState) -> dict[str, Any]:
 
 
 def _prompt_composer_payload(state: WorkflowState) -> dict[str, Any]:
+    critic_analysis = state.get("critic_analysis", {})
     return {
         "latest_message": state["user_request"],
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
@@ -457,7 +454,9 @@ def _prompt_composer_payload(state: WorkflowState) -> dict[str, Any]:
         "relationship_boundaries": state.get("relationship_analysis", {}).get("behavior_boundaries", []),
         "relevant_memories": state.get("memories", []),
         "dialogue_plan": state.get("dialogue_composition", {}),
-        "rewrite_instruction": state.get("rewrite_instruction", ""),
+        "rewrite_instruction": str(critic_analysis.get("rewrite_instruction", "")),
+        "rewrite_candidate_indexes": critic_analysis.get("rewrite_candidate_indexes", []),
+        "existing_candidates": state.get("candidates", []),
         "candidate_count": 3,
     }
 
@@ -479,7 +478,19 @@ def _invoke_prompt_composer(state: WorkflowState, include_images: bool) -> tuple
         llm_input = {"messages": [{"role": "user", "content": _json(payload)}]}
         result = agent.invoke(llm_input)  # type: ignore[arg-type]
     structured = _structured_dict(result)
-    candidates = [str(item).strip() for item in structured["candidates"]]
+    generated = [str(item).strip() for item in structured["candidates"]]
+    rewrite_indexes = [
+        int(index) for index in state.get("critic_analysis", {}).get("rewrite_candidate_indexes", [])
+        if int(index) in {0, 1, 2}
+    ]
+    existing = [str(item).strip() for item in state.get("candidates", [])]
+    if rewrite_indexes and len(existing) == 3:
+        candidates = list(existing)
+        for offset, index in enumerate(rewrite_indexes):
+            if offset < len(generated):
+                candidates[index] = generated[offset]
+    else:
+        candidates = generated
     return candidates, {"input": llm_input, "output": structured}
 
 
@@ -487,10 +498,13 @@ def node_prompt_composer(state: WorkflowState) -> dict[str, Any]:
     """Responsibility: write final candidate replies from the plan. Persistence: snapshot only."""
     try:
         candidates, llm_debug = _invoke_prompt_composer(state, include_images=state.get("critic_attempts", 0) == 0)
-        return {"candidates": candidates, "_debug_llm": llm_debug}
+        result = {"candidates": candidates, "_debug_llm": llm_debug}
+        if len(candidates) == 3 and not state.get("fallback_candidates"):
+            result["fallback_candidates"] = list(candidates)
+        return result
     except Exception as exc:
-        if state.get("best_candidates"):
-            return {"candidates": state["best_candidates"], "warnings": [f"Prompt Composer重写失败: {exc}"]}
+        if state.get("fallback_candidates"):
+            return {"candidates": state["fallback_candidates"], "warnings": [f"Prompt Composer重写失败: {exc}"]}
         raise
 
 
@@ -507,7 +521,7 @@ def _critic_score(review: dict[str, Any]) -> float:
 
 def node_reply_critic(state: WorkflowState) -> dict[str, Any]:
     """Responsibility: review Style, Persona, and Memory use. Persistence: snapshot only."""
-    fallback = {"candidates": [], "passed": True, "rewrite_instruction": ""}
+    fallback = {"candidates": [], "passed": True, "rewrite_candidate_indexes": []}
     review, warnings, llm_debug = _run_structured_agent(state, "critic", {
         "latest_message": state["user_request"],
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
@@ -519,18 +533,28 @@ def node_reply_critic(state: WorkflowState) -> dict[str, Any]:
     }, fallback)
     attempts = state.get("critic_attempts", 0) + 1
     history = [*state.get("critic_analysis", {}).get("reviews", []), review]
-    score = _critic_score(review)
-    best_score = state.get("best_candidate_score", float("-inf"))
-    best_candidates = state.get("best_candidates", [])
-    if score > best_score or not best_candidates:
-        best_score = score
-        best_candidates = list(state["candidates"])
+    candidate_reviews = review.get("candidates", [])
+    rewrite_indexes = [
+        int(item.get("candidate_index", -1))
+        for item in candidate_reviews
+        if isinstance(item, dict) and not bool(item.get("passed", True)) and int(item.get("candidate_index", -1)) in {0, 1, 2}
+    ]
+    rewrite_indexes = sorted(set(rewrite_indexes))
+    rewrite_instruction = "\n".join(
+        str(item.get("rewrite_instruction", "")).strip()
+        for item in candidate_reviews
+        if isinstance(item, dict)
+        and int(item.get("candidate_index", -1)) in rewrite_indexes
+        and str(item.get("rewrite_instruction", "")).strip()
+    )
     result: dict[str, Any] = {
         "critic_attempts": attempts,
-        "critic_analysis": {"reviews": history, "passed": bool(review.get("passed", True))},
-        "rewrite_instruction": str(review.get("rewrite_instruction", "")),
-        "best_candidate_score": best_score,
-        "best_candidates": best_candidates,
+        "critic_analysis": {
+            "reviews": history,
+            "passed": bool(review.get("passed", True)),
+            "rewrite_instruction": rewrite_instruction,
+            "rewrite_candidate_indexes": rewrite_indexes,
+        },
         "warnings": warnings,
         "_debug_llm": llm_debug,
     }
@@ -566,7 +590,7 @@ def node_content_save(state: WorkflowState) -> dict[str, Any]:
     """Responsibility: persist selected analyses. Mutation and persistence: yes."""
     final_candidates = state.get("candidates", [])
     if not state.get("critic_analysis", {}).get("passed", True) and state.get("critic_attempts", 0) >= 3:
-        final_candidates = state.get("best_candidates", final_candidates)
+        final_candidates = state.get("fallback_candidates", final_candidates)
 
     input_message_id = state.get("input_message_id")
     if not input_message_id:
