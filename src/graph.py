@@ -431,6 +431,21 @@ def node_dialogue_composer(state: WorkflowState) -> dict[str, Any]:
         "persona_expression": ["遵守固定人格与表达风格"],
         "emotion_expression": ["不过度解读情绪"],
         "topic_plan": ["优先延续当前话题"],
+        "length_plan": {
+            "sentence_count": 1,
+            "char_budget": 25,
+            "openness": 0.5,
+            "allow_filler_only": True,
+            "rhythm_note": "短句为主，不要把话说完",
+        },
+        "candidate_directives": [
+            {"candidate_index": 0, "angle": "情绪回应", "length_hint": "短",
+             "instruction": "先接住对方此刻的状态，不解释不建议"},
+            {"candidate_index": 1, "angle": "极简附和", "length_hint": "极短",
+             "instruction": "只用几个字回应，不补充任何信息"},
+            {"candidate_index": 2, "angle": "轻反问", "length_hint": "短",
+             "instruction": "顺着说一句，再抛一个自然的小问题"},
+        ],
         "constraints": ["不捏造事实", "不越过关系行为边界"],
     }
     result, warnings, llm_debug = _run_structured_agent(state, "dialogue_composer", {

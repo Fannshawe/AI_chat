@@ -112,7 +112,17 @@ class GraphPipelineTests(unittest.TestCase):
             "dialogue_composer": {
                 "goal": "自然回应", "strategy": ["简短回应"], "structure": ["一句回应"],
                 "memory_usage": [], "persona_expression": ["简洁"], "emotion_expression": [],
-                "topic_plan": ["延续当前话题"], "constraints": ["不追问"],
+                "topic_plan": ["延续当前话题"],
+                "length_plan": {
+                    "sentence_count": 1, "char_budget": 15, "openness": 0.5,
+                    "allow_filler_only": True, "rhythm_note": "短句",
+                },
+                "candidate_directives": [
+                    {"candidate_index": 0, "angle": "情绪回应", "length_hint": "短", "instruction": "接住状态"},
+                    {"candidate_index": 1, "angle": "极简附和", "length_hint": "极短", "instruction": "几个字"},
+                    {"candidate_index": 2, "angle": "轻反问", "length_hint": "短", "instruction": "问一句"},
+                ],
+                "constraints": ["不追问"],
             },
             "prompt_composer": {"candidates": ["好呀", "可以", "听起来不错"]},
             "critic": critique(True),

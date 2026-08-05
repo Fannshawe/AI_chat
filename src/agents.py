@@ -34,6 +34,10 @@ ShortEmotionDimension = Literal[
 RelationshipLevel = Literal["陌生人", "认识", "朋友", "亲密朋友", "暧昧", "恋人"]
 RelationshipDimension = Literal["trust", "familiarity", "intimacy", "attraction", "attachment", "comfort"]
 MemoryCategory = Literal["episodic", "semantic", "emotional", "shared_experience"]
+CandidateAngle = Literal[
+    "情绪回应", "轻反问", "玩笑吐槽", "极简附和", "自我暴露", "具体建议", "话题延展", "暂不回复",
+]
+CandidateLengthHint = Literal["极短", "短", "中"]
 ConversationEventType = Literal[
     "好消息", "坏消息", "道歉", "感谢", "夸奖", "失联", "冷淡", "冲突", "和解",
     "示好", "试探", "边界确认", "表达想念", "邀约", "拒绝", "求安慰", "求建议",
@@ -124,6 +128,25 @@ class MemoryPlan(BaseModel):
     requests: list[MemoryPlanItem] = Field(default_factory=list, max_length=8)
 
 
+class LengthPlan(BaseModel):
+    """Turn-level rhythm budget so replies read like chat instead of prose."""
+
+    sentence_count: int = Field(default=2, ge=1, le=3, description="本轮建议句子数")
+    char_budget: int = Field(default=30, ge=2, le=60, description="整轮中文字符上限")
+    openness: float = Field(default=0.4, ge=0, le=1, description="留白比例，越高说得越少")
+    allow_filler_only: bool = Field(default=True, description="是否允许没有信息量的纯语气回应")
+    rhythm_note: str = Field(default="", description="本轮节奏的一句话说明")
+
+
+class CandidateDirective(BaseModel):
+    """Per-candidate writing angle so the three options differ by design."""
+
+    candidate_index: int = Field(ge=0, le=2)
+    angle: CandidateAngle
+    length_hint: CandidateLengthHint
+    instruction: str = Field(description="这条候选怎么写、不写什么")
+
+
 class DialogueComposerAnalysis(BaseModel):
     """A response plan; this node never writes the final reply."""
 
@@ -134,6 +157,8 @@ class DialogueComposerAnalysis(BaseModel):
     persona_expression: list[str] = Field(default_factory=list, max_length=8)
     emotion_expression: list[str] = Field(default_factory=list, max_length=8)
     topic_plan: list[str] = Field(default_factory=list, max_length=8)
+    length_plan: LengthPlan = Field(default_factory=LengthPlan)
+    candidate_directives: list[CandidateDirective] = Field(min_length=3, max_length=3)
     constraints: list[str] = Field(default_factory=list, max_length=12)
 
 

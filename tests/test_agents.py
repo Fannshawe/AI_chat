@@ -112,9 +112,25 @@ class AgentHarnessTests(unittest.TestCase):
             "persona_expression": ["保持克制"],
             "emotion_expression": ["轻微关心"],
             "topic_plan": ["项目进度"],
+            "length_plan": {
+                "sentence_count": 1,
+                "char_budget": 20,
+                "openness": 0.5,
+                "allow_filler_only": True,
+                "rhythm_note": "只回半句",
+            },
+            "candidate_directives": [
+                {"candidate_index": 0, "angle": "情绪回应", "length_hint": "短", "instruction": "先接住状态"},
+                {"candidate_index": 1, "angle": "极简附和", "length_hint": "极短", "instruction": "几个字带过"},
+                {"candidate_index": 2, "angle": "轻反问", "length_hint": "短", "instruction": "顺着问一句"},
+            ],
             "constraints": ["不连续追问"],
         })
         self.assertEqual(composer.goal, "回应近况并自然延续话题")
+        self.assertEqual(composer.length_plan.char_budget, 20)
+        self.assertEqual(
+            [item.length_hint for item in composer.candidate_directives], ["短", "极短", "短"],
+        )
 
 
 if __name__ == "__main__":
