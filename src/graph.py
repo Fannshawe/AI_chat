@@ -13,7 +13,7 @@ from langgraph.graph import END, StateGraph
 from pydantic import BaseModel
 
 from .agents import get_agent
-from .config import SHORT_TERM_MESSAGE_LIMIT
+from .config import CRITIC_MAX_ATTEMPTS, SHORT_TERM_MESSAGE_LIMIT, WORKFLOW_DEBUG
 from .guidance import guidance_retriever
 from .storage import (
     MEMORY_CATEGORIES,
@@ -48,6 +48,10 @@ def _state_debug_enabled(state: "WorkflowState") -> bool:
     if isinstance(value, bool):
         return value
     return DEBUG
+
+
+def _workflow_debug_enabled(state: "WorkflowState") -> bool:
+    return _state_debug_enabled(state) or WORKFLOW_DEBUG
 
 
 def _safe_debug_value(value: Any) -> Any:
@@ -94,6 +98,13 @@ def _state_delta(before: dict[str, Any], output: dict[str, Any]) -> dict[str, An
         if before.get(key) != serialized:
             changed[key] = serialized
     return changed
+
+
+def _workflow_debug_print(state: "WorkflowState", label: str, payload: Any) -> None:
+    if not _workflow_debug_enabled(state):
+        return
+    formatted = json.dumps(_safe_debug_value(payload), ensure_ascii=False, indent=2)
+    print(f"[workflow-debug] {label}\n{formatted}\n[/workflow-debug]")
 
 
 def _trace_node(name: str, node_fn):
@@ -289,6 +300,7 @@ def node_ai_emotion_update(state: WorkflowState) -> dict[str, Any]:
         "persona_emotion_profile": state.get("emotion_profile", {}),
         "recent_events": _events_with_time(store.list_conversation_events(state["contact_id"], 8)),
     }, fallback)
+    _workflow_debug_print(state, "ai_emotion analysis", result)
     return {"ai_emotion_analysis": result, "warnings": warnings, "_debug_llm": llm_debug}
 
 
@@ -498,6 +510,10 @@ def node_prompt_composer(state: WorkflowState) -> dict[str, Any]:
     """Responsibility: write final candidate replies from the plan. Persistence: snapshot only."""
     try:
         candidates, llm_debug = _invoke_prompt_composer(state, include_images=state.get("critic_attempts", 0) == 0)
+        if state.get("critic_attempts", 0) > 0:
+            _workflow_debug_print(state, "prompt_rewriter candidates", candidates)
+        else:
+            _workflow_debug_print(state, "prompt_composer candidates", candidates)
         result = {"candidates": candidates, "_debug_llm": llm_debug}
         if len(candidates) == 3 and not state.get("fallback_candidates"):
             result["fallback_candidates"] = list(candidates)
@@ -547,6 +563,7 @@ def node_reply_critic(state: WorkflowState) -> dict[str, Any]:
         and int(item.get("candidate_index", -1)) in rewrite_indexes
         and str(item.get("rewrite_instruction", "")).strip()
     )
+    _workflow_debug_print(state, "critic analysis", review)
     result: dict[str, Any] = {
         "critic_attempts": attempts,
         "critic_analysis": {
@@ -558,13 +575,13 @@ def node_reply_critic(state: WorkflowState) -> dict[str, Any]:
         "warnings": warnings,
         "_debug_llm": llm_debug,
     }
-    if not review.get("passed", True) and attempts >= 3:
+    if not review.get("passed", True) and attempts >= CRITIC_MAX_ATTEMPTS:
         result["warnings"] = [*warnings, "Reply Critic两次重写后仍未通过，已返回最佳候选并记录告警。"]
     return result
 
 
 def route_after_critic(state: WorkflowState) -> str:
-    if state.get("critic_analysis", {}).get("passed", True) or state.get("critic_attempts", 0) >= 3:
+    if state.get("critic_analysis", {}).get("passed", True) or state.get("critic_attempts", 0) >= CRITIC_MAX_ATTEMPTS:
         return "reflection"
     return "prompt_composer"
 
@@ -589,7 +606,7 @@ def node_reflection(state: WorkflowState) -> dict[str, Any]:
 def node_content_save(state: WorkflowState) -> dict[str, Any]:
     """Responsibility: persist selected analyses. Mutation and persistence: yes."""
     final_candidates = state.get("candidates", [])
-    if not state.get("critic_analysis", {}).get("passed", True) and state.get("critic_attempts", 0) >= 3:
+    if not state.get("critic_analysis", {}).get("passed", True) and state.get("critic_attempts", 0) >= CRITIC_MAX_ATTEMPTS:
         final_candidates = state.get("fallback_candidates", final_candidates)
 
     input_message_id = state.get("input_message_id")

@@ -63,6 +63,17 @@ def _read_env(name: str) -> str | None:
     return stripped or None
 
 
+def _read_bool_env(name: str, default: bool = False) -> bool:
+    value = _read_env(name)
+    if value is None:
+        return default
+    return value.lower() in {"1", "true", "yes", "on"}
+
+
+WORKFLOW_DEBUG = _read_bool_env("WORKFLOW_DEBUG", default=False)
+CRITIC_MAX_ATTEMPTS = max(1, int(os.getenv("CRITIC_MAX_ATTEMPTS", "3")))
+
+
 def _agent_env_prefix(agent_name: str) -> str:
     return f"AGENT_{agent_name.upper()}"
 
