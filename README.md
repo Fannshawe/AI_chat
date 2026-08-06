@@ -6,13 +6,13 @@
 
 - FastAPI 本地服务与现代化聊天页面
 - 独立管理后台：Persona YAML、Core 提案、记忆、情绪、关系、指导文档、导入导出、模型切换
-- LangGraph 工作流：上下文 → User Emotion → Relationship → Persona Habit Retrieval → AI Emotion Update → Memory Planner → Memory Retrieval → 技巧文档 → Dialogue Composer → Prompt Composer → Reply Critic → Reflection → 保存
+- LangGraph 工作流：上下文（预加载 Persona Core + Personality） → User Emotion → Relationship → Persona Habit Retrieval → Memory Planner → Memory Retrieval → AI Emotion Update → 技巧文档 → Dialogue Composer → Prompt Composer → Reply Critic → Reflection → 保存
 - 每个 LLM 节点保留独立的 LangChain v1 `create_agent()`，节点直接调用 `agent.invoke()`
 - Pydantic + `ToolStrategy` 结构化输出，结果从 `structured_response` 读取，不再手工解析模型 JSON
 - `ModelRetryMiddleware` 处理瞬时模型故障，`ModelCallLimitMiddleware` 限制单节点调用次数
 - 最近短期上下文
 - SQLite 长期记忆与可读 JSON 全量导出
-- Persona YAML 模板：Core 与 Personality 人工维护，Habit 可由 Reflection 自动更新
+- Persona YAML 模板：Core 与 Personality 在上下文加载阶段固定注入，Habit 作为按需检索层由 Persona Habit Retrieval 选择性注入；Habit 可由 Reflection 自动更新
 - 四类长期记忆：episodic、semantic、emotional、shared_experience
 - 六维关系状态：trust、familiarity、intimacy、attraction、attachment、comfort
 - 六阶段关系状态机：陌生人、认识、朋友、亲密朋友、暧昧、恋人；严重事件才允许降级
@@ -59,7 +59,9 @@
 
 ## 新回复流程
 
-当前主流程为：上下文 → User Emotion → Relationship → Persona Habit Retrieval → AI Emotion Update → Memory Planner → Memory Retrieval → 聊天技巧文档 → Dialogue Composer → Prompt Composer → Reply Critic → Reflection → 内容保存。
+当前主流程为：上下文（预加载 Persona Core + Personality） → User Emotion → Relationship → Persona Habit Retrieval → Memory Planner → Memory Retrieval → AI Emotion Update → 聊天技巧文档 → Dialogue Composer → Prompt Composer → Reply Critic → Reflection → 内容保存。
+
+其中 Persona Habit Retrieval 对应 Persona 的第三层 Habit（生活习惯）：它会从 `persona_habits` 中按当前话题筛出 `relevant_habits`，而不是把全部 Habit 一次性塞进 Prompt。
 
 AI Emotion Update 读取 Previous AI Emotion、User Emotion、Relationship、Persona emotionProfile、Conversation Event 与时间衰减信息。User Emotion 只描述对方，不直接修改 AI。
 

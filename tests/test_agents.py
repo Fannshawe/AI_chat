@@ -45,6 +45,7 @@ class AgentHarnessTests(unittest.TestCase):
             "events": [{"event": "好消息", "impact": 0.8, "reason": "用户分享升职"}],
             "ai_emotion": {
                 "mood": "开心",
+                "mood_intensity": 65,
                 "energy": 72,
                 "dimensions": [
                     {"name": "喜悦", "value": 45},

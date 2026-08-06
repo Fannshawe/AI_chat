@@ -32,13 +32,16 @@ MEMORY_CATEGORIES = ["episodic", "semantic", "emotional", "shared_experience"]
 USER_MEMORY_CATEGORIES = ["episodic", "semantic", "emotional"]
 MEMORY_OWNER_AI = "ai"
 MEMORY_OWNER_CONTACT = "contact"
-DEFAULT_EMOTION_PROFILE = {
+DEFAULT_EMOTION_PROFILE: dict[str, Any] = {
     "sensitivity": 0.5,
     "warmth": 0.5,
     "jealousy": 0.2,
     "expressiveness": 0.5,
     "forgiveness": 0.5,
     "humor": 0.5,
+    "base_mood": "放松",
+    "base_energy": 60,
+    "base_dimensions": {},
 }
 LEGACY_MEMORY_CATEGORY_MAP = {
     "人物事实与偏好": "semantic",
@@ -201,6 +204,7 @@ class ChatStore:
                 CREATE TABLE IF NOT EXISTS ai_emotion_states (
                     contact_id INTEGER PRIMARY KEY,
                     mood TEXT NOT NULL DEFAULT '放松',
+                    mood_intensity INTEGER NOT NULL DEFAULT 60,
                     energy INTEGER NOT NULL DEFAULT 60,
                     dimensions TEXT NOT NULL DEFAULT '{}',
                     updated_at TEXT NOT NULL,
@@ -286,6 +290,13 @@ class ChatStore:
             connection.execute(
                 "UPDATE memories SET owner_type='contact', owner_id=contact_id WHERE owner_type IS NULL OR owner_type=''"
             )
+            ai_emotion_columns = {
+                row[1] for row in connection.execute("PRAGMA table_info(ai_emotion_states)").fetchall()
+            }
+            if "mood_intensity" not in ai_emotion_columns:
+                connection.execute(
+                    "ALTER TABLE ai_emotion_states ADD COLUMN mood_intensity INTEGER NOT NULL DEFAULT 60"
+                )
             for column, default in defaults.items():
                 if column not in relationship_columns:
                     connection.execute(
@@ -445,18 +456,41 @@ class ChatStore:
         self.refresh_yaml_snapshots({"05_ai_memory.yaml"})
         return self.get_ai_memory_profile()
 
-    def get_emotion_profile(self) -> dict[str, float]:
-        """Return persona-level emotion tuning with sane defaults."""
+    def get_emotion_profile(self) -> dict[str, Any]:
+        """Return persona-level emotion tuning with sane defaults.
+
+        Includes ``base_mood`` / ``base_energy`` / ``base_dimensions``: the
+        Personality-layer baseline that the AI emotion should drift back
+        toward over time.
+        """
         profile = self.get_persona_profile()
         raw = profile.get("emotionProfile", {})
         if not isinstance(raw, dict):
-            return dict(DEFAULT_EMOTION_PROFILE)
-        merged = dict(DEFAULT_EMOTION_PROFILE)
+            raw = {}
+        merged: dict[str, Any] = dict(DEFAULT_EMOTION_PROFILE)
         for key, default in DEFAULT_EMOTION_PROFILE.items():
-            try:
-                merged[key] = max(0.0, min(1.0, float(raw.get(key, default))))
-            except (TypeError, ValueError):
-                merged[key] = default
+            if key == "base_mood":
+                merged[key] = str(raw.get(key, default)).strip() or default
+            elif key == "base_energy":
+                try:
+                    merged[key] = max(0, min(100, int(raw.get(key, default))))
+                except (TypeError, ValueError):
+                    merged[key] = default
+            elif key == "base_dimensions":
+                value = raw.get(key, default)
+                dimensions: dict[str, int] = {}
+                if isinstance(value, dict):
+                    for dim_key, dim_value in value.items():
+                        try:
+                            dimensions[str(dim_key)] = max(0, min(100, int(dim_value)))
+                        except (TypeError, ValueError):
+                            continue
+                merged[key] = dimensions
+            else:
+                try:
+                    merged[key] = max(0.0, min(1.0, float(raw.get(key, default))))
+                except (TypeError, ValueError):
+                    merged[key] = default
         return merged
 
     def update_persona_habits(self, updates: list[dict[str, Any]]) -> dict[str, Any]:
@@ -754,8 +788,8 @@ class ChatStore:
             if row is None:
                 now = utc_now()
                 connection.execute(
-                    """INSERT INTO ai_emotion_states(contact_id, mood, energy, dimensions, updated_at)
-                       VALUES (?, '放松', 60, ?, ?)""",
+                    """INSERT INTO ai_emotion_states(contact_id, mood, mood_intensity, energy, dimensions, updated_at)
+                       VALUES (?, '放松', 60, 60, ?, ?)""",
                     (contact_id, json.dumps({}, ensure_ascii=False), now),
                 )
                 row = connection.execute(
@@ -766,11 +800,21 @@ class ChatStore:
         return result
 
     def save_ai_emotion_state(self, contact_id: int, state: dict[str, Any]) -> dict[str, Any]:
-        """Persist AI mood, energy, and multi-dimensional short emotion scores."""
-        mood = str(state.get("mood", "放松")).strip() or "放松"
-        energy = max(0, min(100, int(state.get("energy", 60))))
+        """Persist AI mood, mood intensity, energy, and multi-dimensional short emotion scores.
+
+        Dimensions are merged with the previous state rather than replaced
+        wholesale: a dimension the model does not mention this round keeps
+        its last value instead of silently dropping to zero.
+        """
+        previous = self.get_ai_emotion_state(contact_id)
+        mood = str(state.get("mood", previous.get("mood", "放松"))).strip() or "放松"
+        energy = max(0, min(100, int(state.get("energy", previous.get("energy", 60)))))
+        try:
+            mood_intensity = max(0, min(100, int(state.get("mood_intensity", previous.get("mood_intensity", 60)))))
+        except (TypeError, ValueError):
+            mood_intensity = int(previous.get("mood_intensity", 60))
         raw_dimensions = state.get("dimensions", {})
-        dimensions: dict[str, int] = {}
+        new_dimensions: dict[str, int] = {}
         if isinstance(raw_dimensions, list):
             for item in raw_dimensions[:8]:
                 if not isinstance(item, dict):
@@ -778,24 +822,27 @@ class ChatStore:
                 name = str(item.get("name", "")).strip()
                 if not name:
                     continue
-                dimensions[name] = max(0, min(100, int(item.get("value", 0))))
+                new_dimensions[name] = max(0, min(100, int(item.get("value", 0))))
         elif isinstance(raw_dimensions, dict):
             for key, value in raw_dimensions.items():
                 name = str(key).strip()
                 if not name:
                     continue
-                dimensions[name] = max(0, min(100, int(value)))
+                new_dimensions[name] = max(0, min(100, int(value)))
+        dimensions = dict(previous.get("dimensions", {}))
+        dimensions.update(new_dimensions)
         now = utc_now()
         with self.connect() as connection:
             connection.execute(
-                """INSERT INTO ai_emotion_states(contact_id, mood, energy, dimensions, updated_at)
-                   VALUES (?, ?, ?, ?, ?)
+                """INSERT INTO ai_emotion_states(contact_id, mood, mood_intensity, energy, dimensions, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?)
                    ON CONFLICT(contact_id) DO UPDATE SET
                        mood=excluded.mood,
+                       mood_intensity=excluded.mood_intensity,
                        energy=excluded.energy,
                        dimensions=excluded.dimensions,
                        updated_at=excluded.updated_at""",
-                (contact_id, mood, energy, json.dumps(dimensions, ensure_ascii=False), now),
+                (contact_id, mood, mood_intensity, energy, json.dumps(dimensions, ensure_ascii=False), now),
             )
             self._mark_exports(connection, "06_emotions.yaml")
         return self.get_ai_emotion_state(contact_id)

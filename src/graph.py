@@ -278,10 +278,12 @@ def node_emotion_detection(state: WorkflowState) -> dict[str, Any]:
 def node_ai_emotion_update(state: WorkflowState) -> dict[str, Any]:
     """Responsibility: update persistent AI emotion state after relationship judgment."""
     previous = state.get("ai_emotion_state", {})
+    emotion_profile = state.get("emotion_profile", {})
     fallback = {
         "events": [{"event": "其他", "impact": 0.2, "reason": "AI 情绪节点未返回可靠结构"}],
         "ai_emotion": {
             "mood": str(previous.get("mood", "放松")),
+            "mood_intensity": int(previous.get("mood_intensity", 60)),
             "energy": int(previous.get("energy", 60)),
             "dimensions": [
                 {"name": key, "value": int(value)}
@@ -295,9 +297,16 @@ def node_ai_emotion_update(state: WorkflowState) -> dict[str, Any]:
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
         "user_emotion": state.get("emotion_analysis", {}),
         "previous_ai_emotion": previous,
+        "current_time": datetime.now().astimezone().isoformat(),
+        "persona_baseline": {
+            "base_mood": emotion_profile.get("base_mood", "放松"),
+            "base_energy": emotion_profile.get("base_energy", 60),
+            "base_dimensions": emotion_profile.get("base_dimensions", {}),
+        },
         "relationship": state.get("relationship", {}),
         "relationship_judgment": state.get("relationship_analysis", {}),
-        "persona_emotion_profile": state.get("emotion_profile", {}),
+        "persona_emotion_profile": emotion_profile,
+        "persona_personality": state.get("persona_personality", {}),
         "recent_events": _events_with_time(store.list_conversation_events(state["contact_id"], 8)),
     }, fallback)
     _workflow_debug_print(state, "ai_emotion analysis", result)
@@ -331,7 +340,7 @@ def _flatten_habits(value: Any, prefix: str = "") -> list[tuple[str, Any]]:
     return [(prefix, value)]
 
 
-def node_persona_retrieval(state: WorkflowState) -> dict[str, Any]:
+def node_persona_habit_retrieval(state: WorkflowState) -> dict[str, Any]:
     """Responsibility: retrieve topic-relevant Habits only. Persistence: none."""
     query = state["user_request"].lower()
     grams = {query[index:index + 2] for index in range(max(0, len(query) - 1))}
@@ -355,7 +364,6 @@ def node_memory_planner(state: WorkflowState) -> dict[str, Any]:
         "latest_message": state["user_request"],
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
         "emotion_analysis": state.get("emotion_analysis", {}),
-        "ai_emotion": state.get("ai_emotion_analysis", {}).get("ai_emotion", state.get("ai_emotion_state", {})),
         "relationship_analysis": state.get("relationship_analysis", {}),
         "available_memory_types": USER_MEMORY_CATEGORIES,
         "instruction": "扩展话题关键词和近义联想，但不要臆造事实。",
@@ -672,7 +680,7 @@ def build_graph():
     graph.add_node("context", _trace_node("context", node_load_context))
     graph.add_node("emotion", _trace_node("emotion", node_emotion_detection))
     graph.add_node("relationship", _trace_node("relationship", node_relationship_state))
-    graph.add_node("persona_retrieval", _trace_node("persona_retrieval", node_persona_retrieval))
+    graph.add_node("persona_habit_retrieval", _trace_node("persona_habit_retrieval", node_persona_habit_retrieval))
     graph.add_node("ai_emotion", _trace_node("ai_emotion", node_ai_emotion_update))
     graph.add_node("memory_planner", _trace_node("memory_planner", node_memory_planner))
     graph.add_node("memory_retrieval", _trace_node("memory_retrieval", node_memory_retrieval))
@@ -685,13 +693,11 @@ def build_graph():
     graph.set_entry_point("context")
     graph.add_edge("context", "emotion")
     graph.add_edge("context", "relationship")
-    graph.add_edge("context", "persona_retrieval")
-    graph.add_edge("emotion", "ai_emotion")
-    graph.add_edge("relationship", "ai_emotion")
-    graph.add_edge("persona_retrieval", "ai_emotion")
-    graph.add_edge("ai_emotion", "memory_planner")
+    graph.add_edge("context", "persona_habit_retrieval")
+    graph.add_edge("context", "memory_planner")
     graph.add_edge("memory_planner", "memory_retrieval")
-    graph.add_edge("memory_retrieval", "guidance")
+    graph.add_edge(["emotion", "relationship", "persona_habit_retrieval", "memory_retrieval"], "ai_emotion")
+    graph.add_edge("ai_emotion", "guidance")
     graph.add_edge("guidance", "dialogue_composer")
     graph.add_edge("dialogue_composer", "prompt_composer")
     graph.add_edge("prompt_composer", "critic")

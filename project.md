@@ -7,9 +7,9 @@
 | `context` (`node_load_context`) | `contact_id?` `provider_name?`；外部：`store` | `contact_id` `history` `persona_core` `persona_personality` `persona_habits` `emotion_profile` `relationship` `recent_emotions` `ai_emotion_state` `provider_name` `critic_attempts` `critic_analysis` `fallback_candidates` |
 | `emotion` (`node_emotion_detection`) | `user_request` `history` `recent_emotions` | `emotion_analysis` `warnings` `_debug_llm` |
 | `relationship` (`node_relationship_state`) | `relationship` `user_request` `history` | `relationship_analysis` `warnings` `_debug_llm` |
-| `persona_retrieval` (`node_persona_retrieval`) | `user_request` `persona_habits` | `relevant_habits` |
-| `ai_emotion` (`node_ai_emotion_update`) | `user_request` `history` `emotion_analysis` `ai_emotion_state` `relationship` `relationship_analysis` `emotion_profile` `contact_id`；外部：`store.list_conversation_events` | `ai_emotion_analysis` `warnings` `_debug_llm` |
-| `memory_planner` (`node_memory_planner`) | `user_request` `history` `emotion_analysis` `ai_emotion_analysis/ai_emotion_state` `relationship_analysis` | `memory_plan` `warnings` `_debug_llm` |
+| `persona_habit_retrieval` (`node_persona_retrieval`) | `user_request` `persona_habits` | `relevant_habits` |
+| `ai_emotion` (`node_ai_emotion_update`) | `user_request` `history` `emotion_analysis` `ai_emotion_state` `relationship` `relationship_analysis` `emotion_profile` `contact_id` `memories`；外部：`store.list_conversation_events` | `ai_emotion_analysis` `warnings` `_debug_llm` |
+| `memory_planner` (`node_memory_planner`) | `user_request` `history`；可选读取：`emotion_analysis` `relationship_analysis` | `memory_plan` `warnings` `_debug_llm` |
 | `memory_retrieval` (`node_memory_retrieval`) | `contact_id` `memory_plan`；外部：`store.search_memories_by_plan` `store.get_ai_memory_profile` | `memories` |
 | `guidance` (`node_chat_guidance`) | `user_request` `relationship.current_level` `emotion_analysis`；外部：`guidance_retriever` | `guidance_chunks` |
 | `dialogue_composer` (`node_dialogue_composer`) | `user_request` `history` `persona_core` `persona_personality` `relevant_habits` `emotion_analysis` `ai_emotion_analysis/ai_emotion_state` `relationship` `relationship_analysis` `memories` `guidance_chunks` | `dialogue_composition` `strategy` `warnings` `_debug_llm` |
@@ -25,7 +25,7 @@
 | `emotion` | `node_emotion_detection` | `latest_message` `recent_conversation_with_time` `recent_emotional_state` `instruction` | `EmotionAnalysis`：`emotions[]`，项字段 `subject` `emotion` `intensity` `confidence` `reason` |
 | `ai_emotion` | `node_ai_emotion_update` | `latest_message` `recent_conversation_with_time` `user_emotion` `previous_ai_emotion` `relationship` `relationship_judgment` `persona_emotion_profile` `recent_events` | `AIEmotionUpdateAnalysis`：`events[]`、`ai_emotion{mood, energy, dimensions[], reason}` |
 | `relationship` | `node_relationship_state` | `allowed_levels` `current_relationship` `latest_message` `recent_conversation_with_time` | `RelationshipAnalysis`：`changes[]` `suggested_level` `stage_reason` `serious_event` `behavior_boundaries[]` |
-| `memory_planner` | `node_memory_planner` | `latest_message` `recent_conversation_with_time` `emotion_analysis` `ai_emotion` `relationship_analysis` `available_memory_types` `instruction` | `MemoryPlan`：`requests[]`，项字段 `memory_type` `query` `keywords[]` `priority` `top_k` `time_range` `reason` |
+| `memory_planner` | `node_memory_planner` | `latest_message` `recent_conversation_with_time` `emotion_analysis?` `relationship_analysis?` `available_memory_types` `instruction` | `MemoryPlan`：`requests[]`，项字段 `memory_type` `query` `keywords[]` `priority` `top_k` `time_range` `reason` |
 | `dialogue_composer` | `node_dialogue_composer` | `latest_message` `recent_conversation_with_time` `persona` `relevant_habits` `emotion` `ai_emotion` `relationship` `relationship_judgment` `memories` `chat_skill_documents` | `DialogueComposerAnalysis`：`goal` `strategy[]` `structure[]` `memory_usage[]` `persona_expression[]` `emotion_expression[]` `topic_plan[]` `constraints[]` |
 | `prompt_composer` | `node_prompt_composer` / `_invoke_prompt_composer` | `latest_message` `recent_conversation_with_time` `persona` `relevant_habits` `emotion_analysis` `ai_emotion` `relationship` `relationship_boundaries` `relevant_memories` `dialogue_plan` `rewrite_instruction` `rewrite_candidate_indexes` `existing_candidates` `candidate_count`（首轮可带图片） | `ResponseCandidates`：`candidates[3]` |
 | `critic` | `node_reply_critic` | `latest_message` `recent_conversation_with_time` `persona` `relevant_memories` `dialogue_plan` `candidates` `review_dimensions` | `ReplyCriticAnalysis`：`candidates[]`（含 `candidate_index` `ai_taste` `interview_taste` `empathy_excess` `naturalness` `persona_consistent` `memory_consistent` `passed` `issues[]` `rewrite_instruction`），以及 `passed` `rewrite_candidate_indexes[]` |
@@ -35,4 +35,8 @@
 ## 备注
 
 - 以上 LLM 输入都通过 `_run_structured_agent` 或 `_invoke_prompt_composer` 封装，实际请求体统一是：`{"messages": [{"role": "user", "content": json(payload)}]}`。
-- `context`、`persona_retrieval`、`memory_retrieval`、`guidance`、`save` 不调用 LLM。
+- `context` 节点启动时会预加载 Persona 的前两层：`persona_core`（Core Identity）和 `persona_personality`（Personality）；第三层 `persona_habits`（Habit / 生活习惯）只是在 state 中备好，供后续按需检索。
+- `persona_habit_retrieval` 对应 Persona 第三层 Habit（生活习惯）：它不直接把全部 Habit 注入 Prompt，而是从 `persona_habits` 中按当前 `user_request` 选出 `relevant_habits`。
+- 当前图主流程：`context → emotion / relationship / persona_habit_retrieval / memory_planner` 并行，随后 `memory_planner → memory_retrieval`，再由 `emotion + relationship + persona_habit_retrieval + memory_retrieval → ai_emotion → guidance → dialogue_composer → prompt_composer → critic → reflection → save`。
+- `memory_plan` 在运行控制流里只直接提供给 `memory_retrieval`；`save` 仅做分析快照持久化。
+- `context`、`persona_habit_retrieval`、`memory_retrieval`、`guidance`、`save` 不调用 LLM。

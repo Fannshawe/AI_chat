@@ -25,7 +25,7 @@ EmotionName = Literal[
     "难过", "委屈", "吃醋", "生气", "沮丧", "内疚", "想念", "其他", "unknown",
 ]
 MoodName = Literal[
-    "放松", "开心", "兴奋", "平静", "专注", "好奇", "孤单", "疲惫", "焦虑", "低落",
+    "放松", "开心", "专注", "孤单", "疲惫", "焦虑", "低落",
 ]
 ShortEmotionDimension = Literal[
     "喜悦", "惊喜", "安心", "好奇", "期待", "害羞", "紧张", "焦虑", "生气",
@@ -80,6 +80,7 @@ class AIEmotionState(BaseModel):
     """Persistent AI affective state used by later dialogue planning."""
 
     mood: MoodName
+    mood_intensity: int = Field(ge=0, le=100, description="mood 的强度，0 到 100，越高越强烈")
     energy: int = Field(ge=0, le=100)
     dimensions: list[AIDimensionState] = Field(default_factory=list, max_length=8)
     reason: str = Field(description="本轮更新的简短依据")
