@@ -7,6 +7,7 @@ import re
 from functools import lru_cache
 from typing import Any
 
+from langchain_core.language_models.model_profile import ModelProfile
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
@@ -17,7 +18,20 @@ from .config import ModelProvider, get_agent_model_provider, get_model_providers
 def _build_model(name: str, model: str, base_url: str | None, api_key: str | None) -> ChatOpenAI:
     if not api_key:
         raise RuntimeError(f"模型供应商 {name} 尚未配置 API Key")
-    return ChatOpenAI(model=model, api_key=api_key, base_url=base_url, temperature=0.7)
+    profile: ModelProfile | None = None
+    if base_url:
+        # OpenAI-compatible endpoints often lack a built-in LangChain profile, so
+        # auto structured output falls back to ToolStrategy and sends tool_choice
+        # values some providers reject. Declaring structured output support keeps
+        # LangChain on the provider-native path.
+        profile = {"structured_output": True}
+    return ChatOpenAI(
+        model=model,
+        api_key=api_key,
+        base_url=base_url,
+        temperature=0.7,
+        profile=profile,
+    )
 
 
 def get_model(provider_name: str = "default", agent_name: str | None = None) -> ChatOpenAI:

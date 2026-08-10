@@ -8,7 +8,7 @@
 - 独立管理后台：Persona YAML、Core 提案、记忆、情绪、关系、指导文档、导入导出、模型切换
 - LangGraph 工作流：上下文（预加载 Persona Core + Personality） → User Emotion → Relationship → Persona Habit Retrieval → Memory Planner → Memory Retrieval → AI Emotion Update → 技巧文档 → Dialogue Composer → Prompt Composer → Reply Critic → Reflection → 保存
 - 每个 LLM 节点保留独立的 LangChain v1 `create_agent()`，节点直接调用 `agent.invoke()`
-- Pydantic + `ToolStrategy` 结构化输出，结果从 `structured_response` 读取，不再手工解析模型 JSON
+- Pydantic 结构化输出，交给 LangChain 自动优先选择 `ProviderStrategy`，不支持时再回退；结果从 `structured_response` 读取，不再手工解析模型 JSON
 - `ModelRetryMiddleware` 处理瞬时模型故障，`ModelCallLimitMiddleware` 限制单节点调用次数
 - 最近短期上下文
 - SQLite 长期记忆与可读 JSON 全量导出

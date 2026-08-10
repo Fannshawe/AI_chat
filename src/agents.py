@@ -12,7 +12,6 @@ from typing import Literal
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import ModelCallLimitMiddleware, ModelRetryMiddleware
-from langchain.agents.structured_output import ToolStrategy
 from pydantic import BaseModel, Field
 
 from .llm_service import get_model
@@ -244,15 +243,6 @@ AGENT_SCHEMAS: dict[str, type[BaseModel]] = {
 }
 
 
-def _structured_output(schema: type[BaseModel]) -> ToolStrategy:
-    """Use tool-calling output for OpenAI-compatible endpoints without profiles."""
-    return ToolStrategy(
-        schema=schema,
-        tool_message_content="结构化结果已验证。",
-        handle_errors="输出不符合结构要求，请仅修正字段和值后重试，不要添加解释。",
-    )
-
-
 def _middleware():
     """Bound retries and calls so one node cannot loop or overspend."""
     return [
@@ -277,7 +267,7 @@ def get_agent(agent_name: str, provider_name: str = "default"):
         model=get_model(provider_name, agent_name=agent_name),
         tools=[],
         system_prompt=load_prompt(agent_name),
-        response_format=_structured_output(schema),
+        response_format=schema,
         middleware=_middleware(),
         name=f"{agent_name}_agent",
         debug=False,
