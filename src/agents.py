@@ -133,7 +133,6 @@ class LengthPlan(BaseModel):
 
     sentence_count: int = Field(default=2, ge=1, le=3, description="本轮建议句子数")
     char_budget: int = Field(default=30, ge=2, le=60, description="整轮中文字符上限")
-    openness: float = Field(default=0.4, ge=0, le=1, description="留白比例，越高说得越少")
     allow_filler_only: bool = Field(default=True, description="是否允许没有信息量的纯语气回应")
     rhythm_note: str = Field(default="", description="本轮节奏的一句话说明")
 

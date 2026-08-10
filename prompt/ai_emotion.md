@@ -18,7 +18,7 @@
 - `ai_emotion.mood` 必须使用允许的枚举值。
 - `ai_emotion.mood_intensity` 范围为 0 到 100，表示当前 mood 的强弱（例如“开心 65”），同一个 mood 下强度仍可以逐轮小幅变化。
 - `ai_emotion.energy` 范围为 0 到 100。
-- `ai_emotion.dimensions` 只输出确有依据的短期情绪维度，数值范围为 0 到 100。
+- `ai_emotion.dimensions` 只输出确有依据的短期情绪维度，数值范围为 0 到 100。输出关键的2-3个即可。
 - `ai_emotion.reason` 简短概括这次更新的主要依据。
 
 情绪时间回归（由你判断，不是固定公式）：

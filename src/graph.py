@@ -404,7 +404,6 @@ def node_dialogue_composer(state: WorkflowState) -> dict[str, Any]:
         "length_plan": {
             "sentence_count": 1,
             "char_budget": 25,
-            "openness": 0.5,
             "allow_filler_only": True,
             "rhythm_note": "短句为主，不要把话说完",
         },
