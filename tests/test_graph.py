@@ -159,6 +159,7 @@ class GraphPipelineTests(unittest.TestCase):
         self.assertEqual(self.store.get_ai_emotion_state(self.contact_id)["mood"], "开心")
         self.assertEqual(self.store.list_memories(self.contact_id)[0]["category"], "semantic")
         self.assertIn("created_at", self.store.list_memories(self.contact_id)[0])
+        self.assertTrue(all(item["retrieval_mode"] == "exact" for item in result["primary_memories"]))
         self.assertGreater(result["generation_id"], 0)
 
     def test_critic_allows_two_rewrites_and_returns_fallback_candidates(self):

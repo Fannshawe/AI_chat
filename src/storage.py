@@ -605,6 +605,24 @@ class ChatStore:
             )]
         return items
 
+    @staticmethod
+    def _memory_text_score(content: str, query: str) -> int:
+        text = str(content).lower()
+        terms = {part.lower() for part in query.replace("，", " ").replace("。", " ").split() if part}
+        chars = {query[index:index + 2] for index in range(max(0, len(query) - 1))}
+        return sum(3 for term in terms if term in text) + sum(1 for gram in chars if gram in text)
+
+    @staticmethod
+    def _memory_matches_time_range(item: dict[str, Any], time_range: str) -> bool:
+        if time_range == "all":
+            return True
+        try:
+            days = max(1, int(time_range.removesuffix("d")))
+            cutoff = datetime.now().astimezone().timestamp() - days * 86400
+            return datetime.fromisoformat(str(item["created_at"])).timestamp() >= cutoff
+        except (TypeError, ValueError):
+            return True
+
     def search_memories(
         self, contact_id: int, query: str, limit: int = 12,
         category: str | None = None, time_range: str = "all",
@@ -621,51 +639,135 @@ class ChatStore:
         memories = self.list_memories(contact_id, limit=1000, owner_type=MEMORY_OWNER_CONTACT)
         if category in MEMORY_CATEGORIES:
             memories = [item for item in memories if item["category"] == category]
-        if time_range != "all":
-            try:
-                days = max(1, int(time_range.removesuffix("d")))
-                cutoff = datetime.now().astimezone().timestamp() - days * 86400
-                memories = [
-                    item for item in memories
-                    if datetime.fromisoformat(str(item["created_at"])).timestamp() >= cutoff
-                ]
-            except (TypeError, ValueError):
-                pass
-        terms = {part.lower() for part in query.replace("，", " ").replace("。", " ").split() if part}
-        chars = {query[index:index + 2] for index in range(max(0, len(query) - 1))}
+        memories = [item for item in memories if self._memory_matches_time_range(item, time_range)]
 
         def score(item: dict[str, Any]) -> tuple[int, int]:
-            text = item["content"].lower()
-            value = sum(3 for term in terms if term in text) + sum(1 for gram in chars if gram in text)
+            value = self._memory_text_score(str(item.get("content", "")), query)
             return value, int(item["id"])
 
         ranked = sorted(memories, key=score, reverse=True)
         relevant = [item for item in ranked if score(item)[0] > 0]
-        return (relevant or ranked[:4])[:limit]
+        retrieval_mode = "exact" if relevant else "fallback_recent"
+        selected = (relevant or ranked[:4])[:limit]
+        return [{**item, "retrieval_mode": retrieval_mode} for item in selected]
+
+    def search_ai_memories(
+        self,
+        query: str,
+        limit: int = 12,
+        category: str | None = None,
+    ) -> list[dict[str, Any]]:
+        profile = self.get_ai_memory_profile()
+        memories: list[dict[str, Any]] = []
+        now = utc_now()
+        for memory_category in MEMORY_CATEGORIES:
+            if category in MEMORY_CATEGORIES and memory_category != category:
+                continue
+            for index, item in enumerate(profile.get(memory_category, []) or []):
+                if isinstance(item, dict):
+                    content = str(item.get("content", "")).strip()
+                    source = str(item.get("source", "admin"))
+                else:
+                    content = str(item).strip()
+                    source = "admin"
+                if not content:
+                    continue
+                memories.append({
+                    "id": f"ai:{memory_category}:{index}",
+                    "category": memory_category,
+                    "content": content,
+                    "source": source,
+                    "source_label": f"AI memory / {source}",
+                    "owner_type": MEMORY_OWNER_AI,
+                    "owner_label": "ai",
+                    "created_at": now,
+                })
+
+        def score(item: dict[str, Any]) -> tuple[int, str]:
+            value = self._memory_text_score(str(item.get("content", "")), query)
+            return value, str(item["id"])
+
+        ranked = sorted(memories, key=score, reverse=True)
+        relevant = [item for item in ranked if score(item)[0] > 0]
+        retrieval_mode = "exact" if relevant else "fallback_recent"
+        selected = (relevant or ranked[:3])[:limit]
+        return [{**item, "retrieval_mode": retrieval_mode} for item in selected]
 
     def search_memories_by_plan(
         self, contact_id: int, requests: list[dict[str, Any]], total_limit: int = 20,
     ) -> list[dict[str, Any]]:
         """Execute a validated Memory Planner result and deduplicate ranked results."""
-        selected: dict[int, tuple[int, dict[str, Any]]] = {}
+        selected: dict[str, tuple[int, int, dict[str, Any]]] = {}
         ordered = sorted(requests, key=lambda item: int(item.get("priority", 1)), reverse=True)
         for request in ordered:
             query_parts = [str(request.get("query", "")), *map(str, request.get("keywords", []))]
-            items = self.search_memories(
+            query = " ".join(query_parts).strip()
+            top_k = max(1, min(20, int(request.get("top_k", 4))))
+            category = str(request.get("memory_type", ""))
+            priority = max(1, min(5, int(request.get("priority", 1))))
+            contact_items = self.search_memories(
                 contact_id,
-                " ".join(query_parts),
-                limit=max(1, min(20, int(request.get("top_k", 4)))),
-                category=str(request.get("memory_type", "")),
+                query,
+                limit=top_k,
+                category=category,
                 time_range=str(request.get("time_range", "all")),
             )
-            priority = max(1, min(5, int(request.get("priority", 1))))
-            for item in items:
-                memory_id = int(item["id"])
-                if memory_id not in selected or priority > selected[memory_id][0]:
-                    enriched = {**item, "retrieval_priority": priority}
-                    selected[memory_id] = (priority, enriched)
-        ranked = sorted(selected.values(), key=lambda pair: (pair[0], int(pair[1]["id"])), reverse=True)
-        return [item for _, item in ranked[:total_limit]]
+            ai_items = self.search_ai_memories(query, limit=min(top_k, 6), category=category)
+            for rank, item in enumerate([*contact_items, *ai_items]):
+                memory_id = str(item["id"])
+                enriched = {**item, "retrieval_priority": priority}
+                existing = selected.get(memory_id)
+                candidate = (priority, -rank, enriched)
+                if existing is None or candidate[:2] > existing[:2]:
+                    selected[memory_id] = candidate
+
+        ranked = [item for _, _, item in sorted(selected.values(), key=lambda pair: (pair[0], pair[1]), reverse=True)]
+        if not ranked:
+            return []
+
+        requested_types = [
+            str(item.get("memory_type", "")) for item in ordered
+            if str(item.get("memory_type", "")) in MEMORY_CATEGORIES
+        ]
+        unique_types = list(dict.fromkeys(requested_types))
+        if not unique_types:
+            unique_types = list(MEMORY_CATEGORIES)
+
+        per_type_limit = max(1, total_limit // max(1, len(unique_types)))
+        quotas = {memory_type: per_type_limit for memory_type in unique_types}
+        remainder = max(0, total_limit - per_type_limit * len(unique_types))
+        for memory_type in unique_types:
+            if remainder <= 0:
+                break
+            quotas[memory_type] += 1
+            remainder -= 1
+
+        picked: list[dict[str, Any]] = []
+        used_ids: set[str] = set()
+        counts = {memory_type: 0 for memory_type in unique_types}
+
+        for item in ranked:
+            memory_id = str(item["id"])
+            memory_type = str(item.get("category", ""))
+            if memory_id in used_ids or memory_type not in quotas:
+                continue
+            if counts[memory_type] >= quotas[memory_type]:
+                continue
+            picked.append(item)
+            used_ids.add(memory_id)
+            counts[memory_type] += 1
+            if len(picked) >= total_limit:
+                return picked
+
+        for item in ranked:
+            memory_id = str(item["id"])
+            if memory_id in used_ids:
+                continue
+            picked.append(item)
+            used_ids.add(memory_id)
+            if len(picked) >= total_limit:
+                break
+        return picked
 
     def add_memory(
         self,
@@ -1190,10 +1292,14 @@ class ChatStore:
     def _deserialize_memory_row(row: dict[str, Any]) -> dict[str, Any]:
         result = dict(row)
         result["owner_type"] = str(result.get("owner_type") or MEMORY_OWNER_CONTACT)
+        source = str(result.get("source") or ("reflection" if result["owner_type"] == MEMORY_OWNER_CONTACT else "admin"))
+        result["source"] = source
         if result.get("owner_type") == MEMORY_OWNER_CONTACT:
             result["owner_label"] = "contact"
+            result["source_label"] = f"contact memory / {source}"
         else:
             result["owner_label"] = result["owner_type"]
+            result["source_label"] = f"{result['owner_type']} memory / {source}"
         return result
 
     @staticmethod

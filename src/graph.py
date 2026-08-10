@@ -170,6 +170,8 @@ class WorkflowState(TypedDict, total=False):
     relationship_analysis: dict[str, Any]
     memory_plan: dict[str, Any]
     memories: list[dict[str, Any]]
+    primary_memories: list[dict[str, Any]]
+    background_memories: list[dict[str, Any]]
     guidance_chunks: list[dict[str, Any]]
     dialogue_composition: dict[str, Any]
     critic_attempts: int
@@ -367,50 +369,17 @@ def node_memory_planner(state: WorkflowState) -> dict[str, Any]:
 def node_memory_retrieval(state: WorkflowState) -> dict[str, Any]:
     """Responsibility: execute Memory Plan against categorized storage. Persistence: none."""
     requests = state.get("memory_plan", {}).get("requests", [])
-    contact_memories = store.search_memories_by_plan(state["contact_id"], requests)
-    ai_profile = store.get_ai_memory_profile()
-    ai_memories: list[dict[str, Any]] = []
-    for category in MEMORY_CATEGORIES:
-        for index, item in enumerate(ai_profile.get(category, []) or []):
-            if isinstance(item, dict):
-                content = str(item.get("content", "")).strip()
-                if not content:
-                    continue
-                ai_memories.append({
-                    "id": f"ai:{category}:{index}",
-                    "category": category,
-                    "content": content,
-                    "source": str(item.get("source", "admin")),
-                    "source_label": f"AI memory / {item.get('source', 'admin')}",
-                    "owner_type": "ai",
-                    "owner_label": "ai",
-                    "retrieval_priority": 6,
-                })
-            else:
-                content = str(item).strip()
-                if not content:
-                    continue
-                ai_memories.append({
-                    "id": f"ai:{category}:{index}",
-                    "category": category,
-                    "content": content,
-                    "source": "admin",
-                    "source_label": "AI memory / admin",
-                    "owner_type": "ai",
-                    "owner_label": "ai",
-                    "retrieval_priority": 6,
-                })
-    labeled_contact = [
+    retrieved = store.search_memories_by_plan(state["contact_id"], requests)
+    labeled = [
         {
             **item,
-            "source": "reflection",
-            "source_label": "contact memory / reflection",
             "owner_type": item.get("owner_type", MEMORY_OWNER_CONTACT),
-            "owner_label": item.get("owner_label", "contact"),
         }
-        for item in contact_memories
+        for item in retrieved
     ]
-    return {"memories": [*ai_memories, *labeled_contact]}
+    primary = [item for item in labeled if item.get("retrieval_mode") == "exact"][:6]
+    background = [item for item in labeled if item.get("retrieval_mode") != "exact"][:6]
+    return {"memories": labeled, "primary_memories": primary, "background_memories": background}
 
 
 def node_chat_guidance(state: WorkflowState) -> dict[str, Any]:
@@ -458,7 +427,8 @@ def node_dialogue_composer(state: WorkflowState) -> dict[str, Any]:
         "ai_emotion": state.get("ai_emotion_analysis", {}).get("ai_emotion", state.get("ai_emotion_state", {})),
         "relationship": state.get("relationship", {}),
         "relationship_judgment": state.get("relationship_analysis", {}),
-        "memories": state.get("memories", []),
+        "memories": state.get("primary_memories") or state.get("memories", []),
+        "background_memories": state.get("background_memories", []),
         "chat_skill_documents": state.get("guidance_chunks", []),
     }, fallback)
     return {
@@ -480,7 +450,7 @@ def _prompt_composer_payload(state: WorkflowState) -> dict[str, Any]:
         "ai_emotion": state.get("ai_emotion_analysis", {}).get("ai_emotion", state.get("ai_emotion_state", {})),
         "relationship": state.get("relationship", {}),
         "relationship_boundaries": state.get("relationship_analysis", {}).get("behavior_boundaries", []),
-        "relevant_memories": state.get("memories", []),
+        "relevant_memories": state.get("primary_memories") or state.get("memories", []),
         "dialogue_plan": state.get("dialogue_composition", {}),
         "rewrite_instruction": str(critic_analysis.get("rewrite_instruction", "")),
         "rewrite_candidate_indexes": critic_analysis.get("rewrite_candidate_indexes", []),
@@ -558,7 +528,7 @@ def node_reply_critic(state: WorkflowState) -> dict[str, Any]:
         "latest_message": state["user_request"],
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
         "persona": {"core": state.get("persona_core", {}), "personality": state.get("persona_personality", {})},
-        "relevant_memories": state.get("memories", []),
+        "relevant_memories": state.get("primary_memories") or state.get("memories", []),
         "dialogue_plan": state.get("dialogue_composition", {}),
         "candidates": state["candidates"],
         "review_dimensions": ["style", "persona", "memory"],
@@ -610,8 +580,6 @@ def node_reflection(state: WorkflowState) -> dict[str, Any]:
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
         "generated_candidates": state.get("candidates", []),
         "existing_relevant_memories": state.get("memories", []),
-        "ai_emotion": state.get("ai_emotion_analysis", {}).get("ai_emotion", state.get("ai_emotion_state", {})),
-        "current_habits": state.get("persona_habits", {}),
         "allowed_memory_types": USER_MEMORY_CATEGORIES,
         "rules": {"memory": "只保存值得长期记住且有明确证据的内容", "persona_updates": "禁止输出或修改，由用户手动维护", "personality": "禁止修改"},
     }, fallback)

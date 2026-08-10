@@ -4,7 +4,7 @@ import unittest
 
 import yaml
 
-from src.storage import ChatStore
+from src.storage import ChatStore, MEMORY_OWNER_AI
 
 
 class ChatStoreTests(unittest.TestCase):
@@ -98,6 +98,51 @@ class ChatStoreTests(unittest.TestCase):
         }])
         self.assertEqual([item["category"] for item in results], ["semantic"])
 
+    def test_memory_plan_searches_contact_and_ai_memories(self):
+        self.store.add_memory(self.contact_id, "semantic", "对方喜欢手冲咖啡")
+        self.store.save_ai_memory_profile({
+            "episodic": [],
+            "semantic": [{"content": "我平时也会研究咖啡器具", "source": "admin"}],
+            "emotional": [],
+            "shared_experience": [],
+        })
+
+        results = self.store.search_memories_by_plan(self.contact_id, [{
+            "memory_type": "semantic", "query": "咖啡", "keywords": ["手冲"],
+            "priority": 5, "top_k": 5, "time_range": "all",
+        }])
+
+        owner_types = {item["owner_type"] for item in results}
+        self.assertIn("contact", owner_types)
+        self.assertIn(MEMORY_OWNER_AI, owner_types)
+        self.assertTrue(all(item["retrieval_mode"] == "exact" for item in results))
+
+    def test_memory_plan_soft_quota_preserves_multiple_memory_types(self):
+        for index in range(5):
+            self.store.add_memory(self.contact_id, "semantic", f"对方喜欢咖啡豆{index}")
+        self.store.add_memory(self.contact_id, "episodic", "上周一起喝了咖啡")
+        self.store.add_memory(self.contact_id, "emotional", "对方聊起咖啡时会放松下来")
+
+        results = self.store.search_memories_by_plan(self.contact_id, [
+            {
+                "memory_type": "semantic", "query": "咖啡", "keywords": [],
+                "priority": 5, "top_k": 5, "time_range": "all",
+            },
+            {
+                "memory_type": "episodic", "query": "咖啡", "keywords": [],
+                "priority": 4, "top_k": 2, "time_range": "all",
+            },
+            {
+                "memory_type": "emotional", "query": "咖啡", "keywords": [],
+                "priority": 4, "top_k": 2, "time_range": "all",
+            },
+        ], total_limit=4)
+
+        categories = [item["category"] for item in results]
+        self.assertIn("semantic", categories)
+        self.assertIn("episodic", categories)
+        self.assertIn("emotional", categories)
+
     def test_ai_emotion_state_and_events_round_trip(self):
         saved = self.store.save_ai_emotion_state(self.contact_id, {
             "mood": "专注",
@@ -182,7 +227,7 @@ class ChatStoreTests(unittest.TestCase):
         self.assertEqual(proposals[0]["field_key"], "city")
         resolved = self.store.resolve_core_update_proposal(proposals[0]["id"], approved=True)
         self.assertEqual(resolved["status"], "approved")
-        self.assertEqual(self.store.get_persona_profile()["core"]["city"], "上海")
+        self.assertNotIn("city", self.store.get_persona_profile()["core"])
 
 
 if __name__ == "__main__":
