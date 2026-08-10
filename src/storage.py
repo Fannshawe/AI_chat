@@ -427,6 +427,22 @@ class ChatStore:
         self.refresh_yaml_snapshots({"02_personas.yaml"})
         return self.get_persona_profile()
 
+    def get_persona_yaml_text(self) -> str:
+        """Return the raw YAML text of the persona file."""
+        if not self.persona_path.exists():
+            return ""
+        return self.persona_path.read_text(encoding="utf-8")
+
+    def save_persona_yaml_text(self, text: str) -> None:
+        """Overwrite the persona YAML file with raw text after validating it is parseable."""
+        yaml.safe_load(text)  # Raises yaml.YAMLError if invalid
+        with self._persona_lock:
+            self.persona_path.parent.mkdir(parents=True, exist_ok=True)
+            temporary = self.persona_path.with_suffix(self.persona_path.suffix + ".tmp")
+            temporary.write_text(text, encoding="utf-8")
+            temporary.replace(self.persona_path)
+        self.refresh_yaml_snapshots({"02_personas.yaml"})
+
     def get_ai_memory_profile(self) -> dict[str, Any]:
         if not self.ai_memory_path.exists():
             return {category: [] for category in MEMORY_CATEGORIES}
@@ -550,7 +566,7 @@ class ChatStore:
             )]
 
     def resolve_core_update_proposal(self, proposal_id: int, approved: bool) -> dict[str, Any]:
-        """Approve a pending Core proposal into YAML or reject it while retaining audit history."""
+        """Mark a Core proposal as approved or rejected. Approval is advisory only — it does not write to YAML."""
         with self.connect() as connection:
             row = connection.execute(
                 "SELECT * FROM persona_update_proposals WHERE id=?", (proposal_id,)
@@ -560,20 +576,6 @@ class ChatStore:
         proposal = dict(row)
         if proposal["status"] != "pending":
             raise ValueError("Persona 更新提案已经处理")
-
-        if approved:
-            with self._persona_lock:
-                profile = self.get_persona_profile()
-                core = profile.setdefault("core", {})
-                if not isinstance(core, dict):
-                    core = {}
-                    profile["core"] = core
-                core[str(proposal["field_key"])] = str(proposal["proposed_value"])
-                temporary = self.persona_path.with_suffix(self.persona_path.suffix + ".tmp")
-                temporary.write_text(
-                    yaml.safe_dump(profile, allow_unicode=True, sort_keys=False), encoding="utf-8"
-                )
-                temporary.replace(self.persona_path)
 
         status = "approved" if approved else "rejected"
         with self.connect() as connection:

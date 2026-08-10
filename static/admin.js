@@ -13,49 +13,6 @@ const dimensionLabels = {
   comfort: "Comfort",
 };
 
-const personaProfileSections = [
-  {
-    key: "core",
-    title: "Core",
-    fields: [
-      ["identity", "身份定位", "例如：更偏温柔、克制、会留白的伴侣表达"],
-      ["values", "核心价值", "例如：真诚、尊重边界、稳定回应"],
-      ["relationship_goal", "关系目标", "例如：建立安全感，而不是追求高强度黏着"],
-      ["hard_limits", "硬边界", "每行一条，禁止自动突破"],
-    ],
-  },
-  {
-    key: "personality",
-    title: "Personality",
-    fields: [
-      ["tone", "整体语气", "例如：自然、轻松、不过度解释"],
-      ["pace", "节奏偏好", "例如：先回应对方，再轻推话题"],
-      ["humor", "幽默方式", "例如：轻微调侃，不做夸张人设"],
-      ["taboos", "禁忌风格", "每行一条，例如：不要鸡汤式安慰"],
-    ],
-  },
-  {
-    key: "habits",
-    title: "Habits",
-    fields: [
-      ["openings", "开场习惯", "每行一条，例如：先接情绪，再回事实"],
-      ["callbacks", "回扣习惯", "每行一条，例如：会偶尔提及之前的小细节"],
-      ["emoji", "Emoji 使用", "每行一条，例如：偶尔用 :) 而不是堆表情"],
-      ["topics", "常用话题偏好", "每行一条，例如：生活细节、共同计划"],
-    ],
-  },
-  {
-    key: "expression",
-    title: "Expression",
-    fields: [
-      ["dos", "推荐表达", "每行一条，系统更倾向模仿"],
-      ["donts", "避免表达", "每行一条，系统应尽量回避"],
-      ["examples", "示例回复", "每行一条，供风格参考"],
-      ["notes", "补充说明", "可写自由文本"],
-    ],
-  },
-];
-
 async function api(url, options = {}) {
   const response = await fetch(url, {
     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
@@ -85,78 +42,25 @@ function escapeText(value) {
   return span.innerHTML;
 }
 
-function toLines(value) {
-  if (Array.isArray(value)) return value.join("\n");
-  if (value && typeof value === "object") {
-    return Object.entries(value)
-      .map(([key, item]) => `${key}: ${item}`)
-      .join("\n");
-  }
-  return value || "";
-}
-
-function fromLines(value) {
-  return value
-    .split("\n")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
 function buildPersonaProfileForm() {
   const form = $("#personaProfileForm");
   form.innerHTML =
-    personaProfileSections
-      .map(
-        (section) =>
-          `<section class="persona-section full-row"><div class="section-heading"><h3>${section.title}</h3><p>直接对应 persona.yaml 的 ${section.key} 段。</p></div><div class="form-grid">${section.fields
-            .map(
-              ([field, label, placeholder]) =>
-                `<div class="field ${field === "notes" ? "full-row" : ""}"><label>${label}</label><textarea data-section="${section.key}" data-field="${field}" placeholder="${placeholder}"></textarea></div>`,
-            )
-            .join("")}</div></section>`,
-      )
-      .join("") +
+    '<div class="field full-row"><textarea id="personaYamlEditor" rows="30" style="font-family:monospace;font-size:12px;line-height:1.55" placeholder="# persona.yaml 内容"></textarea></div>' +
     '<div class="form-actions full-row"><button class="primary">保存 Persona YAML</button></div>';
 }
 
-function fillPersonaProfile(data) {
-  personaProfileSections.forEach((section) => {
-    const values = data[section.key] || {};
-    section.fields.forEach(([field]) => {
-      const input = document.querySelector(`[data-section="${section.key}"][data-field="${field}"]`);
-      if (!input) return;
-      input.value = toLines(values[field]);
-    });
-  });
-}
-
-function collectPersonaProfile() {
-  const payload = {};
-  personaProfileSections.forEach((section) => {
-    payload[section.key] = {};
-    section.fields.forEach(([field]) => {
-      const input = document.querySelector(`[data-section="${section.key}"][data-field="${field}"]`);
-      const raw = input ? input.value.trim() : "";
-      if (["hard_limits", "taboos", "openings", "callbacks", "emoji", "topics", "dos", "donts", "examples"].includes(field)) {
-        payload[section.key][field] = fromLines(raw);
-      } else {
-        payload[section.key][field] = raw;
-      }
-    });
-  });
-  return payload;
-}
-
 async function loadPersonaProfile() {
-  const data = await api("/api/persona-profile");
-  fillPersonaProfile(data);
+  const data = await api("/api/persona-yaml");
+  const editor = $("#personaYamlEditor");
+  if (editor) editor.value = data.text || "";
 }
 
 async function savePersonaProfile(event) {
   event.preventDefault();
-  await api("/api/persona-profile", {
+  const editor = $("#personaYamlEditor");
+  await api("/api/persona-yaml", {
     method: "PUT",
-    body: JSON.stringify(collectPersonaProfile()),
+    body: JSON.stringify({ text: editor ? editor.value : "" }),
   });
   toast("Persona YAML 已保存");
 }
@@ -168,33 +72,33 @@ function renderProposals(items) {
     const row = document.createElement("div");
     row.className = "list-item proposal-item";
     const body = document.createElement("div");
-    const status = item.resolved_at ? (item.approved ? "已批准" : "已拒绝") : "待处理";
-    body.innerHTML = `<h3>${escapeText(item.field)} <span class="badge-status">${status}</span></h3><p>${escapeText(item.reason || "无说明")}</p><div class="code-note">当前值：${escapeText(item.old_value || "空")}</div><div class="code-note">建议值：${escapeText(item.new_value || "空")}</div>`;
+    const statusText = item.status === "approved" ? "已确认" : item.status === "rejected" ? "已忽略" : "待处理";
+    body.innerHTML = `<h3>${escapeText(item.field_key)} <span class="badge-status">${statusText}</span></h3><p>${escapeText(item.reason || "无说明")}</p><div class="code-note">建议值：${escapeText(item.proposed_value || "空")}</div>`;
     row.appendChild(body);
-    if (!item.resolved_at) {
+    if (item.status === "pending") {
       const actions = document.createElement("div");
       actions.className = "list-actions";
       const approve = document.createElement("button");
       approve.className = "primary";
-      approve.textContent = "批准";
+      approve.textContent = "确认参考";
       approve.onclick = async () => {
         await api(`/api/persona-proposals/${item.id}/resolve`, {
           method: "POST",
           body: JSON.stringify({ approved: true }),
         });
-        await Promise.all([loadProposals(), loadPersonaProfile()]);
-        toast("提案已批准并写回 Persona YAML");
+        await loadProposals();
+        toast("提案已标记为已确认（请手动更新 Persona YAML）");
       };
       const reject = document.createElement("button");
       reject.className = "secondary";
-      reject.textContent = "拒绝";
+      reject.textContent = "忽略";
       reject.onclick = async () => {
         await api(`/api/persona-proposals/${item.id}/resolve`, {
           method: "POST",
           body: JSON.stringify({ approved: false }),
         });
         await loadProposals();
-        toast("提案已拒绝");
+        toast("提案已忽略");
       };
       actions.append(approve, reject);
       row.appendChild(actions);

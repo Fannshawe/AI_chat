@@ -76,17 +76,15 @@ def _state_snapshot(state: WorkflowState) -> dict[str, Any]:
     }
 
 
-def _debug_result_payload(result: dict[str, Any], include_details: bool) -> dict[str, Any] | None:
-    if not include_details:
+def _node_output_payload(name: str, result: dict[str, Any], include_details: bool) -> dict[str, Any] | None:
+    """Return sanitized node output for nodes where output visibility is useful."""
+    _OUTPUT_NODES = {"memory_retrieval", "persona_habit_retrieval"}
+    if not include_details or name not in _OUTPUT_NODES:
         return None
     sanitized = _safe_debug_value(result)
     if not isinstance(sanitized, dict):
         return sanitized
-    return {
-        key: value
-        for key, value in sanitized.items()
-        if key not in {"_debug_llm"}
-    }
+    return {key: value for key, value in sanitized.items() if key not in {"_debug_llm"}}
 
 
 def _state_delta(before: dict[str, Any], output: dict[str, Any]) -> dict[str, Any]:
@@ -123,8 +121,6 @@ def _trace_node(name: str, node_fn):
                 "started_at": started_at.isoformat(),
                 "finished_at": finished_at.isoformat(),
                 "duration_ms": round((perf_counter() - start_counter) * 1000.0, 2),
-                "input": before,
-                "output": None,
                 "state_changes": {} if include_details else None,
                 "status": "error",
                 "error": str(exc),
@@ -138,8 +134,7 @@ def _trace_node(name: str, node_fn):
             "started_at": started_at.isoformat(),
             "finished_at": finished_at.isoformat(),
             "duration_ms": round((perf_counter() - start_counter) * 1000.0, 2),
-            "input": before,
-            "output": _debug_result_payload(result, include_details),
+            "output": _node_output_payload(name, result, include_details) if isinstance(result, dict) else None,
             "llm": _safe_debug_value(result.get("_debug_llm")) if include_details and isinstance(result, dict) else None,
             "state_changes": _state_delta(before or {}, result) if include_details else None,
             "status": "ok",
@@ -363,8 +358,6 @@ def node_memory_planner(state: WorkflowState) -> dict[str, Any]:
     result, warnings, llm_debug = _run_structured_agent(state, "memory_planner", {
         "latest_message": state["user_request"],
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
-        "emotion_analysis": state.get("emotion_analysis", {}),
-        "relationship_analysis": state.get("relationship_analysis", {}),
         "available_memory_types": USER_MEMORY_CATEGORIES,
         "instruction": "扩展话题关键词和近义联想，但不要臆造事实。",
     }, fallback)
@@ -611,7 +604,7 @@ def route_after_critic(state: WorkflowState) -> str:
 
 def node_reflection(state: WorkflowState) -> dict[str, Any]:
     """Responsibility: decide durable memories and Persona updates. Persistence: save node."""
-    fallback = {"memories": [], "habit_updates": [], "core_update_proposals": []}
+    fallback = {"memories": []}
     result, warnings, llm_debug = _run_structured_agent(state, "reflection", {
         "latest_real_message": {"speaker": "对方", "content": state["user_request"]},
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
@@ -620,8 +613,7 @@ def node_reflection(state: WorkflowState) -> dict[str, Any]:
         "ai_emotion": state.get("ai_emotion_analysis", {}).get("ai_emotion", state.get("ai_emotion_state", {})),
         "current_habits": state.get("persona_habits", {}),
         "allowed_memory_types": USER_MEMORY_CATEGORIES,
-        "rules": {"memory": "只保存值得长期记住且有明确证据的内容", "habits": "可自动更新",
-                  "core": "只能生成待人工确认的提案", "personality": "禁止修改"},
+        "rules": {"memory": "只保存值得长期记住且有明确证据的内容", "persona_updates": "禁止输出或修改，由用户手动维护", "personality": "禁止修改"},
     }, fallback)
     return {"reflection_analysis": result, "warnings": warnings, "_debug_llm": llm_debug}
 
@@ -654,8 +646,6 @@ def node_content_save(state: WorkflowState) -> dict[str, Any]:
         store.add_memory(state["contact_id"], category, str(item["content"]),
                          bool(item.get("sensitive", False)), input_message_id,
                          owner_type=MEMORY_OWNER_CONTACT)
-    store.update_persona_habits(reflection.get("habit_updates", []))
-    store.add_core_update_proposals(state["contact_id"], reflection.get("core_update_proposals", []))
     analysis = {
         "emotion": state.get("emotion_analysis", {}), "relationship": state.get("relationship_analysis", {}),
         "ai_emotion": state.get("ai_emotion_analysis", {}),

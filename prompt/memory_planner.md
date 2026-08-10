@@ -4,7 +4,6 @@
 
 规则：
 - memory_type 只能是 episodic、semantic、emotional、shared_experience。
-- 当前 AI Emotion 与 Conversation Event 会影响检索优先级；高情绪权重事件可以适度提高 emotional/shared_experience 的优先级。
 - Query 要描述想找到的信息，不要把用户原句机械复制成每一项查询。
 - keywords 要包含话题相关词、近义词、人物或事件联想，帮助本地检索扩展命中。
 - Priority 为 1-5；Top K 为 1-20。只检索确实能帮助当前回复的类型。

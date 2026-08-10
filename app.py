@@ -274,6 +274,20 @@ def save_persona_profile(request: dict[str, Any]) -> dict[str, Any]:
     return store.save_persona_profile(request)
 
 
+@app.get("/api/persona-yaml")
+def get_persona_yaml() -> dict[str, Any]:
+    return {"text": store.get_persona_yaml_text()}
+
+
+@app.put("/api/persona-yaml")
+def save_persona_yaml(request: dict[str, Any]) -> dict[str, Any]:
+    try:
+        store.save_persona_yaml_text(request.get("text", ""))
+    except Exception as exc:
+        raise HTTPException(400, f"YAML 格式有误：{exc}") from exc
+    return {"ok": True}
+
+
 @app.get("/api/persona-proposals/{contact_id}")
 def list_persona_proposals(contact_id: int) -> list[dict[str, Any]]:
     return store.list_core_update_proposals(contact_id)

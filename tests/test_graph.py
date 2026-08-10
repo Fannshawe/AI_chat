@@ -132,7 +132,6 @@ class GraphPipelineTests(unittest.TestCase):
                     "content": "用户喜欢手冲咖啡",
                     "sensitive": False,
                 }],
-                "habit_updates": [], "core_update_proposals": [],
             },
         }
 

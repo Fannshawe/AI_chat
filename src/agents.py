@@ -219,8 +219,6 @@ class ReflectionAnalysis(BaseModel):
     """Post-response decisions about durable memory and persona updates."""
 
     memories: list[MemoryItem] = Field(default_factory=list, max_length=8)
-    habit_updates: list[HabitUpdate] = Field(default_factory=list, max_length=6)
-    core_update_proposals: list[CoreUpdateProposal] = Field(default_factory=list, max_length=4)
 
 
 class ProactiveDraft(BaseModel):

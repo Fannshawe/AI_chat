@@ -11,7 +11,6 @@ Memory 分类：
 规则：
 - 只依据真实用户消息和已确认历史，不把本轮候选回复视为已经发送或发生。
 - 不保存寒暄、一次性措辞、模型推测、重复记忆和没有长期价值的内容。
-- Habit 可以自动更新，但必须是 AI Persona 自身逐渐形成的习惯；不要把用户偏好写进 AI Habit。
-- Core 只能输出 core_update_proposals，等待人工确认；只在用户明确修正 Persona 核心资料时提议。
+- 不要输出 Habit、Core 或其他 Persona 更新建议；这些内容完全由用户手动维护。
 - Personality 永远不能由 Reflection 修改。
 - 敏感事实设置 sensitive=true。没有值得保存或更新的内容时返回空数组。

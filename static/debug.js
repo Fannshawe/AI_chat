@@ -109,7 +109,6 @@ function renderTraceItem(trace) {
   copyButton.onclick = async () => copyText(stringifyDebugValue(traceForCopy), `已复制节点 ${trace.node}`);
   content.appendChild(copyButton);
   const sections = [
-    ["节点输入", trace.input],
     ["节点输出", trace.output],
     ["LLM 输入", trace.llm?.input],
     ["LLM 输出", trace.llm?.output],
