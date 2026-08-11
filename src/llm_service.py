@@ -15,7 +15,13 @@ from .config import ModelProvider, get_agent_model_provider, get_model_providers
 
 
 @lru_cache(maxsize=16)
-def _build_model(name: str, model: str, base_url: str | None, api_key: str | None) -> ChatOpenAI:
+def _build_model(
+    name: str,
+    model: str,
+    base_url: str | None,
+    api_key: str | None,
+    enable_thinking: bool | None,
+) -> ChatOpenAI:
     if not api_key:
         raise RuntimeError(f"模型供应商 {name} 尚未配置 API Key")
     profile: ModelProfile | None = None
@@ -25,23 +31,44 @@ def _build_model(name: str, model: str, base_url: str | None, api_key: str | Non
         # values some providers reject. Declaring structured output support keeps
         # LangChain on the provider-native path.
         profile = {"structured_output": True}
+    extra_body: dict[str, Any] | None = None
+    if enable_thinking is not None:
+        extra_body = {"enable_thinking": enable_thinking}
     return ChatOpenAI(
         model=model,
         api_key=api_key,
         base_url=base_url,
         temperature=0.7,
         profile=profile,
+        extra_body=extra_body,
     )
 
 
 def get_model(provider_name: str = "default", agent_name: str | None = None) -> ChatOpenAI:
     if agent_name:
         provider = get_agent_model_provider(agent_name, provider_name)
-        return _build_model(provider.name, provider.model, provider.base_url, provider.api_key)
+        return _build_model(
+            provider.name,
+            provider.model,
+            provider.base_url,
+            provider.api_key,
+            provider.enable_thinking,
+        )
 
     providers = get_model_providers()
     provider: ModelProvider = providers.get(provider_name) or providers["default"]
-    return _build_model(provider.name, provider.model, provider.base_url, provider.api_key)
+    return _build_model(
+        provider.name,
+        provider.model,
+        provider.base_url,
+        provider.api_key,
+        provider.enable_thinking,
+    )
+
+
+def clear_model_cache() -> None:
+    """Invalidate the ChatOpenAI instance cache (call after config changes)."""
+    _build_model.cache_clear()
 
 
 def content_to_text(content: Any) -> str:

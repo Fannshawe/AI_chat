@@ -598,7 +598,7 @@ def node_reply_critic(state: WorkflowState) -> dict[str, Any]:
 
 def route_after_critic(state: WorkflowState) -> str:
     if state.get("critic_analysis", {}).get("passed", True) or state.get("critic_attempts", 0) >= CRITIC_MAX_ATTEMPTS:
-        return "reflection"
+        return "save"
     return "rewrite"
 
 
@@ -653,9 +653,8 @@ def build_graph():
     graph.add_edge("prompt_composer", "critic")
     graph.add_edge("rewrite", "critic")
     graph.add_conditional_edges("critic", route_after_critic, {
-        "rewrite": "rewrite", "reflection": "reflection",
+        "rewrite": "rewrite", "save": "save",
     })
-    graph.add_edge("reflection", "save")
     graph.add_edge("save", END)
     return graph.compile()
 

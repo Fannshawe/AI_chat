@@ -351,6 +351,61 @@ async function loadModels() {
   });
 }
 
+const AGENT_DISPLAY_NAMES = {
+  emotion: "Emotion（用户情绪）",
+  ai_emotion: "AI Emotion（AI情绪）",
+  relationship: "Relationship（关系）",
+  memory_planner: "Memory Planner（记忆规划）",
+  dialogue_composer: "Dialogue Composer（对话规划）",
+  prompt_composer: "Prompt Composer（生成回复）",
+  rewrite: "Rewrite（重写）",
+  critic: "Critic（质检）",
+  reflection: "Reflection（反思）",
+  proactive: "Proactive（主动消息）",
+};
+
+async function loadAgentModels() {
+  const data = await api("/api/agent-models");
+  const list = $("#agentModelList");
+  list.innerHTML = "";
+  data.forEach((agent) => {
+    const row = document.createElement("div");
+    row.className = "list-item";
+    row.style.cssText = "display:flex;align-items:center;gap:12px;flex-wrap:wrap";
+    const label = document.createElement("div");
+    label.style.cssText = "flex:1;min-width:160px";
+    label.innerHTML = `<h3 style="margin:0">${escapeText(AGENT_DISPLAY_NAMES[agent.agent] || agent.agent)}</h3><p style="margin:2px 0 0;font-size:12px;color:var(--text-muted,#888)">${agent.configured ? "密钥已配置" : "密钥未配置"}${agent.error ? " · <span style=color:red>" + escapeText(agent.error) + "</span>" : ""}</p>`;
+    const modelInput = document.createElement("input");
+    modelInput.type = "text";
+    modelInput.value = agent.model;
+    modelInput.placeholder = "模型名称";
+    modelInput.style.cssText = "width:200px;padding:4px 8px;border:1px solid var(--border,#ccc);border-radius:4px;font-size:13px";
+    const thinkingLabel = document.createElement("label");
+    thinkingLabel.style.cssText = "display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:13px;cursor:pointer";
+    const thinkingCheck = document.createElement("input");
+    thinkingCheck.type = "checkbox";
+    thinkingCheck.checked = agent.enable_thinking;
+    thinkingLabel.appendChild(thinkingCheck);
+    thinkingLabel.appendChild(document.createTextNode("Thinking"));
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "primary";
+    saveBtn.textContent = "保存";
+    saveBtn.style.cssText = "padding:4px 14px;font-size:13px";
+    saveBtn.onclick = async () => {
+      await api("/api/agent-models", {
+        method: "PUT",
+        body: JSON.stringify({ agent: agent.agent, model: modelInput.value, enable_thinking: thinkingCheck.checked }),
+      });
+      toast(`${agent.agent} 已保存`);
+    };
+    row.appendChild(label);
+    row.appendChild(modelInput);
+    row.appendChild(thinkingLabel);
+    row.appendChild(saveBtn);
+    list.appendChild(row);
+  });
+}
+
 buildPersonaProfileForm();
 $("#personaProfileForm").addEventListener("submit", savePersonaProfile);
 
@@ -435,6 +490,7 @@ $("#importForm").onsubmit = async (event) => {
       loadState(),
       loadGuidance(),
       loadModels(),
+      loadAgentModels(),
     ]);
   } catch (error) {
     toast(error.message);

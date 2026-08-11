@@ -31,6 +31,7 @@ class ModelProvider:
     model: str
     base_url: str | None
     api_key: str | None
+    enable_thinking: bool | None = None
 
     def public_dict(self) -> dict[str, str | bool | None]:
         return {
@@ -38,6 +39,7 @@ class ModelProvider:
             "model": self.model,
             "base_url": self.base_url,
             "configured": bool(self.api_key),
+            "enable_thinking": self.enable_thinking,
         }
 
 
@@ -53,6 +55,20 @@ AGENT_MODEL_NAMES: tuple[str, ...] = (
     "reflection",
     "proactive",
 )
+
+# Runtime overrides applied by the admin UI (model name and thinking toggle).
+# Populated via apply_agent_overrides(); never written to .env.
+_agent_overrides: dict[str, dict] = {}
+
+
+def apply_agent_overrides(overrides: dict[str, dict]) -> None:
+    """Replace the in-memory per-agent overrides (model, enable_thinking).
+
+    Called once at app startup (from DB) and again on each admin save.
+    Only keys present in AGENT_MODEL_NAMES are accepted.
+    """
+    global _agent_overrides
+    _agent_overrides = {k: v for k, v in overrides.items() if k in AGENT_MODEL_NAMES}
 
 
 def _read_env(name: str) -> str | None:
@@ -105,6 +121,11 @@ def _extra_providers() -> dict[str, ModelProvider]:
             model=str(item["model"]),
             base_url=str(item["base_url"]) if item.get("base_url") else None,
             api_key=os.getenv(api_key_env) if api_key_env else None,
+            enable_thinking=(
+                _read_bool_env(str(item["enable_thinking_env"]), default=False)
+                if item.get("enable_thinking_env")
+                else None
+            ),
         )
     return providers
 
@@ -116,6 +137,7 @@ def _default_provider_from_agent_env() -> ModelProvider:
         model=_read_env("DEFAULT_MODEL") or "not-configured",
         base_url=_read_env("DEFAULT_BASE_URL"),
         api_key=_read_env("DEFAULT_API_KEY"),
+        enable_thinking=_read_bool_env("DEFAULT_ENABLE_THINKING", default=False),
     )
 
 
@@ -141,6 +163,14 @@ def get_agent_model_provider(agent_name: str, provider_name: str = "default") ->
     model = _read_env(f"{prefix}_MODEL")
     base_url = _read_env(f"{prefix}_BASE_URL")
     api_key = _read_env(f"{prefix}_API_KEY")
+    enable_thinking = _read_bool_env(f"{prefix}_ENABLE_THINKING", default=False)
+
+    # Apply runtime overrides from the admin UI (model name / enable_thinking).
+    override = _agent_overrides.get(normalized, {})
+    if override.get("model"):
+        model = override["model"]
+    if "enable_thinking" in override:
+        enable_thinking = bool(override["enable_thinking"])
 
     missing = [
         key
@@ -159,4 +189,5 @@ def get_agent_model_provider(agent_name: str, provider_name: str = "default") ->
         model=model,
         base_url=base_url,
         api_key=api_key,
+        enable_thinking=enable_thinking,
     )

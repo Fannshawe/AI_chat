@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Persona Chat · 管理后台</title>
   <link rel="stylesheet" href="/static/styles.css?v=20260731-admin-refresh">
-  <script defer src="/static/admin.js?v=20260731-admin-refresh"></script>
+  <script defer src="/static/admin.js?v=20260811-agent-models"></script>
 </head>
 <body class="admin-page">
   <main class="admin-shell">
@@ -42,6 +42,11 @@
         </div>
         <div class="tab-panel" id="tab-model">
           <article class="panel-card"><h2>模型供应商</h2><p>默认供应商由 AGENT_PROMPT_COMPOSER_* 变量映射；额外供应商通过 MODEL_PROVIDERS_JSON 声明，密钥不会写入数据库。</p><div id="modelList" class="list"></div><div class="code-note">默认变量：AGENT_PROMPT_COMPOSER_BASE_URL、AGENT_PROMPT_COMPOSER_API_KEY、AGENT_PROMPT_COMPOSER_MODEL<br>可选变量：MODEL_PROVIDERS_JSON</div></article>
+          <article class="panel-card">
+            <h2>各节点模型配置</h2>
+            <p>为每个处理节点单独指定模型名称与 Thinking 模式。保存后立即生效，无需重启，覆盖 .env 中的对应配置。</p>
+            <div id="agentModelList" class="list"></div>
+          </article>
         </div>
       </section>
     </div>

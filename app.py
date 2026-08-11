@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import threading
 from contextlib import asynccontextmanager
@@ -14,9 +15,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
-from src.config import GUIDANCE_DIR, STATIC_DIR, get_model_providers
+from src.config import AGENT_MODEL_NAMES, GUIDANCE_DIR, STATIC_DIR, apply_agent_overrides, get_agent_model_provider, get_model_providers
 from src.graph import WorkflowState
-from src.graph import DEBUG, build_graph, generate_proactive_draft
+from src.graph import DEBUG, build_graph, generate_proactive_draft, node_reflection
 from src.guidance import guidance_retriever
 from src.prompt_loader import clear_prompt_cache
 from src.storage import (
@@ -105,15 +106,39 @@ class ModelSelectionRequest(BaseModel):
     provider: str
 
 
+class PersonaYamlRequest(BaseModel):
+    text: str
+
+
+class AgentModelRequest(BaseModel):
+    agent: str
+    model: str = Field(min_length=1, max_length=300)
+    enable_thinking: bool = False
+
+
 class DebugSettingsRequest(BaseModel):
     enabled: bool | None = None
     keep_generations: int | None = Field(default=None, ge=1, le=200)
+
+
+def _load_agent_overrides_from_db() -> dict[str, dict]:
+    """Read all per-agent model overrides that were saved to the settings table."""
+    overrides: dict[str, dict] = {}
+    for name in AGENT_MODEL_NAMES:
+        raw = store.get_setting(f"agent_override:{name}", "")
+        if raw:
+            try:
+                overrides[name] = json.loads(raw)
+            except json.JSONDecodeError:
+                pass
+    return overrides
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     store.initialize()
     GUIDANCE_DIR.mkdir(parents=True, exist_ok=True)
+    apply_agent_overrides(_load_agent_overrides_from_db())
     yield
 
 
@@ -190,6 +215,8 @@ async def generate(request: GenerateRequest) -> dict[str, Any]:
         _pending_saves[draft_id] = {
             "contact_id": request.contact_id,
             "user_request": content,
+            "history": result.get("history", []),
+            "provider_name": result.get("provider_name", "default"),
             "final_candidates": result.get("candidates", []),
             "strategy": result.get("strategy", ""),
             "emotion_analysis": result.get("emotion_analysis", {}),
@@ -199,7 +226,6 @@ async def generate(request: GenerateRequest) -> dict[str, Any]:
             "memories": result.get("memories", []),
             "dialogue_composition": result.get("dialogue_composition", {}),
             "critic_analysis": result.get("critic_analysis", {}),
-            "reflection_analysis": result.get("reflection_analysis", {}),
             "debug_trace": result.get("debug_trace", []),
             "warnings": result.get("warnings", []),
         }
@@ -272,8 +298,23 @@ def confirm_send(request: ConfirmRequest) -> dict[str, Any]:
     store.save_ai_emotion_state(contact_id, pending["ai_emotion_analysis"].get("ai_emotion", {}))
     store.add_conversation_events(contact_id, pending["ai_emotion_analysis"].get("events", []))
 
-    # 5. Save memories extracted by the reflection node.
-    reflection = pending["reflection_analysis"]
+    # 5. Run reflection at confirm time, then save extracted memories.
+    reflection_state: WorkflowState = {
+        "contact_id": contact_id,
+        "provider_name": str(pending.get("provider_name", "default")),
+        "user_request": str(pending.get("user_request", "")),
+        "history": pending.get("history", []),
+        "relationship": pending.get("relationship_analysis", {}),
+        "memories": pending.get("memories", []),
+        "candidates": pending.get("final_candidates", []),
+        "warnings": pending.get("warnings", []),
+    }
+    reflection_output = node_reflection(reflection_state)
+    reflection = reflection_output.get("reflection_analysis", {})
+    reflection_warnings = reflection_output.get("warnings", [])
+    if reflection_warnings:
+        pending["warnings"] = [*pending.get("warnings", []), *reflection_warnings]
+
     for item in reflection.get("memories", [])[:8]:
         if not isinstance(item, dict) or not str(item.get("content", "")).strip():
             continue
@@ -321,6 +362,20 @@ async def proactive(contact_id: int) -> dict[str, str]:
         return await run_in_threadpool(generate_proactive_draft, contact_id, provider)
     except Exception as exc:
         raise HTTPException(502, f"主动聊天草稿生成失败：{exc}") from exc
+
+
+@app.get("/api/persona-yaml")
+def get_persona_yaml() -> dict[str, str]:
+    return {"text": store.get_persona_yaml_text()}
+
+
+@app.put("/api/persona-yaml")
+def save_persona_yaml(request: PersonaYamlRequest) -> dict[str, str]:
+    try:
+        store.save_persona_yaml_text(request.text)
+    except Exception as exc:
+        raise HTTPException(400, f"YAML 格式错误：{exc}") from exc
+    return {"text": request.text}
 
 
 @app.get("/api/persona-profile")
@@ -535,6 +590,54 @@ def debug_generation_detail(generation_id: int) -> dict[str, Any]:
                     "warnings": analysis.get("warnings", []),
                 }
     raise HTTPException(404, "调试记录不存在")
+
+
+@app.get("/api/agent-models")
+def agent_models_list() -> list[dict[str, Any]]:
+    """Return effective model config (env + DB overrides) for every agent."""
+    result: list[dict[str, Any]] = []
+    for name in AGENT_MODEL_NAMES:
+        try:
+            provider = get_agent_model_provider(name)
+            result.append({
+                "agent": name,
+                "model": provider.model,
+                "enable_thinking": bool(provider.enable_thinking),
+                "base_url": provider.base_url,
+                "configured": bool(provider.api_key),
+            })
+        except Exception as exc:  # noqa: BLE001
+            result.append({
+                "agent": name,
+                "model": "",
+                "enable_thinking": False,
+                "base_url": None,
+                "configured": False,
+                "error": str(exc),
+            })
+    return result
+
+
+@app.put("/api/agent-models")
+def update_agent_model(request: AgentModelRequest) -> dict[str, Any]:
+    """Persist a per-agent model override and reload in-memory config."""
+    from src.agents import clear_agent_cache
+    from src.llm_service import clear_model_cache
+
+    if request.agent not in AGENT_MODEL_NAMES:
+        raise HTTPException(400, "未知 Agent 名称")
+
+    override = {"model": request.model, "enable_thinking": request.enable_thinking}
+    store.set_setting(f"agent_override:{request.agent}", json.dumps(override))
+
+    # Re-apply all overrides so the in-memory dict is consistent
+    apply_agent_overrides(_load_agent_overrides_from_db())
+
+    # Clear model/agent caches so the next invocation uses the new settings
+    clear_model_cache()
+    clear_agent_cache()
+
+    return {"agent": request.agent, "model": request.model, "enable_thinking": request.enable_thinking}
 
 
 @app.put("/api/models")

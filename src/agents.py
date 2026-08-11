@@ -12,6 +12,7 @@ from typing import Literal
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import ModelCallLimitMiddleware, ModelRetryMiddleware
+from langchain.agents.structured_output import ProviderStrategy
 from pydantic import BaseModel, Field
 
 from .llm_service import get_model
@@ -258,6 +259,11 @@ def _middleware():
 
 
 @lru_cache(maxsize=32)
+def clear_agent_cache() -> None:
+    """Invalidate the cached agent instances (call after model config changes)."""
+    get_agent.cache_clear()
+
+
 def get_agent(agent_name: str, provider_name: str = "default"):
     """Return one named ``create_agent`` harness for a model provider."""
     schema = AGENT_SCHEMAS.get(agent_name)
@@ -267,7 +273,7 @@ def get_agent(agent_name: str, provider_name: str = "default"):
         model=get_model(provider_name, agent_name=agent_name),
         tools=[],
         system_prompt=load_prompt(agent_name),
-        response_format=schema,
+        response_format=ProviderStrategy(schema=schema, strict=True),
         middleware=_middleware(),
         name=f"{agent_name}_agent",
         debug=False,
