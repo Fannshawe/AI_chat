@@ -4,7 +4,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from src.graph import build_graph
+from src.graph import _normalize_segments, build_graph
 from src.storage import ChatStore
 
 
@@ -114,13 +114,13 @@ class GraphPipelineTests(unittest.TestCase):
                 "memory_usage": [], "persona_expression": ["简洁"], "emotion_expression": [],
                 "topic_plan": ["延续当前话题"],
                 "length_plan": {
-                    "sentence_count": 1, "char_budget": 15, "openness": 0.5,
-                    "allow_filler_only": True, "rhythm_note": "短句",
+                    "sentence_count": 1, "char_budget": 15,
+                    "allow_filler_only": True, "allow_double_text": False, "rhythm_note": "短句",
                 },
                 "candidate_directives": [
-                    {"candidate_index": 0, "angle": "情绪回应", "length_hint": "短", "instruction": "接住状态"},
-                    {"candidate_index": 1, "angle": "极简附和", "length_hint": "极短", "instruction": "几个字"},
-                    {"candidate_index": 2, "angle": "轻反问", "length_hint": "短", "instruction": "问一句"},
+                    {"candidate_index": 0, "angle": "情绪回应", "length_hint": "短", "segment_count": 1, "instruction": "接住状态"},
+                    {"candidate_index": 1, "angle": "极简附和", "length_hint": "极短", "segment_count": 1, "instruction": "几个字"},
+                    {"candidate_index": 2, "angle": "轻反问", "length_hint": "短", "segment_count": 1, "instruction": "问一句"},
                 ],
                 "constraints": ["不追问"],
             },
@@ -204,6 +204,43 @@ class GraphPipelineTests(unittest.TestCase):
         self.assertEqual(counts["prompt_composer"], 1)
         self.assertEqual(counts["rewrite"], 1)
         self.assertEqual(result["candidates"], ["原候选一", "只改第二条", "原候选三"])
+
+    def test_prompt_composer_normalizes_segment_line_breaks(self):
+        responses = self.base_responses()
+        responses["prompt_composer"] = {"candidates": [
+            "今天去公司了。\n\n结果老板不在😂\n\n下午就提前回来了。",
+            "哈哈哈",
+            "一\n二\n三\n四\n五\n六",
+        ]}
+        result, _counts = self.invoke(responses)
+        self.assertEqual(
+            result["candidates"][0].split("\n"),
+            ["今天去公司了。", "结果老板不在😂", "下午就提前回来了。"],
+        )
+        self.assertEqual(result["candidates"][1], "哈哈哈")
+        self.assertEqual(result["candidates"][2].split("\n"), ["一", "二", "三", "四", "五六"])
+
+
+class NormalizeSegmentsTests(unittest.TestCase):
+    def test_collapses_blank_lines_between_ideas(self):
+        text = "今天去公司了。\n\n结果老板不在😂\n\n下午就提前回来了。"
+        self.assertEqual(
+            _normalize_segments(text), "今天去公司了。\n结果老板不在😂\n下午就提前回来了。",
+        )
+
+    def test_keeps_silence_marker_untouched(self):
+        self.assertEqual(_normalize_segments("（暂不回复）"), "（暂不回复）")
+
+    def test_caps_segment_count_by_merging_tail(self):
+        text = "一\n二\n三\n四\n五\n六"
+        self.assertEqual(_normalize_segments(text, max_segments=5), "一\n二\n三\n四\n五六")
+
+    def test_keeps_structured_list_as_single_message(self):
+        text = "可以试试：\n- A\n- B\n- C"
+        self.assertEqual(_normalize_segments(text), text)
+
+    def test_single_segment_passthrough(self):
+        self.assertEqual(_normalize_segments("哈哈哈"), "哈哈哈")
 
 
 if __name__ == "__main__":

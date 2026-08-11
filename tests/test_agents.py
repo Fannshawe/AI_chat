@@ -116,14 +116,14 @@ class AgentHarnessTests(unittest.TestCase):
             "length_plan": {
                 "sentence_count": 1,
                 "char_budget": 20,
-                "openness": 0.5,
                 "allow_filler_only": True,
+                "allow_double_text": False,
                 "rhythm_note": "只回半句",
             },
             "candidate_directives": [
-                {"candidate_index": 0, "angle": "情绪回应", "length_hint": "短", "instruction": "先接住状态"},
-                {"candidate_index": 1, "angle": "极简附和", "length_hint": "极短", "instruction": "几个字带过"},
-                {"candidate_index": 2, "angle": "轻反问", "length_hint": "短", "instruction": "顺着问一句"},
+                {"candidate_index": 0, "angle": "情绪回应", "length_hint": "短", "segment_count": 2, "instruction": "先接住状态"},
+                {"candidate_index": 1, "angle": "极简附和", "length_hint": "极短", "segment_count": 1, "instruction": "几个字带过"},
+                {"candidate_index": 2, "angle": "轻反问", "length_hint": "短", "segment_count": 1, "instruction": "顺着问一句"},
             ],
             "constraints": ["不连续追问"],
         })
@@ -131,6 +131,9 @@ class AgentHarnessTests(unittest.TestCase):
         self.assertEqual(composer.length_plan.char_budget, 20)
         self.assertEqual(
             [item.length_hint for item in composer.candidate_directives], ["短", "极短", "短"],
+        )
+        self.assertEqual(
+            [item.segment_count for item in composer.candidate_directives], [2, 1, 1],
         )
 
 

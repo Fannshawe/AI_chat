@@ -134,6 +134,7 @@ class LengthPlan(BaseModel):
     sentence_count: int = Field(default=2, ge=1, le=3, description="本轮建议句子数")
     char_budget: int = Field(default=30, ge=2, le=60, description="整轮中文字符上限")
     allow_filler_only: bool = Field(default=True, description="是否允许没有信息量的纯语气回应")
+    allow_double_text: bool = Field(default=False, description="是否允许在末尾追加一条补充消息（Double Text）")
     rhythm_note: str = Field(default="", description="本轮节奏的一句话说明")
 
 
@@ -143,6 +144,7 @@ class CandidateDirective(BaseModel):
     candidate_index: int = Field(ge=0, le=2)
     angle: CandidateAngle
     length_hint: CandidateLengthHint
+    segment_count: int = Field(default=1, ge=1, le=5, description="这条候选建议拆成几条消息发送，按想法数量决定")
     instruction: str = Field(description="这条候选怎么写、不写什么")
 
 

@@ -53,10 +53,13 @@ function formatTime(value) {
 function messageElement(message) {
   const item = document.createElement("article");
   item.className = `message ${message.role}`;
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
-  bubble.textContent = message.content;
-  item.appendChild(bubble);
+  const segments = String(message.content ?? "").split("\n").map((segment) => segment.trim()).filter(Boolean);
+  (segments.length ? segments : [""]).forEach((segment) => {
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = segment;
+    item.appendChild(bubble);
+  });
   const time = document.createElement("time");
   time.textContent = formatTime(message.created_at);
   item.appendChild(time);
@@ -80,6 +83,10 @@ function finalCritiques(critic) {
   return review?.candidates || [];
 }
 
+function segmentCount(text) {
+  return String(text ?? "").split("\n").map((segment) => segment.trim()).filter(Boolean).length || 1;
+}
+
 function renderCandidates(candidates, strategy, modes = [], critic = {}) {
   $("#strategyText").textContent = strategy;
   const grid = $("#candidateGrid");
@@ -90,12 +97,20 @@ function renderCandidates(candidates, strategy, modes = [], critic = {}) {
     const mode = document.createElement("span");
     mode.className = "candidate-mode";
     mode.textContent = modes[index] || "候选回复";
+    const segmentBadge = document.createElement("span");
+    segmentBadge.className = "candidate-segments";
+    const isSilence = candidate === "（暂不回复）" || modes[index] === "暂不回复";
+    const updateSegmentBadge = (value) => {
+      segmentBadge.textContent = isSilence ? "" : `将发送 ${segmentCount(value)} 条`;
+    };
     const textarea = document.createElement("textarea");
     textarea.value = candidate;
     textarea.setAttribute("aria-label", `候选回复 ${index + 1}`);
-    const isSilence = candidate === "（暂不回复）" || modes[index] === "暂不回复";
+    textarea.rows = Math.max(2, segmentCount(candidate) + 1);
     if (isSilence) textarea.readOnly = true;
-    card.append(mode, textarea);
+    textarea.addEventListener("input", () => updateSegmentBadge(textarea.value));
+    updateSegmentBadge(candidate);
+    card.append(mode, segmentBadge, textarea);
     const critique = finalCritiques(critic).find(item => item.candidate_index === index);
     if (critique && !critique.passed) {
       const warning = document.createElement("p");

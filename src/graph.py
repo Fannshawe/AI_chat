@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import operator
 import os
+import re
 from datetime import datetime
 from time import perf_counter
 from typing import Annotated, Any, TypedDict
@@ -191,6 +192,35 @@ class WorkflowState(_WorkflowStateRequired, total=False):
 
 def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, indent=2, default=str)
+
+
+_STRUCTURED_LINE_PATTERN = re.compile(r"^\s*(?:[-*•]|\d+[.、)]|```|\|.+\|)")
+_MAX_MESSAGE_SEGMENTS = 5
+
+
+def _looks_structured(line: str) -> bool:
+    """Detect list/code/table lines that must stay in one bubble, not split apart."""
+    return bool(_STRUCTURED_LINE_PATTERN.match(line))
+
+
+def _normalize_segments(text: str, max_segments: int = _MAX_MESSAGE_SEGMENTS) -> str:
+    """Collapse model line breaks into clean, bubble-ready WeChat-style segments.
+
+    The model is asked to separate distinct ideas with a single newline. This
+    guards against blank-line padding, over-splitting, and accidentally
+    splitting structured content (lists/code/tables) across bubbles.
+    """
+    stripped = text.strip()
+    if stripped == "（暂不回复）":
+        return stripped
+    lines = [line.strip() for line in stripped.splitlines() if line.strip()]
+    if not lines:
+        return stripped
+    if any(_looks_structured(line) for line in lines):
+        return "\n".join(lines)
+    if len(lines) > max_segments:
+        lines = [*lines[: max_segments - 1], "".join(lines[max_segments - 1:])]
+    return "\n".join(lines)
 
 
 def _history_with_time(history: list[dict[str, Any]], limit: int = 24) -> list[dict[str, Any]]:
@@ -409,14 +439,15 @@ def node_dialogue_composer(state: WorkflowState) -> dict[str, Any]:
             "sentence_count": 1,
             "char_budget": 25,
             "allow_filler_only": True,
+            "allow_double_text": False,
             "rhythm_note": "短句为主，不要把话说完",
         },
         "candidate_directives": [
-            {"candidate_index": 0, "angle": "情绪回应", "length_hint": "短",
+            {"candidate_index": 0, "angle": "情绪回应", "length_hint": "短", "segment_count": 1,
              "instruction": "先接住对方此刻的状态，不解释不建议"},
-            {"candidate_index": 1, "angle": "极简附和", "length_hint": "极短",
+            {"candidate_index": 1, "angle": "极简附和", "length_hint": "极短", "segment_count": 1,
              "instruction": "只用几个字回应，不补充任何信息"},
-            {"candidate_index": 2, "angle": "轻反问", "length_hint": "短",
+            {"candidate_index": 2, "angle": "轻反问", "length_hint": "短", "segment_count": 1,
              "instruction": "顺着说一句，再抛一个自然的小问题"},
         ],
         "constraints": ["不捏造事实", "不越过关系行为边界"],
@@ -489,7 +520,7 @@ def node_prompt_composer(state: WorkflowState) -> dict[str, Any]:
     result, warnings, llm_debug = _run_structured_agent(
         state, "prompt_composer", _prompt_composer_payload(state), fallback,
     )
-    candidates = [str(item).strip() for item in result.get("candidates", [])][:3]
+    candidates = [_normalize_segments(str(item)) for item in result.get("candidates", [])][:3]
     _workflow_debug_print(state, "prompt_composer candidates", candidates)
     output: dict[str, Any] = {"candidates": candidates, "warnings": warnings, "_debug_llm": llm_debug}
     if len(candidates) == 3 and not state.get("fallback_candidates"):
@@ -503,7 +534,7 @@ def node_rewrite(state: WorkflowState) -> dict[str, Any]:
     result, warnings, llm_debug = _run_structured_agent(
         state, "rewrite", _rewrite_payload(state), fallback,
     )
-    rewritten = [str(item).strip() for item in result.get("candidates", [])]
+    rewritten = [_normalize_segments(str(item)) for item in result.get("candidates", [])]
     candidates = _merge_rewrite_candidates(state, rewritten)
     _workflow_debug_print(state, "rewrite candidates", candidates)
     return {"candidates": candidates, "warnings": warnings, "_debug_llm": llm_debug}
