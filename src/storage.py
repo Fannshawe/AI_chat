@@ -141,7 +141,7 @@ class ChatStore:
         会创建缺失的表和索引，并确保：
         - 至少有一个默认联系人；
         - 该联系人存在一条关系记录；
-        - 各联系人存在对应的 AI emotion 初始状态。
+        - 各联系人存在对应的自身情绪初始状态。
         """
         self.upload_dir.mkdir(parents=True, exist_ok=True)
         with self.connect() as connection:
@@ -484,7 +484,7 @@ class ChatStore:
         """Return persona-level emotion tuning with sane defaults.
 
         Includes ``base_mood`` / ``base_energy`` / ``base_dimensions``: the
-        Personality-layer baseline that the AI emotion should drift back
+        Personality-layer baseline that the self emotion should drift back
         toward over time.
         """
         profile = self.get_persona_profile()
@@ -891,8 +891,8 @@ class ChatStore:
                 row = connection.execute("SELECT * FROM relationships WHERE contact_id=?", (contact_id,)).fetchone()
         return dict(row)
 
-    def get_ai_emotion_state(self, contact_id: int) -> dict[str, Any]:
-        """Read persistent AI emotion state, lazily creating a default row."""
+    def get_self_emotion_state(self, contact_id: int) -> dict[str, Any]:
+        """Read persistent self emotion state, lazily creating a default row."""
         with self.connect() as connection:
             row = connection.execute(
                 "SELECT * FROM ai_emotion_states WHERE contact_id=?", (contact_id,)
@@ -911,14 +911,14 @@ class ChatStore:
         result["dimensions"] = _loads(result.get("dimensions"), {})
         return result
 
-    def save_ai_emotion_state(self, contact_id: int, state: dict[str, Any]) -> dict[str, Any]:
-        """Persist AI mood, mood intensity, energy, and multi-dimensional short emotion scores.
+    def save_self_emotion_state(self, contact_id: int, state: dict[str, Any]) -> dict[str, Any]:
+        """Persist self mood, mood intensity, energy, and multi-dimensional short emotion scores.
 
         Dimensions are merged with the previous state rather than replaced
         wholesale: a dimension the model does not mention this round keeps
         its last value instead of silently dropping to zero.
         """
-        previous = self.get_ai_emotion_state(contact_id)
+        previous = self.get_self_emotion_state(contact_id)
         mood = str(state.get("mood", previous.get("mood", "放松"))).strip() or "放松"
         energy = max(0, min(100, int(state.get("energy", previous.get("energy", 60)))))
         try:
@@ -957,10 +957,10 @@ class ChatStore:
                 (contact_id, mood, mood_intensity, energy, json.dumps(dimensions, ensure_ascii=False), now),
             )
             self._mark_exports(connection, "06_emotions.yaml")
-        return self.get_ai_emotion_state(contact_id)
+        return self.get_self_emotion_state(contact_id)
 
     def add_conversation_events(self, contact_id: int, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Persist extracted conversation events that influenced AI emotion updates."""
+        """Persist extracted conversation events that influenced self emotion updates."""
         created: list[dict[str, Any]] = []
         now = utc_now()
         with self.connect() as connection:
@@ -1278,7 +1278,7 @@ class ChatStore:
         if table == "memories":
             return [self._deserialize_memory_row(row) for row in rows]
         if table == "ai_emotion_states":
-            return [self._deserialize_ai_emotion_state_row(row) for row in rows]
+            return [self._deserialize_self_emotion_state_row(row) for row in rows]
         if table == "generations":
             return [self._deserialize_generation_row(row) for row in rows]
         return rows
@@ -1291,7 +1291,7 @@ class ChatStore:
         return result
 
     @staticmethod
-    def _deserialize_ai_emotion_state_row(row: dict[str, Any]) -> dict[str, Any]:
+    def _deserialize_self_emotion_state_row(row: dict[str, Any]) -> dict[str, Any]:
         result = dict(row)
         result["dimensions"] = _loads(result.get("dimensions"), {})
         return result

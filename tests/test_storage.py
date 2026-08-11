@@ -143,8 +143,8 @@ class ChatStoreTests(unittest.TestCase):
         self.assertIn("episodic", categories)
         self.assertIn("emotional", categories)
 
-    def test_ai_emotion_state_and_events_round_trip(self):
-        saved = self.store.save_ai_emotion_state(self.contact_id, {
+    def test_self_emotion_state_and_events_round_trip(self):
+        saved = self.store.save_self_emotion_state(self.contact_id, {
             "mood": "专注",
             "energy": 42,
             "dimensions": [{"name": "好奇", "value": 66}, {"name": "失落", "value": 12}],
@@ -168,7 +168,7 @@ class ChatStoreTests(unittest.TestCase):
     def test_export_yaml_files_splits_data_for_debugging(self):
         self.store.save_message(self.contact_id, "user", "你好", ["/uploads/demo.png"])
         self.store.add_memory(self.contact_id, "semantic", "对方喜欢 YAML")
-        self.store.save_ai_emotion_state(self.contact_id, {
+        self.store.save_self_emotion_state(self.contact_id, {
             "mood": "开心",
             "energy": 77,
             "dimensions": {"好奇": 70},

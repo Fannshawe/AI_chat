@@ -45,7 +45,7 @@ class ModelProvider:
 
 AGENT_MODEL_NAMES: tuple[str, ...] = (
     "emotion",
-    "ai_emotion",
+    "self_emotion",
     "relationship",
     "memory_planner",
     "dialogue_composer",

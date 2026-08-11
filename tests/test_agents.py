@@ -3,13 +3,13 @@ import unittest
 from pydantic import ValidationError
 
 from src.agents import (
-    AIEmotionUpdateAnalysis,
     DialogueComposerAnalysis,
     EmotionAnalysis,
     MemoryPlan,
     RelationshipAnalysis,
     ReplyCriticAnalysis,
     ResponseCandidates,
+    SelfEmotionUpdateAnalysis,
     get_agent,
 )
 
@@ -40,10 +40,10 @@ class AgentHarnessTests(unittest.TestCase):
                 }]
             })
 
-    def test_ai_emotion_update_schema_supports_multidimensional_state(self):
-        value = AIEmotionUpdateAnalysis.model_validate({
+    def test_self_emotion_update_schema_supports_multidimensional_state(self):
+        value = SelfEmotionUpdateAnalysis.model_validate({
             "events": [{"event": "好消息", "impact": 0.8, "reason": "用户分享升职"}],
-            "ai_emotion": {
+            "self_emotion_state": {
                 "mood": "开心",
                 "mood_intensity": 65,
                 "energy": 72,
@@ -54,8 +54,8 @@ class AgentHarnessTests(unittest.TestCase):
                 "reason": "关系较近，因此更容易被带动",
             },
         })
-        self.assertEqual(value.ai_emotion.mood, "开心")
-        self.assertEqual(value.ai_emotion.dimensions[1].name, "好奇")
+        self.assertEqual(value.self_emotion_state.mood, "开心")
+        self.assertEqual(value.self_emotion_state.dimensions[1].name, "好奇")
 
     def test_response_requires_exactly_three_candidates(self):
         with self.assertRaises(ValidationError):

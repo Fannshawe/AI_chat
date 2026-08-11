@@ -353,7 +353,7 @@ async function loadModels() {
 
 const AGENT_DISPLAY_NAMES = {
   emotion: "Emotion（用户情绪）",
-  ai_emotion: "AI Emotion（AI情绪）",
+  self_emotion: "Self Emotion（自身情绪）",
   relationship: "Relationship（关系）",
   memory_planner: "Memory Planner（记忆规划）",
   dialogue_composer: "Dialogue Composer（对话规划）",

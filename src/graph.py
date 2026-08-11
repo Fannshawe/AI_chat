@@ -170,9 +170,9 @@ class WorkflowState(_WorkflowStateRequired, total=False):
     emotion_profile: dict[str, Any]
     relevant_habits: dict[str, Any]
     recent_emotions: list[dict[str, Any]]
-    ai_emotion_state: dict[str, Any]
-    emotion_analysis: dict[str, Any]
-    ai_emotion_analysis: dict[str, Any]
+    self_emotion_state: dict[str, Any]
+    contact_emotion_analysis: dict[str, Any]
+    self_emotion_update: dict[str, Any]
     relationship_analysis: dict[str, Any]
     memory_plan: dict[str, Any]
     memories: list[dict[str, Any]]
@@ -235,6 +235,32 @@ def _events_with_time(events: list[dict[str, Any]], limit: int = 8) -> list[dict
     return [dict(event) for event in events[:limit]]
 
 
+def _primary_contact_emotion_summary(state: WorkflowState) -> dict[str, Any]:
+    emotions = [
+        item for item in state.get("contact_emotion_analysis", {}).get("emotions", [])
+        if isinstance(item, dict) and str(item.get("subject", "对方")) == "对方"
+    ]
+    primary = emotions[0] if emotions else {}
+    return {
+        "emotion": primary.get("emotion", "unknown"),
+        "intensity": primary.get("intensity", 0.0),
+        "confidence": primary.get("confidence", 0.0),
+        "reason": primary.get("reason", ""),
+    }
+
+
+def _self_emotion_state_summary(state: WorkflowState) -> dict[str, Any]:
+    self_emotion = state.get("self_emotion_update", {}).get("self_emotion_state", state.get("self_emotion_state", {}))
+    dimensions = [item for item in self_emotion.get("dimensions", []) if isinstance(item, dict)]
+    return {
+        "mood": self_emotion.get("mood"),
+        "mood_intensity": self_emotion.get("mood_intensity"),
+        "energy": self_emotion.get("energy"),
+        "dimensions": dimensions[:2],
+        "reason": self_emotion.get("reason", ""),
+    }
+
+
 def _structured_dict(result: dict[str, Any]) -> dict[str, Any]:
     response = result.get("structured_response")
     if isinstance(response, BaseModel):
@@ -277,7 +303,7 @@ def node_load_context(state: WorkflowState) -> dict[str, Any]:
         "emotion_profile": store.get_emotion_profile(),
         "relationship": store.get_relationship(contact_id),
         "recent_emotions": store.list_emotions(contact_id, 12),
-        "ai_emotion_state": store.get_ai_emotion_state(contact_id),
+        "self_emotion_state": store.get_self_emotion_state(contact_id),
         "provider_name": state.get("provider_name") or store.get_setting("active_model_provider", "default"),
         "critic_attempts": 0,
         "critic_analysis": {"reviews": []},
@@ -303,16 +329,16 @@ def node_emotion_detection(state: WorkflowState) -> dict[str, Any]:
     ]
     if not emotions:
         emotions = fallback["emotions"]
-    return {"emotion_analysis": {"emotions": emotions[:4]}, "warnings": warnings, "_debug_llm": llm_debug}
+    return {"contact_emotion_analysis": {"emotions": emotions[:4]}, "warnings": warnings, "_debug_llm": llm_debug}
 
 
-def node_ai_emotion_update(state: WorkflowState) -> dict[str, Any]:
-    """Responsibility: update persistent AI emotion state after relationship judgment."""
-    previous = state.get("ai_emotion_state", {})
+def node_self_emotion_update(state: WorkflowState) -> dict[str, Any]:
+    """Responsibility: update persistent self emotion state after relationship judgment."""
+    previous = state.get("self_emotion_state", {})
     emotion_profile = state.get("emotion_profile", {})
     fallback = {
-        "events": [{"event": "其他", "impact": 0.2, "reason": "AI 情绪节点未返回可靠结构"}],
-        "ai_emotion": {
+        "events": [{"event": "其他", "impact": 0.2, "reason": "自身情绪节点未返回可靠结构"}],
+        "self_emotion_state": {
             "mood": str(previous.get("mood", "放松")),
             "mood_intensity": int(previous.get("mood_intensity", 60)),
             "energy": int(previous.get("energy", 60)),
@@ -323,11 +349,11 @@ def node_ai_emotion_update(state: WorkflowState) -> dict[str, Any]:
             "reason": "沿用上一轮 AI 情绪状态",
         },
     }
-    result, warnings, llm_debug = _run_structured_agent(state, "ai_emotion", {
+    result, warnings, llm_debug = _run_structured_agent(state, "self_emotion", {
         "latest_message": state["user_request"],
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
-        "user_emotion": state.get("emotion_analysis", {}),
-        "previous_ai_emotion": previous,
+        "contact_emotion": state.get("contact_emotion_analysis", {}),
+        "previous_self_emotion_state": previous,
         "current_time": datetime.now().astimezone().isoformat(),
         "persona_baseline": {
             "base_mood": emotion_profile.get("base_mood", "放松"),
@@ -340,8 +366,8 @@ def node_ai_emotion_update(state: WorkflowState) -> dict[str, Any]:
         "persona_personality": state.get("persona_personality", {}),
         "recent_events": _events_with_time(store.list_conversation_events(state["contact_id"], 8)),
     }, fallback)
-    _workflow_debug_print(state, "ai_emotion analysis", result)
-    return {"ai_emotion_analysis": result, "warnings": warnings, "_debug_llm": llm_debug}
+    _workflow_debug_print(state, "self_emotion update", result)
+    return {"self_emotion_update": result, "warnings": warnings, "_debug_llm": llm_debug}
 
 
 def node_relationship_state(state: WorkflowState) -> dict[str, Any]:
@@ -420,7 +446,7 @@ def node_chat_guidance(state: WorkflowState) -> dict[str, Any]:
     """Responsibility: retrieve relevant chat-skill documents. Persistence: none."""
     query = " ".join([
         state["user_request"], state["relationship"]["current_level"],
-        _json(state.get("emotion_analysis", {})),
+        _json(state.get("contact_emotion_analysis", {})),
     ])
     return {"guidance_chunks": guidance_retriever.search(query, limit=5)}
 
@@ -457,13 +483,25 @@ def node_dialogue_composer(state: WorkflowState) -> dict[str, Any]:
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
         "persona": {"core": state.get("persona_core", {}), "personality": state.get("persona_personality", {})},
         "relevant_habits": state.get("relevant_habits", {}),
-        "emotion": state.get("emotion_analysis", {}),
-        "ai_emotion": state.get("ai_emotion_analysis", {}).get("ai_emotion", state.get("ai_emotion_state", {})),
-        "relationship": state.get("relationship", {}),
-        "relationship_judgment": state.get("relationship_analysis", {}),
+        "contact_emotion": _primary_contact_emotion_summary(state),
+        "self_emotion_state": _self_emotion_state_summary(state),
+        "relationship": {
+            "current_level": state.get("relationship", {}).get("current_level"),
+            "trust": state.get("relationship", {}).get("trust"),
+            "familiarity": state.get("relationship", {}).get("familiarity"),
+            "intimacy": state.get("relationship", {}).get("intimacy"),
+            "attraction": state.get("relationship", {}).get("attraction"),
+            "attachment": state.get("relationship", {}).get("attachment"),
+            "comfort": state.get("relationship", {}).get("comfort"),
+        },
+        "relationship_judgment": {
+            "suggested_level": state.get("relationship_analysis", {}).get("suggested_level"),
+            "stage_reason": state.get("relationship_analysis", {}).get("stage_reason"),
+            "behavior_boundaries": state.get("relationship_analysis", {}).get("behavior_boundaries", []),
+        },
         "memories": state.get("primary_memories") or state.get("memories", []),
-        "background_memories": state.get("background_memories", []),
-        "chat_skill_documents": state.get("guidance_chunks", []),
+        "background_memories": state.get("background_memories", [])[:2],
+        "chat_skill_documents": state.get("guidance_chunks", [])[:2],
     }, fallback)
     return {
         "dialogue_composition": result,
@@ -474,17 +512,33 @@ def node_dialogue_composer(state: WorkflowState) -> dict[str, Any]:
 
 
 def _prompt_composer_payload(state: WorkflowState) -> dict[str, Any]:
+    dialogue_plan = state.get("dialogue_composition", {})
+    relationship = state.get("relationship", {})
+    relationship_boundaries = state.get("relationship_analysis", {}).get("behavior_boundaries", [])
     return {
         "latest_message": state["user_request"],
-        "recent_conversation_with_time": _history_with_time(state.get("history", [])),
-        "persona": {"core": state.get("persona_core", {}), "personality": state.get("persona_personality", {})},
+        "persona": {
+            "core": state.get("persona_core", {}),
+            "personality": {
+                "expression_style": state.get("persona_personality", {}).get("expression_style", {}),
+            },
+        },
         "relevant_habits": state.get("relevant_habits", {}),
-        "emotion_analysis": state.get("emotion_analysis", {}),
-        "ai_emotion": state.get("ai_emotion_analysis", {}).get("ai_emotion", state.get("ai_emotion_state", {})),
-        "relationship": state.get("relationship", {}),
-        "relationship_boundaries": state.get("relationship_analysis", {}).get("behavior_boundaries", []),
-        "relevant_memories": state.get("primary_memories") or state.get("memories", []),
-        "dialogue_plan": state.get("dialogue_composition", {}),
+        "contact_emotion": _primary_contact_emotion_summary(state),
+        "self_emotion_state": _self_emotion_state_summary(state),
+        "relationship": {
+            "current_level": relationship.get("current_level"),
+        },
+        "relationship_boundaries": relationship_boundaries,
+        "relevant_memories": (state.get("primary_memories") or state.get("memories", []))[:3],
+        "dialogue_plan": {
+            "goal": dialogue_plan.get("goal", ""),
+            "structure": dialogue_plan.get("structure", []),
+            "length_plan": dialogue_plan.get("length_plan", {}),
+            "candidate_directives": dialogue_plan.get("candidate_directives", []),
+            "constraints": dialogue_plan.get("constraints", []),
+            "topic_plan": dialogue_plan.get("topic_plan", []),
+        },
         "candidate_count": 3,
     }
 
@@ -630,7 +684,7 @@ def build_graph():
     graph.add_node("emotion", _trace_node("emotion", node_emotion_detection))
     graph.add_node("relationship", _trace_node("relationship", node_relationship_state))
     graph.add_node("persona_habit_retrieval", _trace_node("persona_habit_retrieval", node_persona_habit_retrieval))
-    graph.add_node("ai_emotion", _trace_node("ai_emotion", node_ai_emotion_update))
+    graph.add_node("self_emotion", _trace_node("self_emotion", node_self_emotion_update))
     graph.add_node("memory_planner", _trace_node("memory_planner", node_memory_planner))
     graph.add_node("memory_retrieval", _trace_node("memory_retrieval", node_memory_retrieval))
     graph.add_node("guidance", _trace_node("guidance", node_chat_guidance))
@@ -646,8 +700,8 @@ def build_graph():
     graph.add_edge("context", "persona_habit_retrieval")
     graph.add_edge("context", "memory_planner")
     graph.add_edge("memory_planner", "memory_retrieval")
-    graph.add_edge(["emotion", "relationship", "persona_habit_retrieval", "memory_retrieval"], "ai_emotion")
-    graph.add_edge("ai_emotion", "guidance")
+    graph.add_edge(["emotion", "relationship", "persona_habit_retrieval", "memory_retrieval"], "self_emotion")
+    graph.add_edge("self_emotion", "guidance")
     graph.add_edge("guidance", "dialogue_composer")
     graph.add_edge("dialogue_composer", "prompt_composer")
     graph.add_edge("prompt_composer", "critic")

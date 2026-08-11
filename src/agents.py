@@ -37,7 +37,7 @@ MemoryCategory = Literal["episodic", "semantic", "emotional", "shared_experience
 CandidateAngle = Literal[
     "情绪回应", "轻反问", "玩笑吐槽", "极简附和", "自我暴露", "具体建议", "话题延展", "暂不回复",
 ]
-CandidateLengthHint = Literal["极短", "短", "中"]
+CandidateLengthHint = Literal["极短", "短", "中", "中长"]
 ConversationEventType = Literal[
     "好消息", "坏消息", "道歉", "感谢", "夸奖", "失联", "冷淡", "冲突", "和解",
     "示好", "试探", "边界确认", "表达想念", "邀约", "拒绝", "求安慰", "求建议",
@@ -62,7 +62,7 @@ class EmotionAnalysis(BaseModel):
 
 
 class ConversationEvent(BaseModel):
-    """A compact turn-level event extracted before AI emotion update."""
+    """A compact turn-level event extracted before self emotion update."""
 
     event: ConversationEventType
     impact: float = Field(ge=0, le=1, description="事件影响强度，0 到 1")
@@ -70,14 +70,14 @@ class ConversationEvent(BaseModel):
 
 
 class AIDimensionState(BaseModel):
-    """One short-lived AI emotion dimension score."""
+    """One short-lived self emotion dimension score."""
 
     name: ShortEmotionDimension
     value: int = Field(ge=0, le=100, description="短期情绪数值，0 到 100")
 
 
 class AIEmotionState(BaseModel):
-    """Persistent AI affective state used by later dialogue planning."""
+    """Persistent self affective state used by later dialogue planning."""
 
     mood: MoodName
     mood_intensity: int = Field(ge=0, le=100, description="mood 的强度，0 到 100，越高越强烈")
@@ -86,11 +86,11 @@ class AIEmotionState(BaseModel):
     reason: str = Field(description="本轮更新的简短依据")
 
 
-class AIEmotionUpdateAnalysis(BaseModel):
-    """AI emotion update output combining event extraction and persistent state."""
+class SelfEmotionUpdateAnalysis(BaseModel):
+    """Self emotion update output combining event extraction and persistent state."""
 
     events: list[ConversationEvent] = Field(default_factory=list, max_length=4)
-    ai_emotion: AIEmotionState
+    self_emotion_state: AIEmotionState
 
 
 class RelationshipChange(BaseModel):
@@ -232,7 +232,7 @@ class ProactiveDraft(BaseModel):
 
 AGENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "emotion": EmotionAnalysis,
-    "ai_emotion": AIEmotionUpdateAnalysis,
+    "self_emotion": SelfEmotionUpdateAnalysis,
     "relationship": RelationshipAnalysis,
     "memory_planner": MemoryPlan,
     "dialogue_composer": DialogueComposerAnalysis,

@@ -93,10 +93,11 @@ class GraphPipelineTests(unittest.TestCase):
                 "serious_event": False,
                 "behavior_boundaries": ["保持自然称呼"],
             },
-            "ai_emotion": {
+            "self_emotion": {
                 "events": [{"event": "好消息", "impact": 0.7, "reason": "用户在分享开心的事"}],
-                "ai_emotion": {
+                "self_emotion_state": {
                     "mood": "开心",
+                    "mood_intensity": 65,
                     "energy": 75,
                     "dimensions": [
                         {"name": "喜悦", "value": 48},
@@ -157,7 +158,7 @@ class GraphPipelineTests(unittest.TestCase):
         self.assertEqual(result["candidates"], ["好呀", "可以", "听起来不错"])
         self.assertEqual(counts["critic"], 1)
         self.assertEqual(self.store.get_relationship(self.contact_id)["familiarity"], 12)
-        self.assertEqual(self.store.get_ai_emotion_state(self.contact_id)["mood"], "开心")
+        self.assertEqual(self.store.get_self_emotion_state(self.contact_id)["mood"], "开心")
         self.assertEqual(self.store.list_memories(self.contact_id)[0]["category"], "semantic")
         self.assertIn("created_at", self.store.list_memories(self.contact_id)[0])
         self.assertGreater(result["generation_id"], 0)
