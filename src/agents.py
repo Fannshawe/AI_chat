@@ -234,6 +234,7 @@ AGENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "memory_planner": MemoryPlan,
     "dialogue_composer": DialogueComposerAnalysis,
     "prompt_composer": ResponseCandidates,
+    "rewrite": ResponseCandidates,
     "critic": ReplyCriticAnalysis,
     "reflection": ReflectionAnalysis,
     "proactive": ProactiveDraft,

@@ -20,7 +20,6 @@ PROMPT_DIR = BASE_DIR / "prompt"
 GUIDANCE_DIR = BASE_DIR / "guidance_docs"
 PERSONA_PATH = Path(os.getenv("PERSONA_PATH", DATA_DIR / "persona.yaml")).resolve()
 STATIC_DIR = BASE_DIR / "static"
-MAX_IMAGE_BYTES = int(os.getenv("MAX_IMAGE_BYTES", str(5 * 1024 * 1024)))
 SHORT_TERM_MESSAGE_LIMIT = int(os.getenv("SHORT_TERM_MESSAGE_LIMIT", "100"))
 
 
@@ -49,6 +48,7 @@ AGENT_MODEL_NAMES: tuple[str, ...] = (
     "memory_planner",
     "dialogue_composer",
     "prompt_composer",
+    "rewrite",
     "critic",
     "reflection",
     "proactive",
@@ -110,12 +110,12 @@ def _extra_providers() -> dict[str, ModelProvider]:
 
 
 def _default_provider_from_agent_env() -> ModelProvider:
-    """Build the admin-visible default provider from per-agent settings."""
+    """Build the admin-visible default provider from DEFAULT_* env vars."""
     return ModelProvider(
         name="default",
-        model=_read_env("AGENT_PROMPT_COMPOSER_MODEL") or "not-configured",
-        base_url=_read_env("AGENT_PROMPT_COMPOSER_BASE_URL"),
-        api_key=_read_env("AGENT_PROMPT_COMPOSER_API_KEY"),
+        model=_read_env("DEFAULT_MODEL") or "not-configured",
+        base_url=_read_env("DEFAULT_BASE_URL"),
+        api_key=_read_env("DEFAULT_API_KEY"),
     )
 
 

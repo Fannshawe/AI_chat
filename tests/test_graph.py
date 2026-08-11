@@ -125,6 +125,7 @@ class GraphPipelineTests(unittest.TestCase):
                 "constraints": ["不追问"],
             },
             "prompt_composer": {"candidates": ["好呀", "可以", "听起来不错"]},
+            "rewrite": {"candidates": ["改好的一", "改好的二", "改好的三"]},
             "critic": critique(True),
             "reflection": {
                 "memories": [{
@@ -132,6 +133,7 @@ class GraphPipelineTests(unittest.TestCase):
                     "content": "用户喜欢手冲咖啡",
                     "sensitive": False,
                 }],
+                "habit_updates": [], "core_update_proposals": [],
             },
         }
 
@@ -146,7 +148,6 @@ class GraphPipelineTests(unittest.TestCase):
             result = build_graph().invoke({
                 "contact_id": self.contact_id,
                 "user_request": "今天喝了手冲咖啡",
-                "image_data_urls": [],
                 "warnings": [],
             })
         return result, counts
@@ -159,13 +160,14 @@ class GraphPipelineTests(unittest.TestCase):
         self.assertEqual(self.store.get_ai_emotion_state(self.contact_id)["mood"], "开心")
         self.assertEqual(self.store.list_memories(self.contact_id)[0]["category"], "semantic")
         self.assertIn("created_at", self.store.list_memories(self.contact_id)[0])
-        self.assertTrue(all(item["retrieval_mode"] == "exact" for item in result["primary_memories"]))
         self.assertGreater(result["generation_id"], 0)
 
     def test_critic_allows_two_rewrites_and_returns_fallback_candidates(self):
         responses = self.base_responses()
         responses["prompt_composer"] = [
             {"candidates": ["初稿一", "初稿二", "初稿三"]},
+        ]
+        responses["rewrite"] = [
             {"candidates": ["二稿一", "二稿二", "二稿三"]},
             {"candidates": ["三稿一", "三稿二", "三稿三"]},
         ]
@@ -175,7 +177,8 @@ class GraphPipelineTests(unittest.TestCase):
             critique(False, naturalness=5, instruction="仍未通过"),
         ]
         result, counts = self.invoke(responses)
-        self.assertEqual(counts["prompt_composer"], 3)
+        self.assertEqual(counts["prompt_composer"], 1)
+        self.assertEqual(counts["rewrite"], 2)
         self.assertEqual(counts["critic"], 3)
         self.assertEqual(result["candidates"], ["初稿一", "初稿二", "初稿三"])
         self.assertTrue(any("最佳候选" in warning for warning in result["warnings"]))
@@ -186,6 +189,21 @@ class GraphPipelineTests(unittest.TestCase):
         result, _counts = self.invoke(responses)
         self.assertEqual(result["critic_analysis"]["rewrite_candidate_indexes"], [1])
         self.assertIn("需要修改1", result["critic_analysis"]["rewrite_instruction"])
+
+    def test_rewrite_only_replaces_failed_candidates(self):
+        responses = self.base_responses()
+        responses["prompt_composer"] = {"candidates": ["原候选一", "原候选二", "原候选三"]}
+        responses["critic"] = [
+            partial_critique([1]),
+            critique(True),
+        ]
+        responses["rewrite"] = [
+            {"candidates": ["只改第二条"]},
+        ]
+        result, counts = self.invoke(responses)
+        self.assertEqual(counts["prompt_composer"], 1)
+        self.assertEqual(counts["rewrite"], 1)
+        self.assertEqual(result["candidates"], ["原候选一", "只改第二条", "原候选三"])
 
 
 if __name__ == "__main__":

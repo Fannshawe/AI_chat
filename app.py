@@ -2,14 +2,10 @@
 
 from __future__ import annotations
 
-import base64
-import binascii
 import re
 from contextlib import asynccontextmanager
 from datetime import date
-from pathlib import Path
 from typing import Any, cast
-from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
@@ -17,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
-from src.config import GUIDANCE_DIR, MAX_IMAGE_BYTES, STATIC_DIR, UPLOAD_DIR, get_model_providers
+from src.config import GUIDANCE_DIR, STATIC_DIR, get_model_providers
 from src.graph import WorkflowState
 from src.graph import DEBUG, build_graph, generate_proactive_draft
 from src.guidance import guidance_retriever
@@ -31,16 +27,9 @@ from src.storage import (
 )
 
 
-class ImageInput(BaseModel):
-    name: str = "image"
-    mime: str
-    data: str
-
-
 class GenerateRequest(BaseModel):
     contact_id: int
-    content: str = ""
-    images: list[ImageInput] = Field(default_factory=list, max_length=4)
+    content: str = Field(min_length=1)
 
 
 class ConfirmRequest(BaseModel):
@@ -112,9 +101,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="Persona Chat", version="1.0.0", lifespan=lifespan)
 chat_graph = build_graph()
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
 def _debug_settings() -> dict[str, Any]:
@@ -136,27 +123,6 @@ def admin_page() -> FileResponse:
 @app.get("/debug", include_in_schema=False)
 def debug_page() -> FileResponse:
     return FileResponse(STATIC_DIR / "debug.html")
-
-
-def _save_images(images: list[ImageInput]) -> tuple[list[str], list[str]]:
-    allowed = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif"}
-    paths: list[str] = []
-    data_urls: list[str] = []
-    for image in images:
-        if image.mime not in allowed:
-            raise HTTPException(400, f"不支持的图片类型: {image.mime}")
-        encoded = image.data.split(",", 1)[1] if image.data.startswith("data:") and "," in image.data else image.data
-        try:
-            content = base64.b64decode(encoded, validate=True)
-        except (ValueError, binascii.Error) as exc:
-            raise HTTPException(400, "图片数据不是有效的 Base64") from exc
-        if len(content) > MAX_IMAGE_BYTES:
-            raise HTTPException(400, f"单张图片不能超过 {MAX_IMAGE_BYTES // 1024 // 1024}MB")
-        filename = f"{uuid4().hex}{allowed[image.mime]}"
-        (UPLOAD_DIR / filename).write_bytes(content)
-        paths.append(f"/uploads/{filename}")
-        data_urls.append(f"data:{image.mime};base64,{base64.b64encode(content).decode('ascii')}")
-    return paths, data_urls
 
 
 @app.get("/api/bootstrap")
@@ -189,20 +155,15 @@ def update_contact(contact_id: int, request: ContactRequest) -> dict[str, Any]:
 @app.post("/api/chat/generate")
 async def generate(request: GenerateRequest) -> dict[str, Any]:
     content = request.content.strip()
-    if not content and not request.images:
-        raise HTTPException(400, "请输入消息或选择图片")
-    image_paths, image_data_urls = _save_images(request.images)
     saved = store.save_message(
         request.contact_id,
         "user",
-        content or "（图片消息）",
-        image_paths=image_paths,
+        content,
     )
     initial_state = {
         "contact_id": request.contact_id,
         "input_message_id": saved["id"],
-        "user_request": content or "对方发来了一张图片",
-        "image_data_urls": image_data_urls,
+        "user_request": content,
         "warnings": [],
         "debug_enabled": _debug_settings()["enabled"],
     }
@@ -272,20 +233,6 @@ def get_persona_profile() -> dict[str, Any]:
 @app.put("/api/persona-profile")
 def save_persona_profile(request: dict[str, Any]) -> dict[str, Any]:
     return store.save_persona_profile(request)
-
-
-@app.get("/api/persona-yaml")
-def get_persona_yaml() -> dict[str, Any]:
-    return {"text": store.get_persona_yaml_text()}
-
-
-@app.put("/api/persona-yaml")
-def save_persona_yaml(request: dict[str, Any]) -> dict[str, Any]:
-    try:
-        store.save_persona_yaml_text(request.get("text", ""))
-    except Exception as exc:
-        raise HTTPException(400, f"YAML 格式有误：{exc}") from exc
-    return {"ok": True}
 
 
 @app.get("/api/persona-proposals/{contact_id}")

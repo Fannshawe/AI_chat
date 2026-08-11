@@ -147,13 +147,19 @@ def _trace_node(name: str, node_fn):
     return wrapped
 
 
-class WorkflowState(TypedDict, total=False):
-    """Shared state for one graph run; parallel branches return partial updates."""
+class _WorkflowStateRequired(TypedDict):
+    """Keys that must exist for the graph nodes that use direct indexing."""
 
     user_request: str
     contact_id: int
+    relationship: dict[str, Any]
+    candidates: list[str]
+
+
+class WorkflowState(_WorkflowStateRequired, total=False):
+    """Shared state for one graph run; parallel branches return partial updates."""
+
     input_message_id: int | None
-    image_data_urls: list[str]
     debug_enabled: bool
     provider_name: str
     history: list[dict[str, Any]]
@@ -162,7 +168,6 @@ class WorkflowState(TypedDict, total=False):
     persona_habits: dict[str, Any]
     emotion_profile: dict[str, Any]
     relevant_habits: dict[str, Any]
-    relationship: dict[str, Any]
     recent_emotions: list[dict[str, Any]]
     ai_emotion_state: dict[str, Any]
     emotion_analysis: dict[str, Any]
@@ -176,7 +181,6 @@ class WorkflowState(TypedDict, total=False):
     dialogue_composition: dict[str, Any]
     critic_attempts: int
     critic_analysis: dict[str, Any]
-    candidates: list[str]
     fallback_candidates: list[str]
     reflection_analysis: dict[str, Any]
     strategy: str
@@ -439,7 +443,6 @@ def node_dialogue_composer(state: WorkflowState) -> dict[str, Any]:
 
 
 def _prompt_composer_payload(state: WorkflowState) -> dict[str, Any]:
-    critic_analysis = state.get("critic_analysis", {})
     return {
         "latest_message": state["user_request"],
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
@@ -451,62 +454,59 @@ def _prompt_composer_payload(state: WorkflowState) -> dict[str, Any]:
         "relationship_boundaries": state.get("relationship_analysis", {}).get("behavior_boundaries", []),
         "relevant_memories": state.get("primary_memories") or state.get("memories", []),
         "dialogue_plan": state.get("dialogue_composition", {}),
-        "rewrite_instruction": str(critic_analysis.get("rewrite_instruction", "")),
-        "rewrite_candidate_indexes": critic_analysis.get("rewrite_candidate_indexes", []),
-        "existing_candidates": state.get("candidates", []),
         "candidate_count": 3,
     }
 
 
-def _invoke_prompt_composer(state: WorkflowState, include_images: bool) -> tuple[list[str], dict[str, Any] | None]:
-    agent = get_agent("prompt_composer", state.get("provider_name", "default"))
+def _rewrite_payload(state: WorkflowState) -> dict[str, Any]:
+    critic_analysis = state.get("critic_analysis", {})
     payload = _prompt_composer_payload(state)
-    images = (state.get("image_data_urls") or []) if include_images else []
-    content: str | list[dict[str, Any]] = _json(payload)
-    if images:
-        content = [{"type": "text", "text": _json(payload)}]
-        content.extend({"type": "image_url", "image_url": {"url": image}} for image in images)
-    llm_input = {"messages": [{"role": "user", "content": content}]}
-    try:
-        result = agent.invoke(llm_input)  # type: ignore[arg-type]
-    except Exception:
-        if not images:
-            raise
-        llm_input = {"messages": [{"role": "user", "content": _json(payload)}]}
-        result = agent.invoke(llm_input)  # type: ignore[arg-type]
-    structured = _structured_dict(result)
-    generated = [str(item).strip() for item in structured["candidates"]]
+    payload.update({
+        "rewrite_instruction": str(critic_analysis.get("rewrite_instruction", "")),
+        "rewrite_candidate_indexes": critic_analysis.get("rewrite_candidate_indexes", []),
+        "existing_candidates": state.get("candidates", []),
+    })
+    return payload
+
+
+def _merge_rewrite_candidates(state: WorkflowState, rewritten: list[str]) -> list[str]:
     rewrite_indexes = [
         int(index) for index in state.get("critic_analysis", {}).get("rewrite_candidate_indexes", [])
         if int(index) in {0, 1, 2}
     ]
     existing = [str(item).strip() for item in state.get("candidates", [])]
-    if rewrite_indexes and len(existing) == 3:
-        candidates = list(existing)
+    candidates = list(existing) if rewrite_indexes and len(existing) == 3 else rewritten
+    if candidates is not rewritten:
         for offset, index in enumerate(rewrite_indexes):
-            if offset < len(generated):
-                candidates[index] = generated[offset]
-    else:
-        candidates = generated
-    return candidates, {"input": llm_input, "output": structured}
+            if offset < len(rewritten):
+                candidates[index] = rewritten[offset]
+    return candidates
 
 
 def node_prompt_composer(state: WorkflowState) -> dict[str, Any]:
     """Responsibility: write final candidate replies from the plan. Persistence: snapshot only."""
-    try:
-        candidates, llm_debug = _invoke_prompt_composer(state, include_images=state.get("critic_attempts", 0) == 0)
-        if state.get("critic_attempts", 0) > 0:
-            _workflow_debug_print(state, "prompt_rewriter candidates", candidates)
-        else:
-            _workflow_debug_print(state, "prompt_composer candidates", candidates)
-        result = {"candidates": candidates, "_debug_llm": llm_debug}
-        if len(candidates) == 3 and not state.get("fallback_candidates"):
-            result["fallback_candidates"] = list(candidates)
-        return result
-    except Exception as exc:
-        if state.get("fallback_candidates"):
-            return {"candidates": state["fallback_candidates"], "warnings": [f"Prompt Composer重写失败: {exc}"]}
-        raise
+    fallback = {"candidates": state.get("fallback_candidates") or ["...", "...", "..."]}
+    result, warnings, llm_debug = _run_structured_agent(
+        state, "prompt_composer", _prompt_composer_payload(state), fallback,
+    )
+    candidates = [str(item).strip() for item in result.get("candidates", [])][:3]
+    _workflow_debug_print(state, "prompt_composer candidates", candidates)
+    output: dict[str, Any] = {"candidates": candidates, "warnings": warnings, "_debug_llm": llm_debug}
+    if len(candidates) == 3 and not state.get("fallback_candidates"):
+        output["fallback_candidates"] = list(candidates)
+    return output
+
+
+def node_rewrite(state: WorkflowState) -> dict[str, Any]:
+    """Responsibility: rewrite only critic-rejected candidates. Persistence: snapshot only."""
+    fallback = {"candidates": state.get("candidates", [])}
+    result, warnings, llm_debug = _run_structured_agent(
+        state, "rewrite", _rewrite_payload(state), fallback,
+    )
+    rewritten = [str(item).strip() for item in result.get("candidates", [])]
+    candidates = _merge_rewrite_candidates(state, rewritten)
+    _workflow_debug_print(state, "rewrite candidates", candidates)
+    return {"candidates": candidates, "warnings": warnings, "_debug_llm": llm_debug}
 
 
 def _critic_score(review: dict[str, Any]) -> float:
@@ -568,7 +568,7 @@ def node_reply_critic(state: WorkflowState) -> dict[str, Any]:
 def route_after_critic(state: WorkflowState) -> str:
     if state.get("critic_analysis", {}).get("passed", True) or state.get("critic_attempts", 0) >= CRITIC_MAX_ATTEMPTS:
         return "reflection"
-    return "prompt_composer"
+    return "rewrite"
 
 
 def node_reflection(state: WorkflowState) -> dict[str, Any]:
@@ -644,6 +644,7 @@ def build_graph():
     graph.add_node("guidance", _trace_node("guidance", node_chat_guidance))
     graph.add_node("dialogue_composer", _trace_node("dialogue_composer", node_dialogue_composer))
     graph.add_node("prompt_composer", _trace_node("prompt_composer", node_prompt_composer))
+    graph.add_node("rewrite", _trace_node("rewrite", node_rewrite))
     graph.add_node("critic", _trace_node("critic", node_reply_critic))
     graph.add_node("reflection", _trace_node("reflection", node_reflection))
     graph.add_node("save", _trace_node("save", node_content_save))
@@ -658,8 +659,9 @@ def build_graph():
     graph.add_edge("guidance", "dialogue_composer")
     graph.add_edge("dialogue_composer", "prompt_composer")
     graph.add_edge("prompt_composer", "critic")
+    graph.add_edge("rewrite", "critic")
     graph.add_conditional_edges("critic", route_after_critic, {
-        "prompt_composer": "prompt_composer", "reflection": "reflection",
+        "rewrite": "rewrite", "reflection": "reflection",
     })
     graph.add_edge("reflection", "save")
     graph.add_edge("save", END)

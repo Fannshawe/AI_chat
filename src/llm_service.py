@@ -52,15 +52,9 @@ def content_to_text(content: Any) -> str:
     return str(content)
 
 
-def invoke_text(system_prompt: str, user_prompt: str, provider_name: str = "default", images: list[str] | None = None) -> str:
+def invoke_text(system_prompt: str, user_prompt: str, provider_name: str = "default") -> str:
     model = get_model(provider_name)
-    human_content: str | list[dict[str, Any]]
-    if images:
-        human_content = [{"type": "text", "text": user_prompt}]
-        human_content.extend({"type": "image_url", "image_url": {"url": image}} for image in images)
-    else:
-        human_content = user_prompt
-    response = model.invoke([SystemMessage(content=system_prompt), HumanMessage(content=human_content)])
+    response = model.invoke([SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)])
     return content_to_text(response.content).strip()
 
 

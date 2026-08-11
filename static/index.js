@@ -1,5 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
-const state = { contactId: null, images: [], generationId: null, debugEnabled: true };
+const state = { contactId: null, generationId: null, debugEnabled: true };
 
 async function api(url, options = {}) {
   const response = await fetch(url, { headers: { "Content-Type": "application/json", ...(options.headers || {}) }, ...options });
@@ -53,17 +53,6 @@ function formatTime(value) {
 function messageElement(message) {
   const item = document.createElement("article");
   item.className = `message ${message.role}`;
-  if (message.image_paths?.length) {
-    const images = document.createElement("div");
-    images.className = "message-images";
-    message.image_paths.forEach((path) => {
-      const image = document.createElement("img");
-      image.src = path;
-      image.alt = "聊天图片";
-      images.appendChild(image);
-    });
-    item.appendChild(images);
-  }
   const bubble = document.createElement("div");
   bubble.className = "bubble";
   bubble.textContent = message.content;
@@ -148,41 +137,16 @@ async function confirmCandidate(content, candidateIndex, button) {
   finally { button.disabled = false; }
 }
 
-function renderImagePreview() {
-  const container = $("#imagePreview");
-  container.innerHTML = "";
-  state.images.forEach((image, index) => {
-    const wrapper = document.createElement("div");
-    wrapper.className = "preview-item";
-    const preview = document.createElement("img");
-    preview.src = image.data;
-    const remove = document.createElement("button");
-    remove.textContent = "×";
-    remove.onclick = () => { state.images.splice(index, 1); renderImagePreview(); };
-    wrapper.append(preview, remove);
-    container.appendChild(wrapper);
-  });
-}
-
-function readFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve({ name: file.name, mime: file.type, data: reader.result });
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 async function generate() {
   const input = $("#messageInput");
   const content = input.value.trim();
-  if (!content && !state.images.length) return toast("请输入消息或选择图片");
+  if (!content) return toast("请输入消息");
   const button = $("#generateButton");
   button.disabled = true;
   button.classList.add("loading");
   button.textContent = "分析中";
   try {
-    const result = await api("/api/chat/generate", { method: "POST", body: JSON.stringify({ contact_id: state.contactId, content, images: state.images }) });
+    const result = await api("/api/chat/generate", { method: "POST", body: JSON.stringify({ contact_id: state.contactId, content }) });
     const empty = $("#messages .empty-state");
     if (empty) empty.remove();
     $("#messages").appendChild(messageElement(result.message));
@@ -192,8 +156,6 @@ async function generate() {
     $("#relationshipBadge").textContent = `关系：${result.relationship.current_level}`;
     input.value = "";
     input.style.height = "auto";
-    state.images = [];
-    renderImagePreview();
     if (result.warnings?.length) toast(result.warnings.join("；"));
   } catch (error) { toast(error.message); }
   finally {
@@ -235,13 +197,6 @@ $("#messageInput").addEventListener("keydown", (event) => {
 $("#messageInput").addEventListener("input", (event) => {
   event.target.style.height = "auto";
   event.target.style.height = `${Math.min(event.target.scrollHeight, 130)}px`;
-});
-$("#imageInput").addEventListener("change", async (event) => {
-  const remaining = 4 - state.images.length;
-  const files = [...event.target.files].slice(0, remaining);
-  state.images.push(...await Promise.all(files.map(readFile)));
-  renderImagePreview();
-  event.target.value = "";
 });
 $("#proactiveButton").onclick = async (event) => {
   event.currentTarget.disabled = true;
