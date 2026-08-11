@@ -26,7 +26,7 @@ import yaml
 from .config import DATABASE_PATH, PERSONA_PATH, UPLOAD_DIR
 
 
-RELATIONSHIP_LEVELS = ["陌生人", "认识", "朋友", "亲密朋友", "暧昧", "恋人"]
+RELATIONSHIP_LEVELS = ["陌生人", "认识", "朋友", "暧昧", "恋人"]
 RELATIONSHIP_DIMENSIONS = ("trust", "familiarity", "intimacy", "attraction", "attachment", "comfort")
 MEMORY_CATEGORIES = ["episodic", "semantic", "emotional", "shared_experience"]
 USER_MEMORY_CATEGORIES = ["episodic", "semantic", "emotional"]
@@ -380,6 +380,14 @@ class ChatStore:
             )
             self._mark_exports(connection, "03_messages.yaml")
             row = connection.execute("SELECT * FROM messages WHERE id = ?", (cursor.lastrowid,)).fetchone()
+        return self._message_dict(row)
+
+    def get_message(self, message_id: int) -> dict[str, Any] | None:
+        """按 id 返回单条消息，不存在时返回 None。"""
+        with self.connect() as connection:
+            row = connection.execute("SELECT * FROM messages WHERE id = ?", (message_id,)).fetchone()
+        if row is None:
+            return None
         return self._message_dict(row)
 
     def list_messages(self, contact_id: int, limit: int = 100) -> list[dict[str, Any]]:

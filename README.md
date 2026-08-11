@@ -15,7 +15,7 @@
 - Persona YAML 模板：Core 与 Personality 在上下文加载阶段固定注入，Habit 作为按需检索层由 Persona Habit Retrieval 选择性注入；Habit 可由 Reflection 自动更新
 - 四类长期记忆：episodic、semantic、emotional、shared_experience
 - 六维关系状态：trust、familiarity、intimacy、attraction、attachment、comfort
-- 六阶段关系状态机：陌生人、认识、朋友、亲密朋友、暧昧、恋人；严重事件才允许降级
+- 六阶段关系状态机：陌生人、认识、朋友、暧昧、恋人；严重事件才允许降级
 - User Emotion 与 AI Emotion 分离：用户情绪保留旧字段输出，AI Emotion 作为持久内部状态单独更新
 - AI Emotion 持久化：Mood、Energy 与多维短期 Emotion 按轮保存，并记录 Conversation Event
 - Markdown 指导文档本地关键词检索

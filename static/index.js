@@ -146,6 +146,7 @@ async function confirmCandidate(content, candidateIndex, button) {
     const saved = await api("/api/chat/confirm", { method: "POST", body: JSON.stringify({ contact_id: state.contactId, content, generation_id: state.generationId, candidate_index: candidateIndex }) });
     $("#messages").appendChild(messageElement(saved));
     $("#messages").scrollTop = $("#messages").scrollHeight;
+    if (saved.generation_id != null) { state.generationId = saved.generation_id; updateLatestDebugLink(); }
     $("#draftZone").classList.add("hidden");
     toast("已记录为真实发送内容");
   } catch (error) { toast(error.message); }

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import re
+import threading
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Any, cast
 
 from fastapi import FastAPI, HTTPException
@@ -25,6 +26,24 @@ from src.storage import (
     RELATIONSHIP_LEVELS,
     store,
 )
+
+
+# ---------------------------------------------------------------------------
+# Pending saves: graph results are held in memory until the user confirms send.
+# Key is a monotonically increasing integer returned as `generation_id` from
+# /api/chat/generate; the real DB generation_id is produced at confirm time.
+# ---------------------------------------------------------------------------
+_pending_lock = threading.Lock()
+_pending_saves: dict[int, dict[str, Any]] = {}
+_pending_counter = 0
+_MAX_PENDING = 20
+
+
+def _new_draft_id() -> int:
+    global _pending_counter
+    with _pending_lock:
+        _pending_counter += 1
+        return _pending_counter
 
 
 class GenerateRequest(BaseModel):
@@ -155,14 +174,8 @@ def update_contact(contact_id: int, request: ContactRequest) -> dict[str, Any]:
 @app.post("/api/chat/generate")
 async def generate(request: GenerateRequest) -> dict[str, Any]:
     content = request.content.strip()
-    saved = store.save_message(
-        request.contact_id,
-        "user",
-        content,
-    )
     initial_state = {
         "contact_id": request.contact_id,
-        "input_message_id": saved["id"],
         "user_request": content,
         "warnings": [],
         "debug_enabled": _debug_settings()["enabled"],
@@ -171,15 +184,44 @@ async def generate(request: GenerateRequest) -> dict[str, Any]:
         result = cast(WorkflowState, await run_in_threadpool(chat_graph.invoke, initial_state))
     except Exception as exc:
         raise HTTPException(502, f"生成失败，请检查模型配置或服务状态：{exc}") from exc
-    store.trim_generations(request.contact_id, _debug_settings()["keep_generations"])
+
+    draft_id = _new_draft_id()
+    with _pending_lock:
+        _pending_saves[draft_id] = {
+            "contact_id": request.contact_id,
+            "user_request": content,
+            "final_candidates": result.get("candidates", []),
+            "strategy": result.get("strategy", ""),
+            "emotion_analysis": result.get("emotion_analysis", {}),
+            "relationship_analysis": result.get("relationship_analysis", {}),
+            "ai_emotion_analysis": result.get("ai_emotion_analysis", {}),
+            "memory_plan": result.get("memory_plan", {}),
+            "memories": result.get("memories", []),
+            "dialogue_composition": result.get("dialogue_composition", {}),
+            "critic_analysis": result.get("critic_analysis", {}),
+            "reflection_analysis": result.get("reflection_analysis", {}),
+            "debug_trace": result.get("debug_trace", []),
+            "warnings": result.get("warnings", []),
+        }
+        if len(_pending_saves) > _MAX_PENDING:
+            del _pending_saves[min(_pending_saves)]
+
+    # Return a preview message (not yet in DB) so the UI can render it immediately.
+    preview_message = {
+        "id": None,
+        "role": "user",
+        "content": content,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "image_paths": [],
+    }
     return {
-        "message": saved,
-        "generation_id": result["generation_id"],
-        "strategy": result["strategy"],
-        "candidates": result["candidates"],
+        "message": preview_message,
+        "generation_id": draft_id,
+        "strategy": result.get("strategy", ""),
+        "candidates": result.get("candidates", []),
         "dialogue_plan": result.get("dialogue_composition", {}),
         "critic": result.get("critic_analysis", {}),
-        "relationship": result["relationship"],
+        "relationship": result.get("relationship", {}),
         "warnings": result.get("warnings", []),
     }
 
@@ -201,19 +243,75 @@ def update_debug_settings(request: DebugSettingsRequest) -> dict[str, Any]:
 
 @app.post("/api/chat/confirm")
 def confirm_send(request: ConfirmRequest) -> dict[str, Any]:
-    """Record only the candidate the user actually chose or edited."""
+    """Persist everything once the user confirms they actually sent the reply."""
+    pending: dict[str, Any] | None = None
     if request.generation_id is not None:
-        try:
-            store.select_generation_candidate(
-                request.generation_id, request.contact_id, request.candidate_index,
-            )
-        except (KeyError, ValueError) as exc:
-            raise HTTPException(400, str(exc)) from exc
-    return store.save_message(
-        request.contact_id,
-        "assistant",
-        request.content.strip(),
+        with _pending_lock:
+            pending = _pending_saves.pop(request.generation_id, None)
+
+    if pending is None:
+        # Fallback when pending data is missing (e.g. server restart).
+        ai_message = store.save_message(request.contact_id, "assistant", request.content.strip())
+        return {**ai_message, "generation_id": None}
+
+    contact_id: int = pending["contact_id"]
+
+    # 1. Save the other party's message.
+    user_msg = store.save_message(contact_id, "user", pending["user_request"])
+    input_message_id = int(user_msg["id"])
+
+    # 2. Save emotion events.
+    for item in pending["emotion_analysis"].get("emotions", [])[:4]:
+        if isinstance(item, dict):
+            store.add_emotion(contact_id, item)
+
+    # 3. Apply relationship analysis.
+    store.apply_relationship_analysis(contact_id, pending["relationship_analysis"])
+
+    # 4. Save AI emotion state and conversation events.
+    store.save_ai_emotion_state(contact_id, pending["ai_emotion_analysis"].get("ai_emotion", {}))
+    store.add_conversation_events(contact_id, pending["ai_emotion_analysis"].get("events", []))
+
+    # 5. Save memories extracted by the reflection node.
+    reflection = pending["reflection_analysis"]
+    for item in reflection.get("memories", [])[:8]:
+        if not isinstance(item, dict) or not str(item.get("content", "")).strip():
+            continue
+        category = str(item.get("category", "semantic"))
+        if category not in USER_MEMORY_CATEGORIES:
+            category = "semantic"
+        store.add_memory(
+            contact_id, category, str(item["content"]),
+            bool(item.get("sensitive", False)), input_message_id,
+            owner_type=MEMORY_OWNER_CONTACT,
+        )
+
+    # 6. Save generation record with full analysis.
+    analysis = {
+        "emotion": pending["emotion_analysis"],
+        "relationship": pending["relationship_analysis"],
+        "ai_emotion": pending["ai_emotion_analysis"],
+        "memory_plan": pending["memory_plan"],
+        "retrieved_memories": pending["memories"],
+        "dialogue_composer": pending["dialogue_composition"],
+        "critic": pending["critic_analysis"],
+        "reflection": reflection,
+        "warnings": pending["warnings"],
+        "debug_trace": pending["debug_trace"],
+    }
+    generation_id = store.save_generation(
+        contact_id, input_message_id, pending["strategy"], pending["final_candidates"], analysis,
     )
+    if request.candidate_index is not None:
+        try:
+            store.select_generation_candidate(generation_id, contact_id, request.candidate_index)
+        except (KeyError, ValueError):
+            pass
+    store.trim_generations(contact_id, _debug_settings()["keep_generations"])
+
+    # 7. Save the AI reply.
+    ai_message = store.save_message(contact_id, "assistant", request.content.strip())
+    return {**ai_message, "generation_id": generation_id}
 
 
 @app.post("/api/proactive/{contact_id}")

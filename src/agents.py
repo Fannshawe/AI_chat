@@ -30,7 +30,7 @@ ShortEmotionDimension = Literal[
     "喜悦", "惊喜", "安心", "好奇", "期待", "害羞", "紧张", "焦虑", "生气",
     "失落", "思念", "依恋",
 ]
-RelationshipLevel = Literal["陌生人", "认识", "朋友", "亲密朋友", "暧昧", "恋人"]
+RelationshipLevel = Literal["陌生人", "认识", "朋友", "暧昧", "恋人"]
 RelationshipDimension = Literal["trust", "familiarity", "intimacy", "attraction", "attachment", "comfort"]
 MemoryCategory = Literal["episodic", "semantic", "emotional", "shared_experience"]
 CandidateAngle = Literal[

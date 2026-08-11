@@ -491,7 +491,7 @@ def _prompt_composer_payload(state: WorkflowState) -> dict[str, Any]:
 
 def _rewrite_payload(state: WorkflowState) -> dict[str, Any]:
     critic_analysis = state.get("critic_analysis", {})
-    payload = _prompt_composer_payload(state)
+    payload = state.get("dialogue_composition", {})
     payload.update({
         "rewrite_instruction": str(critic_analysis.get("rewrite_instruction", "")),
         "rewrite_candidate_indexes": critic_analysis.get("rewrite_candidate_indexes", []),
@@ -617,50 +617,11 @@ def node_reflection(state: WorkflowState) -> dict[str, Any]:
 
 
 def node_content_save(state: WorkflowState) -> dict[str, Any]:
-    """Responsibility: persist selected analyses. Mutation and persistence: yes."""
+    """Collect final candidates; all DB persistence is deferred to /api/chat/confirm."""
     final_candidates = state.get("candidates", [])
     if not state.get("critic_analysis", {}).get("passed", True) and state.get("critic_attempts", 0) >= CRITIC_MAX_ATTEMPTS:
         final_candidates = state.get("fallback_candidates", final_candidates)
-
-    input_message_id = state.get("input_message_id")
-    if not input_message_id:
-        saved = store.save_message(state["contact_id"], "user", state["user_request"])
-        input_message_id = int(saved["id"])
-    for item in state.get("emotion_analysis", {}).get("emotions", [])[:4]:
-        if isinstance(item, dict):
-            store.add_emotion(state["contact_id"], item)
-    relationship = store.apply_relationship_analysis(state["contact_id"], state.get("relationship_analysis", {}))
-    ai_emotion_state = store.save_ai_emotion_state(
-        state["contact_id"], state.get("ai_emotion_analysis", {}).get("ai_emotion", {})
-    )
-    store.add_conversation_events(state["contact_id"], state.get("ai_emotion_analysis", {}).get("events", []))
-    reflection = state.get("reflection_analysis", {})
-    for item in reflection.get("memories", [])[:8]:
-        if not isinstance(item, dict) or not str(item.get("content", "")).strip():
-            continue
-        category = str(item.get("category", "semantic"))
-        if category not in USER_MEMORY_CATEGORIES:
-            category = "semantic"
-        store.add_memory(state["contact_id"], category, str(item["content"]),
-                         bool(item.get("sensitive", False)), input_message_id,
-                         owner_type=MEMORY_OWNER_CONTACT)
-    analysis = {
-        "emotion": state.get("emotion_analysis", {}), "relationship": state.get("relationship_analysis", {}),
-        "ai_emotion": state.get("ai_emotion_analysis", {}),
-        "memory_plan": state.get("memory_plan", {}), "retrieved_memories": state.get("memories", []),
-        "dialogue_composer": state.get("dialogue_composition", {}), "critic": state.get("critic_analysis", {}),
-        "reflection": reflection, "warnings": state.get("warnings", []),
-        "debug_trace": state.get("debug_trace", []),
-    }
-    generation_id = store.save_generation(
-        state["contact_id"], input_message_id, state.get("strategy", ""), final_candidates, analysis,
-    )
-    return {
-        "input_message_id": input_message_id,
-        "relationship": relationship,
-        "generation_id": generation_id,
-        "candidates": final_candidates,
-    }
+    return {"candidates": final_candidates}
 
 
 def build_graph():
