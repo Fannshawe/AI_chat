@@ -34,6 +34,16 @@ def _env_to_bool(name: str, default: bool = False) -> bool:
 
 DEBUG = _env_to_bool("DEBUG", default=False)
 
+_PERSONA_QUERY_EXPANSIONS: dict[str, tuple[str, ...]] = {
+    "电影": ("电影", "影片", "片子", "favorite_movies"),
+    "音乐": ("音乐", "歌", "听歌", "music"),
+    "作息": ("作息", "睡觉", "几点睡", "几点起", "sleep_time", "wake_up"),
+    "工作": ("工作", "上班", "work_style"),
+    "喜欢": ("喜欢", "喜好", "爱好", "likes", "topics"),
+    "不喜欢": ("不喜欢", "讨厌", "雷点", "dislikes"),
+    "最近": ("最近", "近况", "recent_focus"),
+}
+
 
 def debug_log(message: str) -> None:
     if DEBUG:
@@ -409,14 +419,26 @@ def _flatten_habits(value: Any, prefix: str = "") -> list[tuple[str, Any]]:
     return [(prefix, value)]
 
 
+def _expand_persona_query(query: str) -> set[str]:
+    terms = {query}
+    for trigger, expansions in _PERSONA_QUERY_EXPANSIONS.items():
+        if trigger in query:
+            terms.update(expansions)
+    return {term.lower() for term in terms if term}
+
+
 def node_persona_habit_retrieval(state: WorkflowState) -> dict[str, Any]:
     """Responsibility: retrieve topic-relevant Habits only. Persistence: none."""
     query = state["user_request"].lower()
     grams = {query[index:index + 2] for index in range(max(0, len(query) - 1))}
+    expanded_terms = _expand_persona_query(query)
     relevant: dict[str, Any] = {}
     for key, value in _flatten_habits(state.get("persona_habits", {})):
         text = f"{key} {_json(value)}".lower()
-        if query and (query in text or any(gram.strip() and gram in text for gram in grams)):
+        if query and (
+            any(term in text for term in expanded_terms)
+            or any(gram.strip() and gram in text for gram in grams)
+        ):
             relevant[key] = value
     return {"relevant_habits": relevant}
 

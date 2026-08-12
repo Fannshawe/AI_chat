@@ -4,7 +4,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from src.graph import _normalize_segments, build_graph
+from src.graph import _normalize_segments, build_graph, node_persona_habit_retrieval
 from src.storage import ChatStore
 
 
@@ -242,6 +242,23 @@ class NormalizeSegmentsTests(unittest.TestCase):
 
     def test_single_segment_passthrough(self):
         self.assertEqual(_normalize_segments("哈哈哈"), "哈哈哈")
+
+
+class PersonaHabitRetrievalTests(unittest.TestCase):
+    def test_retrieves_favorite_movies_from_movie_question(self):
+        result = node_persona_habit_retrieval({
+            "user_request": "你喜欢什么电影？",
+            "persona_habits": {
+                "topics": {
+                    "favorite_movies": ["花样年华", "海街日记"],
+                    "music": ["独立流行"],
+                }
+            },
+        })
+        self.assertEqual(
+            result["relevant_habits"].get("topics.favorite_movies"),
+            ["花样年华", "海街日记"],
+        )
 
 
 if __name__ == "__main__":
