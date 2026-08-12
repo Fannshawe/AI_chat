@@ -39,7 +39,7 @@ CandidateAngle = Literal[
 ]
 CandidateLengthHint = Literal["极短", "短", "中", "中长"]
 ConversationEventType = Literal[
-    "好消息", "坏消息", "道歉", "感谢", "夸奖", "失联", "冷淡", "冲突", "和解",
+    "寒暄", "道歉", "感谢", "夸奖", "冷淡", "冲突", "和解",
     "示好", "试探", "边界确认", "表达想念", "邀约", "拒绝", "求安慰", "求建议",
     "日常分享", "工作压力", "学业压力", "家庭压力", "健康困扰", "节日问候", "其他",
 ]
@@ -69,20 +69,20 @@ class ConversationEvent(BaseModel):
     reason: str = Field(description="事件判断依据")
 
 
-class AIDimensionState(BaseModel):
+class SelfEmotionDimensionState(BaseModel):
     """One short-lived self emotion dimension score."""
 
     name: ShortEmotionDimension
     value: int = Field(ge=0, le=100, description="短期情绪数值，0 到 100")
 
 
-class AIEmotionState(BaseModel):
+class SelfEmotionState(BaseModel):
     """Persistent self affective state used by later dialogue planning."""
 
     mood: MoodName
     mood_intensity: int = Field(ge=0, le=100, description="mood 的强度，0 到 100，越高越强烈")
     energy: int = Field(ge=0, le=100)
-    dimensions: list[AIDimensionState] = Field(default_factory=list, max_length=8)
+    dimensions: list[SelfEmotionDimensionState] = Field(default_factory=list, max_length=8)
     reason: str = Field(description="本轮更新的简短依据")
 
 
@@ -90,7 +90,7 @@ class SelfEmotionUpdateAnalysis(BaseModel):
     """Self emotion update output combining event extraction and persistent state."""
 
     events: list[ConversationEvent] = Field(default_factory=list, max_length=4)
-    self_emotion_state: AIEmotionState
+    self_emotion_state: SelfEmotionState
 
 
 class RelationshipChange(BaseModel):

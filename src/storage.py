@@ -95,7 +95,7 @@ class ChatStore:
         "03_messages.yaml": frozenset({"messages"}),
         "04_contact_memories.yaml": frozenset({"memories"}),
         "05_ai_memory.yaml": frozenset({"ai_memory_profile"}),
-        "06_emotions.yaml": frozenset({"emotions", "ai_emotion_states", "conversation_events"}),
+        "06_emotions.yaml": frozenset({"emotions", "self_emotion_states", "conversation_events"}),
         "07_relationships.yaml": frozenset({"relationships", "relationship_events"}),
         "08_generations.yaml": frozenset({"generations"}),
         "09_settings.yaml": frozenset({"settings"}),
@@ -201,7 +201,7 @@ class ChatStore:
                     updated_at TEXT NOT NULL,
                     FOREIGN KEY(contact_id) REFERENCES contacts(id) ON DELETE CASCADE
                 );
-                CREATE TABLE IF NOT EXISTS ai_emotion_states (
+                CREATE TABLE IF NOT EXISTS self_emotion_states (
                     contact_id INTEGER PRIMARY KEY,
                     mood TEXT NOT NULL DEFAULT '放松',
                     mood_intensity INTEGER NOT NULL DEFAULT 60,
@@ -290,12 +290,12 @@ class ChatStore:
             connection.execute(
                 "UPDATE memories SET owner_type='contact', owner_id=contact_id WHERE owner_type IS NULL OR owner_type=''"
             )
-            ai_emotion_columns = {
-                row[1] for row in connection.execute("PRAGMA table_info(ai_emotion_states)").fetchall()
+            self_emotion_columns = {
+                row[1] for row in connection.execute("PRAGMA table_info(self_emotion_states)").fetchall()
             }
-            if "mood_intensity" not in ai_emotion_columns:
+            if "mood_intensity" not in self_emotion_columns:
                 connection.execute(
-                    "ALTER TABLE ai_emotion_states ADD COLUMN mood_intensity INTEGER NOT NULL DEFAULT 60"
+                    "ALTER TABLE self_emotion_states ADD COLUMN mood_intensity INTEGER NOT NULL DEFAULT 60"
                 )
             for column, default in defaults.items():
                 if column not in relationship_columns:
@@ -324,14 +324,14 @@ class ChatStore:
                     (contact_id, "认识", now),
                 )
                 connection.execute(
-                    """INSERT INTO ai_emotion_states(contact_id, mood, energy, dimensions, updated_at)
+                          """INSERT INTO self_emotion_states(contact_id, mood, energy, dimensions, updated_at)
                        VALUES (?, '放松', 60, ?, ?)""",
                     (contact_id, json.dumps({}, ensure_ascii=False), now),
                 )
             contacts = [dict(row) for row in connection.execute("SELECT id FROM contacts")]
             for contact in contacts:
                 connection.execute(
-                    """INSERT OR IGNORE INTO ai_emotion_states(contact_id, mood, energy, dimensions, updated_at)
+                          """INSERT OR IGNORE INTO self_emotion_states(contact_id, mood, energy, dimensions, updated_at)
                        VALUES (?, '放松', 60, ?, ?)""",
                     (int(contact["id"]), json.dumps({}, ensure_ascii=False), now),
                 )
@@ -895,17 +895,17 @@ class ChatStore:
         """Read persistent self emotion state, lazily creating a default row."""
         with self.connect() as connection:
             row = connection.execute(
-                "SELECT * FROM ai_emotion_states WHERE contact_id=?", (contact_id,)
+                "SELECT * FROM self_emotion_states WHERE contact_id=?", (contact_id,)
             ).fetchone()
             if row is None:
                 now = utc_now()
                 connection.execute(
-                    """INSERT INTO ai_emotion_states(contact_id, mood, mood_intensity, energy, dimensions, updated_at)
+                          """INSERT INTO self_emotion_states(contact_id, mood, mood_intensity, energy, dimensions, updated_at)
                        VALUES (?, '放松', 60, 60, ?, ?)""",
                     (contact_id, json.dumps({}, ensure_ascii=False), now),
                 )
                 row = connection.execute(
-                    "SELECT * FROM ai_emotion_states WHERE contact_id=?", (contact_id,)
+                    "SELECT * FROM self_emotion_states WHERE contact_id=?", (contact_id,)
                 ).fetchone()
         result = dict(row)
         result["dimensions"] = _loads(result.get("dimensions"), {})
@@ -946,7 +946,7 @@ class ChatStore:
         now = utc_now()
         with self.connect() as connection:
             connection.execute(
-                """INSERT INTO ai_emotion_states(contact_id, mood, mood_intensity, energy, dimensions, updated_at)
+                """INSERT INTO self_emotion_states(contact_id, mood, mood_intensity, energy, dimensions, updated_at)
                    VALUES (?, ?, ?, ?, ?, ?)
                    ON CONFLICT(contact_id) DO UPDATE SET
                        mood=excluded.mood,
@@ -1148,7 +1148,7 @@ class ChatStore:
             "memories",
             "emotions",
             "relationships",
-            "ai_emotion_states",
+            "self_emotion_states",
             "conversation_events",
             "relationship_events",
             "persona_update_proposals",
@@ -1235,7 +1235,7 @@ class ChatStore:
         if filename == "06_emotions.yaml":
             return {
                 "user_emotions": table_data.get("emotions", []),
-                "ai_emotion_states": table_data.get("ai_emotion_states", []),
+                "self_emotion_states": table_data.get("self_emotion_states", []),
                 "conversation_events": table_data.get("conversation_events", []),
             }
         if filename == "07_relationships.yaml":
@@ -1261,7 +1261,7 @@ class ChatStore:
             "05_ai_memory.yaml": self.get_ai_memory_profile(),
             "06_emotions.yaml": {
                 "user_emotions": exported["emotions"],
-                "ai_emotion_states": exported["ai_emotion_states"],
+                "self_emotion_states": exported["self_emotion_states"],
                 "conversation_events": exported["conversation_events"],
             },
             "07_relationships.yaml": {
@@ -1277,7 +1277,7 @@ class ChatStore:
             return [self._deserialize_message_row(row) for row in rows]
         if table == "memories":
             return [self._deserialize_memory_row(row) for row in rows]
-        if table == "ai_emotion_states":
+        if table == "self_emotion_states":
             return [self._deserialize_self_emotion_state_row(row) for row in rows]
         if table == "generations":
             return [self._deserialize_generation_row(row) for row in rows]

@@ -186,7 +186,7 @@ class ChatStoreTests(unittest.TestCase):
         self.assertEqual(messages[0]["image_paths"], ["/uploads/demo.png"])
 
         emotions = yaml.safe_load((export_dir / "06_emotions.yaml").read_text(encoding="utf-8"))
-        self.assertEqual(emotions["ai_emotion_states"][0]["dimensions"]["好奇"], 70)
+        self.assertEqual(emotions["self_emotion_states"][0]["dimensions"]["好奇"], 70)
 
     def test_write_operations_auto_refresh_yaml_snapshot(self):
         export_dir = self.store.export_dir

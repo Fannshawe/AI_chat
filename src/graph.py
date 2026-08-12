@@ -261,6 +261,18 @@ def _self_emotion_state_summary(state: WorkflowState) -> dict[str, Any]:
     }
 
 
+def _reflection_memories_summary(memories: list[dict[str, Any]], limit: int = 6) -> list[dict[str, Any]]:
+    summarized: list[dict[str, Any]] = []
+    for item in memories[:limit]:
+        if not isinstance(item, dict):
+            continue
+        summarized.append({
+            "category": item.get("category"),
+            "content": item.get("content"),
+        })
+    return summarized
+
+
 def _structured_dict(result: dict[str, Any]) -> dict[str, Any]:
     response = result.get("structured_response")
     if isinstance(response, BaseModel):
@@ -652,7 +664,7 @@ def node_reply_critic(state: WorkflowState) -> dict[str, Any]:
 
 def route_after_critic(state: WorkflowState) -> str:
     if state.get("critic_analysis", {}).get("passed", True) or state.get("critic_attempts", 0) >= CRITIC_MAX_ATTEMPTS:
-        return "save"
+        return "reflection"
     return "rewrite"
 
 
@@ -660,12 +672,13 @@ def node_reflection(state: WorkflowState) -> dict[str, Any]:
     """Responsibility: decide durable memories and Persona updates. Persistence: save node."""
     fallback = {"memories": []}
     result, warnings, llm_debug = _run_structured_agent(state, "reflection", {
-        "latest_real_message": {"speaker": "对方", "content": state["user_request"]},
-        "recent_conversation_with_time": _history_with_time(state.get("history", [])),
-        "generated_candidates": state.get("candidates", []),
-        "existing_relevant_memories": state.get("memories", []),
+        "latest_real_message": state["user_request"],
+        "recent_conversation_with_time": _history_with_time(state.get("history", []), 8),
+        "existing_relevant_memories": _reflection_memories_summary(
+            state.get("primary_memories") or state.get("memories", [])
+        ),
         "allowed_memory_types": USER_MEMORY_CATEGORIES,
-        "rules": {"memory": "只保存值得长期记住且有明确证据的内容", "persona_updates": "禁止输出或修改，由用户手动维护", "personality": "禁止修改"},
+        "instruction": "只基于真实用户消息与已确认历史，输出值得长期保存的新记忆；不要把候选回复当成事实。，已有的记忆不需要再重复输出。",
     }, fallback)
     return {"reflection_analysis": result, "warnings": warnings, "_debug_llm": llm_debug}
 
@@ -707,11 +720,11 @@ def build_graph():
     graph.add_edge("prompt_composer", "critic")
     graph.add_edge("rewrite", "critic")
     graph.add_conditional_edges("critic", route_after_critic, {
-        "rewrite": "rewrite", "save": "save",
+        "rewrite": "rewrite", "reflection": "reflection",
     })
+    graph.add_edge("reflection", "save")
     graph.add_edge("save", END)
     return graph.compile()
-
 
 def generate_proactive_draft(contact_id: int, provider_name: str = "default") -> dict[str, str]:
     store.initialize()

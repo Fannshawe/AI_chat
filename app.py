@@ -221,11 +221,12 @@ async def generate(request: GenerateRequest) -> dict[str, Any]:
             "strategy": result.get("strategy", ""),
             "emotion_analysis": result.get("emotion_analysis", {}),
             "relationship_analysis": result.get("relationship_analysis", {}),
-            "ai_emotion_analysis": result.get("ai_emotion_analysis", {}),
+            "self_emotion_update": result.get("self_emotion_update", {}),
             "memory_plan": result.get("memory_plan", {}),
             "memories": result.get("memories", []),
             "dialogue_composition": result.get("dialogue_composition", {}),
             "critic_analysis": result.get("critic_analysis", {}),
+            "reflection_analysis": result.get("reflection_analysis", {}),
             "debug_trace": result.get("debug_trace", []),
             "warnings": result.get("warnings", []),
         }
@@ -294,26 +295,12 @@ def confirm_send(request: ConfirmRequest) -> dict[str, Any]:
     # 3. Apply relationship analysis.
     store.apply_relationship_analysis(contact_id, pending["relationship_analysis"])
 
-    # 4. Save AI emotion state and conversation events.
-    store.save_ai_emotion_state(contact_id, pending["ai_emotion_analysis"].get("ai_emotion", {}))
-    store.add_conversation_events(contact_id, pending["ai_emotion_analysis"].get("events", []))
+    # 4. Save self emotion state and conversation events.
+    store.save_self_emotion_state(contact_id, pending["self_emotion_update"].get("self_emotion_state", {}))
+    store.add_conversation_events(contact_id, pending["self_emotion_update"].get("events", []))
 
-    # 5. Run reflection at confirm time, then save extracted memories.
-    reflection_state: WorkflowState = {
-        "contact_id": contact_id,
-        "provider_name": str(pending.get("provider_name", "default")),
-        "user_request": str(pending.get("user_request", "")),
-        "history": pending.get("history", []),
-        "relationship": pending.get("relationship_analysis", {}),
-        "memories": pending.get("memories", []),
-        "candidates": pending.get("final_candidates", []),
-        "warnings": pending.get("warnings", []),
-    }
-    reflection_output = node_reflection(reflection_state)
-    reflection = reflection_output.get("reflection_analysis", {})
-    reflection_warnings = reflection_output.get("warnings", [])
-    if reflection_warnings:
-        pending["warnings"] = [*pending.get("warnings", []), *reflection_warnings]
+    # 5. Save memories extracted by the reflection node.
+    reflection = pending["reflection_analysis"]
 
     for item in reflection.get("memories", [])[:8]:
         if not isinstance(item, dict) or not str(item.get("content", "")).strip():
@@ -331,7 +318,7 @@ def confirm_send(request: ConfirmRequest) -> dict[str, Any]:
     analysis = {
         "emotion": pending["emotion_analysis"],
         "relationship": pending["relationship_analysis"],
-        "ai_emotion": pending["ai_emotion_analysis"],
+        "self_emotion": pending["self_emotion_update"],
         "memory_plan": pending["memory_plan"],
         "retrieved_memories": pending["memories"],
         "dialogue_composer": pending["dialogue_composition"],

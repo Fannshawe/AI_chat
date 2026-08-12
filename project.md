@@ -4,19 +4,19 @@
 
 | Node | 主要输入（来自 state / 外部） | 主要输出（写回 state） |
 |---|---|---|
-| `context` (`node_load_context`) | `contact_id?` `provider_name?`；外部：`store` | `contact_id` `history` `persona_core` `persona_personality` `persona_habits` `emotion_profile` `relationship` `recent_emotions` `ai_emotion_state` `provider_name` `critic_attempts` `critic_analysis` `fallback_candidates` |
+| `context` (`node_load_context`) | `contact_id?` `provider_name?`；外部：`store` | `contact_id` `history` `persona_core` `persona_personality` `persona_habits` `emotion_profile` `relationship` `recent_emotions` `self_emotion_state` `provider_name` `critic_attempts` `critic_analysis` `fallback_candidates` |
 | `emotion` (`node_emotion_detection`) | `user_request` `history` `recent_emotions` | `emotion_analysis` `warnings` `_debug_llm` |
 | `relationship` (`node_relationship_state`) | `relationship` `user_request` `history` | `relationship_analysis` `warnings` `_debug_llm` |
 | `persona_habit_retrieval` (`node_persona_retrieval`) | `user_request` `persona_habits` | `relevant_habits` |
-| `ai_emotion` (`node_ai_emotion_update`) | `user_request` `history` `emotion_analysis` `ai_emotion_state` `relationship` `relationship_analysis` `emotion_profile` `contact_id` `memories`；外部：`store.list_conversation_events` | `ai_emotion_analysis` `warnings` `_debug_llm` |
+| `self_emotion` (`node_self_emotion_update`) | `user_request` `history` `emotion_analysis` `self_emotion_state` `relationship` `relationship_analysis` `emotion_profile` `contact_id` `memories`；外部：`store.list_conversation_events` | `self_emotion_update` `warnings` `_debug_llm` |
 | `memory_planner` (`node_memory_planner`) | `user_request` `history`；可选读取：`emotion_analysis` `relationship_analysis` | `memory_plan` `warnings` `_debug_llm` |
 | `memory_retrieval` (`node_memory_retrieval`) | `contact_id` `memory_plan`；外部：`store.search_memories_by_plan` `store.get_ai_memory_profile` | `memories` |
 | `guidance` (`node_chat_guidance`) | `user_request` `relationship.current_level` `emotion_analysis`；外部：`guidance_retriever` | `guidance_chunks` |
-| `dialogue_composer` (`node_dialogue_composer`) | `user_request` `history` `persona_core` `persona_personality` `relevant_habits` `emotion_analysis` `ai_emotion_analysis/ai_emotion_state` `relationship` `relationship_analysis` `memories` `guidance_chunks` | `dialogue_composition` `strategy` `warnings` `_debug_llm` |
-| `prompt_composer` (`node_prompt_composer`) | `provider_name` `critic_attempts` `image_data_urls` + `_prompt_composer_payload`所需字段（`user_request` `history` `persona_*` `relevant_habits` `emotion_analysis` `ai_emotion*` `relationship*` `memories` `dialogue_composition` `critic_analysis` `candidates`） | `candidates` `_debug_llm`；首次成功且有 3 条候选时额外写 `fallback_candidates`；失败时可能回退 `fallback_candidates` 并返回 `warnings` |
+| `dialogue_composer` (`node_dialogue_composer`) | `user_request` `history` `persona_core` `persona_personality` `relevant_habits` `emotion_analysis` `self_emotion_update/self_emotion_state` `relationship` `relationship_analysis` `memories` `guidance_chunks` | `dialogue_composition` `strategy` `warnings` `_debug_llm` |
+| `prompt_composer` (`node_prompt_composer`) | `provider_name` `critic_attempts` `image_data_urls` + `_prompt_composer_payload`所需字段（`user_request` `history` `persona_*` `relevant_habits` `emotion_analysis` `self_emotion*` `relationship*` `memories` `dialogue_composition` `critic_analysis` `candidates`） | `candidates` `_debug_llm`；首次成功且有 3 条候选时额外写 `fallback_candidates`；失败时可能回退 `fallback_candidates` 并返回 `warnings` |
 | `critic` (`node_reply_critic`) | `user_request` `history` `persona_*` `memories` `dialogue_composition` `candidates` `critic_attempts` `critic_analysis` | `critic_attempts` `critic_analysis` `warnings` `_debug_llm` |
-| `reflection` (`node_reflection`) | `user_request` `history` `candidates` `memories` `ai_emotion_analysis/ai_emotion_state` `persona_habits` | `reflection_analysis` `warnings` `_debug_llm` |
-| `save` (`node_content_save`) | `contact_id` `input_message_id?` `user_request` `emotion_analysis` `relationship_analysis` `ai_emotion_analysis` `reflection_analysis` `memory_plan` `memories` `dialogue_composition` `critic_analysis` `critic_attempts` `strategy` `candidates` `fallback_candidates` `warnings` `debug_trace`；外部：`store` | `input_message_id` `relationship` `generation_id` `candidates` |
+| `reflection` (`node_reflection`) | `user_request` `history` `candidates` `memories` `self_emotion_update/self_emotion_state` `persona_habits` | `reflection_analysis` `warnings` `_debug_llm` |
+| `save` (`node_content_save`) | `contact_id` `input_message_id?` `user_request` `emotion_analysis` `relationship_analysis` `self_emotion_update` `reflection_analysis` `memory_plan` `memories` `dialogue_composition` `critic_analysis` `critic_attempts` `strategy` `candidates` `fallback_candidates` `warnings` `debug_trace`；外部：`store` | `input_message_id` `relationship` `generation_id` `candidates` |
 
 ## 表 2：所有 LLM（Agent）的输入和输出
 
