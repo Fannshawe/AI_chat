@@ -7,7 +7,9 @@ import re
 import threading
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timezone
-from typing import Any, cast
+from pathlib import Path
+from typing import Any, Callable, cast
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
@@ -39,12 +41,227 @@ _pending_saves: dict[int, dict[str, Any]] = {}
 _pending_counter = 0
 _MAX_PENDING = 20
 
+_generation_lock = threading.Lock()
+_generation_jobs: dict[str, dict[str, Any]] = {}
+_active_generation_job_id: str | None = None
+_MAX_GENERATION_JOBS = 30
+
+_NODE_STAGE_MAP: dict[str, tuple[str, int]] = {
+    "context": ("读取上下文", 12),
+    "emotion": ("识别情绪", 24),
+    "relationship": ("关系评估", 36),
+    "persona_habit_retrieval": ("检索习惯", 48),
+    "memory_planner": ("记忆规划", 58),
+    "memory_retrieval": ("记忆召回", 66),
+    "self_emotion": ("自身情绪校准", 74),
+    "guidance": ("指导检索", 80),
+    "dialogue_composer": ("整合策略", 86),
+    "prompt_composer": ("生成候选", 92),
+    "critic": ("候选质检", 95),
+    "rewrite": ("候选重写", 97),
+    "reflection": ("记忆反思", 98),
+    "save": ("收尾", 99),
+}
+
 
 def _new_draft_id() -> int:
     global _pending_counter
     with _pending_lock:
         _pending_counter += 1
         return _pending_counter
+
+
+def _stage_for_node(node_name: str) -> tuple[str, int]:
+    return _NODE_STAGE_MAP.get(node_name, ("处理中", 40))
+
+
+def _active_job_id_locked() -> str | None:
+    global _active_generation_job_id
+    job_id = _active_generation_job_id
+    if not job_id:
+        return None
+    job = _generation_jobs.get(job_id)
+    if not job:
+        _active_generation_job_id = None
+        return None
+    if job.get("status") in {"pending", "running"}:
+        return job_id
+    _active_generation_job_id = None
+    return None
+
+
+def _set_job_fields(job_id: str, **fields: Any) -> None:
+    with _generation_lock:
+        job = _generation_jobs.get(job_id)
+        if not job:
+            return
+        job.update(fields)
+        job["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+
+def _trim_generation_jobs_locked() -> None:
+    active = _active_job_id_locked()
+    if len(_generation_jobs) <= _MAX_GENERATION_JOBS:
+        return
+    for job_id in list(_generation_jobs.keys()):
+        if len(_generation_jobs) <= _MAX_GENERATION_JOBS:
+            break
+        if job_id == active:
+            continue
+        _generation_jobs.pop(job_id, None)
+
+
+def _public_job_view(job: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "job_id": job["job_id"],
+        "status": job["status"],
+        "stage": job.get("stage", "排队中"),
+        "progress": int(job.get("progress", 0)),
+        "error": job.get("error"),
+        "created_at": job.get("created_at"),
+        "updated_at": job.get("updated_at"),
+        "finished_at": job.get("finished_at"),
+        "result": job.get("result") if job.get("status") == "succeeded" else None,
+    }
+
+
+def _execute_generation(
+    contact_id: int,
+    content: str,
+    progress_callback: Callable[[str, int], None] | None = None,
+) -> dict[str, Any]:
+    initial_state = {
+        "contact_id": contact_id,
+        "user_request": content,
+        "warnings": [],
+        "debug_enabled": _debug_settings()["enabled"],
+    }
+    result: WorkflowState | None = None
+    if progress_callback is None:
+        result = cast(WorkflowState, chat_graph.invoke(initial_state))
+    else:
+        progress_callback("读取上下文", 6)
+        for step_state in chat_graph.stream(initial_state, stream_mode="values"):
+            if not isinstance(step_state, dict):
+                continue
+            result = cast(WorkflowState, step_state)
+            traces = result.get("debug_trace", [])
+            if traces:
+                node_name = str((traces[-1] or {}).get("node", ""))
+                stage, progress = _stage_for_node(node_name)
+                progress_callback(stage, progress)
+    if result is None:
+        raise RuntimeError("生成流程未返回有效结果")
+
+    draft_id = _new_draft_id()
+    with _pending_lock:
+        _pending_saves[draft_id] = {
+            "contact_id": contact_id,
+            "user_request": content,
+            "history": result.get("history", []),
+            "provider_name": result.get("provider_name", "default"),
+            "final_candidates": result.get("candidates", []),
+            "strategy": result.get("strategy", ""),
+            "emotion_analysis": result.get("emotion_analysis", {}),
+            "relationship_analysis": result.get("relationship_analysis", {}),
+            "self_emotion_update": result.get("self_emotion_update", {}),
+            "memory_plan": result.get("memory_plan", {}),
+            "memories": result.get("memories", []),
+            "dialogue_composition": result.get("dialogue_composition", {}),
+            "critic_analysis": result.get("critic_analysis", {}),
+            "reflection_analysis": result.get("reflection_analysis", {}),
+            "debug_trace": result.get("debug_trace", []),
+            "warnings": result.get("warnings", []),
+        }
+        if len(_pending_saves) > _MAX_PENDING:
+            del _pending_saves[min(_pending_saves)]
+
+    preview_message = {
+        "id": None,
+        "role": "user",
+        "content": content,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "image_paths": [],
+    }
+    return {
+        "message": preview_message,
+        "generation_id": draft_id,
+        "strategy": result.get("strategy", ""),
+        "candidates": result.get("candidates", []),
+        "dialogue_plan": result.get("dialogue_composition", {}),
+        "critic": result.get("critic_analysis", {}),
+        "relationship": result.get("relationship", {}),
+        "warnings": result.get("warnings", []),
+    }
+
+
+def _run_generation_job(job_id: str) -> None:
+    _set_job_fields(job_id, status="running", stage="读取上下文", progress=6)
+    try:
+        with _generation_lock:
+            job = _generation_jobs.get(job_id)
+            if not job:
+                return
+            contact_id = int(job["contact_id"])
+            content = str(job["content"])
+
+        def _job_progress(stage: str, progress: int) -> None:
+            _set_job_fields(job_id, stage=stage, progress=progress)
+
+        result = _execute_generation(contact_id, content, progress_callback=_job_progress)
+        _set_job_fields(
+            job_id,
+            status="succeeded",
+            stage="完成",
+            progress=100,
+            result=result,
+            finished_at=datetime.now(timezone.utc).isoformat(),
+        )
+    except Exception as exc:
+        _set_job_fields(
+            job_id,
+            status="failed",
+            error=f"生成失败，请检查模型配置或服务状态：{exc}",
+            finished_at=datetime.now(timezone.utc).isoformat(),
+        )
+    finally:
+        global _active_generation_job_id
+        with _generation_lock:
+            if _active_generation_job_id == job_id:
+                _active_generation_job_id = None
+
+
+def _create_or_get_active_generation_job(contact_id: int, content: str) -> tuple[dict[str, Any], bool]:
+    global _active_generation_job_id
+    with _generation_lock:
+        active_id = _active_job_id_locked()
+        if active_id:
+            active = _generation_jobs[active_id]
+            return _public_job_view(active), False
+
+        now = datetime.now(timezone.utc).isoformat()
+        job_id = uuid4().hex
+        _generation_jobs[job_id] = {
+            "job_id": job_id,
+            "status": "pending",
+            "stage": "排队中",
+            "progress": 0,
+            "error": None,
+            "result": None,
+            "contact_id": contact_id,
+            "content": content,
+            "created_at": now,
+            "updated_at": now,
+            "finished_at": None,
+        }
+        _active_generation_job_id = job_id
+        _trim_generation_jobs_locked()
+
+    worker = threading.Thread(target=_run_generation_job, args=(job_id,), daemon=True)
+    worker.start()
+
+    with _generation_lock:
+        return _public_job_view(_generation_jobs[job_id]), True
 
 
 class GenerateRequest(BaseModel):
@@ -199,58 +416,41 @@ def update_contact(contact_id: int, request: ContactRequest) -> dict[str, Any]:
 @app.post("/api/chat/generate")
 async def generate(request: GenerateRequest) -> dict[str, Any]:
     content = request.content.strip()
-    initial_state = {
-        "contact_id": request.contact_id,
-        "user_request": content,
-        "warnings": [],
-        "debug_enabled": _debug_settings()["enabled"],
-    }
+    with _generation_lock:
+        active = _active_job_id_locked()
+    if active:
+        raise HTTPException(409, "当前已有生成任务进行中，请等待完成")
     try:
-        result = cast(WorkflowState, await run_in_threadpool(chat_graph.invoke, initial_state))
+        return cast(dict[str, Any], await run_in_threadpool(_execute_generation, request.contact_id, content, None))
     except Exception as exc:
         raise HTTPException(502, f"生成失败，请检查模型配置或服务状态：{exc}") from exc
 
-    draft_id = _new_draft_id()
-    with _pending_lock:
-        _pending_saves[draft_id] = {
-            "contact_id": request.contact_id,
-            "user_request": content,
-            "history": result.get("history", []),
-            "provider_name": result.get("provider_name", "default"),
-            "final_candidates": result.get("candidates", []),
-            "strategy": result.get("strategy", ""),
-            "emotion_analysis": result.get("emotion_analysis", {}),
-            "relationship_analysis": result.get("relationship_analysis", {}),
-            "self_emotion_update": result.get("self_emotion_update", {}),
-            "memory_plan": result.get("memory_plan", {}),
-            "memories": result.get("memories", []),
-            "dialogue_composition": result.get("dialogue_composition", {}),
-            "critic_analysis": result.get("critic_analysis", {}),
-            "reflection_analysis": result.get("reflection_analysis", {}),
-            "debug_trace": result.get("debug_trace", []),
-            "warnings": result.get("warnings", []),
-        }
-        if len(_pending_saves) > _MAX_PENDING:
-            del _pending_saves[min(_pending_saves)]
 
-    # Return a preview message (not yet in DB) so the UI can render it immediately.
-    preview_message = {
-        "id": None,
-        "role": "user",
-        "content": content,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "image_paths": [],
-    }
-    return {
-        "message": preview_message,
-        "generation_id": draft_id,
-        "strategy": result.get("strategy", ""),
-        "candidates": result.get("candidates", []),
-        "dialogue_plan": result.get("dialogue_composition", {}),
-        "critic": result.get("critic_analysis", {}),
-        "relationship": result.get("relationship", {}),
-        "warnings": result.get("warnings", []),
-    }
+@app.post("/api/chat/generate/jobs")
+def create_generate_job(request: GenerateRequest) -> dict[str, Any]:
+    content = request.content.strip()
+    if not content:
+        raise HTTPException(400, "消息不能为空")
+    job_view, accepted = _create_or_get_active_generation_job(request.contact_id, content)
+    return {"accepted": accepted, **job_view}
+
+
+@app.get("/api/chat/generate/jobs/active")
+def get_active_generate_job() -> dict[str, Any] | None:
+    with _generation_lock:
+        active_id = _active_job_id_locked()
+        if not active_id:
+            return None
+        return _public_job_view(_generation_jobs[active_id])
+
+
+@app.get("/api/chat/generate/jobs/{job_id}")
+def get_generate_job(job_id: str) -> dict[str, Any]:
+    with _generation_lock:
+        job = _generation_jobs.get(job_id)
+        if not job:
+            raise HTTPException(404, "任务不存在")
+        return _public_job_view(job)
 
 
 @app.get("/api/debug/settings")
@@ -279,7 +479,11 @@ def confirm_send(request: ConfirmRequest) -> dict[str, Any]:
     if pending is None:
         # Fallback when pending data is missing (e.g. server restart).
         ai_message = store.save_message(request.contact_id, "assistant", request.content.strip())
-        return {**ai_message, "generation_id": None}
+        return {
+            "assistant_message": ai_message,
+            "user_message": None,
+            "generation_id": None,
+        }
 
     contact_id: int = pending["contact_id"]
 
@@ -339,7 +543,11 @@ def confirm_send(request: ConfirmRequest) -> dict[str, Any]:
 
     # 7. Save the AI reply.
     ai_message = store.save_message(contact_id, "assistant", request.content.strip())
-    return {**ai_message, "generation_id": generation_id}
+    return {
+        "assistant_message": ai_message,
+        "user_message": user_msg,
+        "generation_id": generation_id,
+    }
 
 
 @app.post("/api/proactive/{contact_id}")

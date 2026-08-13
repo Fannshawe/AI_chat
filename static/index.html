@@ -4,18 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Persona Chat</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20260731a">
-  <style>
-    .candidate-mode{justify-self:start;background:#f5f1ec;color:#655f58;border-radius:99px;padding:3px 8px;font-size:10px;font-weight:700}
-    .candidate-warning{margin:0;color:#a55a23;background:#fff0db;border-radius:8px;padding:7px 9px;font-size:11px;line-height:1.45}
-    .debug-tools{display:grid;gap:8px;padding:10px 8px;border:1px solid #e8e1d8;border-radius:14px;background:#fffaf4}
-    .debug-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:#5d5954}
-    .debug-toggle input{width:16px;height:16px}
-    .debug-link{display:inline-flex;align-items:center;justify-content:center;padding:9px 12px;border-radius:10px;background:#fff0db;color:#a55a23;text-decoration:none;font-size:12px;font-weight:700}
-    .debug-link.hidden{display:none}
-    .debug-note{margin:0;font-size:11px;line-height:1.5;color:#77736d}
-  </style>
-  <script defer src="/static/index.js?v=20260731b"></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20260813a">
+  <script defer src="/static/index.js?v=20260813b"></script>
 </head>
 <body class="chat-page">
   <div class="app-shell">
@@ -41,20 +31,29 @@
         <div><h1 id="chatTitle">聊天对象</h1><p>AI 生成候选 · 由你确认发送</p></div>
         <span class="status-pill" id="relationshipBadge">关系：认识</span>
       </header>
-      <section class="messages" id="messages" aria-live="polite"></section>
+      <section class="messages" id="messages" aria-live="polite" aria-relevant="additions"></section>
       <section class="draft-zone hidden" id="draftZone">
         <div class="strategy"><span>聊天指导</span><p id="strategyText"></p></div>
         <div class="candidate-grid" id="candidateGrid"></div>
       </section>
       <section class="composer-wrap">
+        <div class="generation-progress hidden" id="generationProgress" aria-live="polite">
+          <div class="generation-progress-head">
+            <strong id="progressStageText">准备中</strong>
+            <span id="progressPercentText">0%</span>
+          </div>
+          <div class="generation-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="回复生成进度">
+            <span id="progressFill"></span>
+          </div>
+        </div>
         <div class="composer">
-          <textarea id="messageInput" rows="1" placeholder="粘贴对方发来的消息，Enter 生成…"></textarea>
+          <textarea id="messageInput" rows="1" placeholder="粘贴对方发来的消息，按 Enter 换行…"></textarea>
           <button class="primary" id="generateButton">生成 3 个回复</button>
         </div>
-        <p class="composer-hint">Shift + Enter 换行 · 当前不连接外部聊天平台</p>
+        <p class="composer-hint">Enter 换行 · 点击按钮生成 3 个回复 · 当前不连接外部聊天平台</p>
       </section>
     </main>
   </div>
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>
 </html>
