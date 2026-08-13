@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import threading
 from contextlib import asynccontextmanager
@@ -411,19 +412,6 @@ def update_contact(contact_id: int, request: ContactRequest) -> dict[str, Any]:
         return store.update_contact(contact_id, request.name)
     except KeyError as exc:
         raise HTTPException(404, str(exc)) from exc
-
-
-@app.post("/api/chat/generate")
-async def generate(request: GenerateRequest) -> dict[str, Any]:
-    content = request.content.strip()
-    with _generation_lock:
-        active = _active_job_id_locked()
-    if active:
-        raise HTTPException(409, "当前已有生成任务进行中，请等待完成")
-    try:
-        return cast(dict[str, Any], await run_in_threadpool(_execute_generation, request.contact_id, content, None))
-    except Exception as exc:
-        raise HTTPException(502, f"生成失败，请检查模型配置或服务状态：{exc}") from exc
 
 
 @app.post("/api/chat/generate/jobs")
@@ -846,4 +834,6 @@ def select_model(request: ModelSelectionRequest) -> dict[str, str]:
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=False)
+    host = os.getenv("CHAT_HOST", "127.0.0.1").strip() or "127.0.0.1"
+    port = int(os.getenv("CHAT_PORT", "8000") or "8000")
+    uvicorn.run("app:app", host=host, port=port, reload=False)

@@ -6,6 +6,7 @@ import json
 import operator
 import os
 import re
+import sys
 from datetime import datetime
 from time import perf_counter
 from typing import Annotated, Any, TypedDict
@@ -47,7 +48,27 @@ _PERSONA_QUERY_EXPANSIONS: dict[str, tuple[str, ...]] = {
 
 def debug_log(message: str) -> None:
     if DEBUG:
-        print(f"[DEBUG] {message}")
+        _safe_debug_print(f"[DEBUG] {message}")
+
+
+def _safe_debug_print(text: str) -> None:
+    """Print debug text without crashing on non-UTF8 Windows console encodings."""
+    try:
+        print(text)
+        return
+    except UnicodeEncodeError:
+        pass
+
+    stream = sys.stdout
+    encoding = stream.encoding or "utf-8"
+    sanitized = text.encode(encoding, errors="backslashreplace")
+    buffer = getattr(stream, "buffer", None)
+    if buffer is not None:
+        buffer.write(sanitized + b"\n")
+        stream.flush()
+        return
+    stream.write(sanitized.decode(encoding, errors="ignore") + "\n")
+    stream.flush()
 
 
 def _debug_detail_enabled() -> bool:
@@ -113,7 +134,7 @@ def _workflow_debug_print(state: "WorkflowState", label: str, payload: Any) -> N
     if not _workflow_debug_enabled(state):
         return
     formatted = json.dumps(_safe_debug_value(payload), ensure_ascii=False, indent=2)
-    print(f"[workflow-debug] {label}\n{formatted}\n[/workflow-debug]")
+    _safe_debug_print(f"[workflow-debug] {label}\n{formatted}\n[/workflow-debug]")
 
 
 def _trace_node(name: str, node_fn):

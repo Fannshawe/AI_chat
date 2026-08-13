@@ -3,7 +3,7 @@ const state = { contactId: null, generationId: null, debugEnabled: true, pending
 const DRAFT_CACHE_KEY = "persona-chat:draft:v1";
 const JOB_CACHE_KEY = "persona-chat:active-job:v1";
 const INPUT_CACHE_KEY = "persona-chat:input:v1";
-const JOB_POLL_INTERVAL_MS = 700;
+const JOB_POLL_INTERVAL_MS = 1000;
 const STAGE_STEPS = [
   { name: "读取上下文", target: 14 },
   { name: "识别情绪", target: 30 },
@@ -16,6 +16,7 @@ const STAGE_STEPS = [
 ];
 let progressTimer = null;
 let progressValue = 0;
+let progressHasServerSignal = false;
 
 async function api(url, options = {}) {
   const response = await fetch(url, { headers: { "Content-Type": "application/json", ...(options.headers || {}) }, ...options });
@@ -33,6 +34,14 @@ function toast(message) {
   element.classList.add("show");
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => element.classList.remove("show"), 3600);
+}
+
+async function logout() {
+  try {
+    await fetch("/gateway/logout", { method: "POST" });
+  } finally {
+    window.location.href = "/";
+  }
 }
 
 async function copyText(value) {
@@ -146,7 +155,9 @@ function currentProgressStage(percent) {
 }
 
 function setProgress(percent, explicitStage) {
-  progressValue = Math.max(0, Math.min(100, Math.round(percent)));
+  const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
+  // Keep progress monotonic to avoid back-and-forth jitter between updates.
+  progressValue = Math.max(progressValue, safePercent);
   const stage = explicitStage || currentProgressStage(progressValue);
   $("#progressStageText").textContent = stage;
   $("#progressPercentText").textContent = `${progressValue}%`;
@@ -156,9 +167,12 @@ function setProgress(percent, explicitStage) {
 
 function startProgress() {
   stopProgress(false);
+  progressHasServerSignal = false;
+  progressValue = 0;
   $("#generationProgress").classList.remove("hidden");
   setProgress(4, "读取上下文");
   progressTimer = setInterval(() => {
+    if (progressHasServerSignal) return;
     const next = progressValue + Math.max(1, Math.round(Math.random() * 4));
     setProgress(Math.min(next, 92));
   }, 420);
@@ -170,11 +184,15 @@ function stopProgress(success) {
     progressTimer = null;
   }
   if (!success) {
+    progressHasServerSignal = false;
+    progressValue = 0;
     $("#generationProgress").classList.add("hidden");
     return;
   }
   setProgress(100, "完成");
   setTimeout(() => {
+    progressHasServerSignal = false;
+    progressValue = 0;
     $("#generationProgress").classList.add("hidden");
   }, 700);
 }
@@ -206,6 +224,7 @@ async function waitForGenerateJob(jobId) {
   while (true) {
     const job = await api(`/api/chat/generate/jobs/${jobId}`);
     if (typeof job.progress === "number") {
+      progressHasServerSignal = true;
       setProgress(job.progress, job.stage || undefined);
     }
     if (job.status === "succeeded") {
@@ -563,4 +582,8 @@ $("#proactiveButton").onclick = async (event) => {
     event.currentTarget.textContent = originalLabel || "✦ 生成主动聊天草稿";
   }
 };
+const logoutButton = $("#logoutButton");
+if (logoutButton) {
+  logoutButton.onclick = logout;
+}
 load();

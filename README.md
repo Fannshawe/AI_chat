@@ -31,6 +31,8 @@
 
 ## 启动
 
+### 单实例模式
+
 1. 保持现有 `.env` 中以下变量可用：
    - `AGENT_EMOTION_BASE_URL` / `AGENT_EMOTION_API_KEY` / `AGENT_EMOTION_MODEL`
    - `AGENT_SELF_EMOTION_BASE_URL` / `AGENT_SELF_EMOTION_API_KEY` / `AGENT_SELF_EMOTION_MODEL`
@@ -51,6 +53,27 @@
 5. 管理后台：`http://127.0.0.1:8000/admin`
 
 也可以用 `uvicorn app:app --host 127.0.0.1 --port 8000` 启动。
+
+### 多实例网关模式
+
+当需要“一个 8000 入口 + 每个用户一个独立实例”时，启动网关而不是直接启动聊天实例：
+
+1. 运行 `python gateway.py`
+2. 浏览器打开 `http://127.0.0.1:8000`
+3. 用户在入口页自行注册或登录
+4. 网关会自动为每个用户分配固定内部端口，并将请求代理到该用户自己的实例
+
+默认行为：
+
+- 网关端口：`8000`（可用 `GATEWAY_PORT` 覆盖）
+- 用户实例端口：从 `8101` 开始固定分配
+- 用户数据目录：`users/<用户名>/data/`
+- 用户 persona 文件：`users/<用户名>/data/persona.yaml`
+- 空闲实例回收：默认 30 分钟，可用 `INSTANCE_IDLE_TIMEOUT_SECONDS` 调整
+- 登录保持时长：默认 30 天，可用 `GATEWAY_SESSION_TTL_SECONDS` 调整
+- 会话签名密钥：`GATEWAY_SESSION_SECRET`（务必改成你自己的随机字符串）
+
+首个注册用户会自动继承项目当前的旧 `data/` 目录，便于把现有单用户数据迁移为第一个用户实例。
 
 ## 首次使用建议
 

@@ -25,6 +25,11 @@ async function copyText(text, message = "已复制") {
   toast(message);
 }
 
+async function logout() {
+  await fetch("/gateway/logout", { method: "POST" });
+  window.location.href = "/";
+}
+
 function tryParseJsonText(value) {
   if (typeof value !== "string") return value;
   const text = value.trim();
@@ -226,5 +231,10 @@ $("#nodeFilter").addEventListener("change", (event) => {
 });
 
 $("#refreshDebugButton").onclick = loadGenerations;
+
+const logoutButton = $("#logoutButton");
+if (logoutButton) {
+  logoutButton.onclick = logout;
+}
 
 loadBootstrap();
