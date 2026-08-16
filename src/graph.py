@@ -60,14 +60,12 @@ def _safe_debug_print(text: str) -> None:
         pass
 
     stream = sys.stdout
-    encoding = stream.encoding or "utf-8"
-    sanitized = text.encode(encoding, errors="backslashreplace")
     buffer = getattr(stream, "buffer", None)
     if buffer is not None:
-        buffer.write(sanitized + b"\n")
+        buffer.write(text.encode("utf-8", errors="backslashreplace") + b"\n")
         stream.flush()
         return
-    stream.write(sanitized.decode(encoding, errors="ignore") + "\n")
+    stream.write(text.encode("utf-8", errors="backslashreplace").decode("utf-8") + "\n")
     stream.flush()
 
 
@@ -600,26 +598,45 @@ def _prompt_composer_payload(state: WorkflowState) -> dict[str, Any]:
 
 def _rewrite_payload(state: WorkflowState) -> dict[str, Any]:
     critic_analysis = state.get("critic_analysis", {})
-    payload = state.get("dialogue_composition", {})
+    rewrite_indexes = [
+        int(index) for index in critic_analysis.get("rewrite_candidate_indexes", [])
+        if int(index) in {0, 1, 2}
+    ]
+    candidates = state.get("candidates", [])
+    payload = dict(state.get("dialogue_composition", {}))
     payload.update({
         "rewrite_instruction": str(critic_analysis.get("rewrite_instruction", "")),
-        "rewrite_candidate_indexes": critic_analysis.get("rewrite_candidate_indexes", []),
-        "existing_candidates": state.get("candidates", []),
+        "rewrite_candidate_indexes": rewrite_indexes,
+        "rewrite_targets": [
+            {"candidate_index": index, "existing_candidate": candidates[index]}
+            for index in rewrite_indexes
+            if index < len(candidates)
+        ],
     })
     return payload
 
 
-def _merge_rewrite_candidates(state: WorkflowState, rewritten: list[str]) -> list[str]:
+def _merge_rewrite_candidates(state: WorkflowState, rewritten: list[dict[str, Any]]) -> list[str]:
     rewrite_indexes = [
         int(index) for index in state.get("critic_analysis", {}).get("rewrite_candidate_indexes", [])
         if int(index) in {0, 1, 2}
     ]
     existing = [str(item).strip() for item in state.get("candidates", [])]
-    candidates = list(existing) if rewrite_indexes and len(existing) == 3 else rewritten
-    if candidates is not rewritten:
-        for offset, index in enumerate(rewrite_indexes):
-            if offset < len(rewritten):
-                candidates[index] = rewritten[offset]
+    if not rewrite_indexes or len(existing) != 3:
+        return existing
+
+    candidates = list(existing)
+    for item in rewritten:
+        if not isinstance(item, dict):
+            continue
+        candidate_index = item.get("candidate_index")
+        content = item.get("content")
+        if (
+            isinstance(candidate_index, int)
+            and candidate_index in rewrite_indexes
+            and isinstance(content, str)
+        ):
+            candidates[candidate_index] = _normalize_segments(content)
     return candidates
 
 
@@ -643,7 +660,7 @@ def node_rewrite(state: WorkflowState) -> dict[str, Any]:
     result, warnings, llm_debug = _run_structured_agent(
         state, "rewrite", _rewrite_payload(state), fallback,
     )
-    rewritten = [_normalize_segments(str(item)) for item in result.get("candidates", [])]
+    rewritten = [item for item in result.get("candidates", []) if isinstance(item, dict)]
     candidates = _merge_rewrite_candidates(state, rewritten)
     _workflow_debug_print(state, "rewrite candidates", candidates)
     return {"candidates": candidates, "warnings": warnings, "_debug_llm": llm_debug}
@@ -688,6 +705,15 @@ def node_reply_critic(state: WorkflowState) -> dict[str, Any]:
         and int(item.get("candidate_index", -1)) in rewrite_indexes
         and str(item.get("rewrite_instruction", "")).strip()
     )
+    fallback_candidates = list(state.get("fallback_candidates") or state.get("candidates", []))
+    current_candidates = state.get("candidates", [])
+    if len(fallback_candidates) == 3 and len(current_candidates) == 3:
+        for item in candidate_reviews:
+            if not isinstance(item, dict) or not bool(item.get("passed", True)):
+                continue
+            candidate_index = item.get("candidate_index")
+            if isinstance(candidate_index, int) and candidate_index in {0, 1, 2}:
+                fallback_candidates[candidate_index] = current_candidates[candidate_index]
     _workflow_debug_print(state, "critic analysis", review)
     result: dict[str, Any] = {
         "critic_attempts": attempts,
@@ -697,6 +723,7 @@ def node_reply_critic(state: WorkflowState) -> dict[str, Any]:
             "rewrite_instruction": rewrite_instruction,
             "rewrite_candidate_indexes": rewrite_indexes,
         },
+        "fallback_candidates": fallback_candidates,
         "warnings": warnings,
         "_debug_llm": llm_debug,
     }

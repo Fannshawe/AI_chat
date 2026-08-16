@@ -193,6 +193,19 @@ class ResponseCandidates(BaseModel):
     candidates: list[str] = Field(min_length=3, max_length=3)
 
 
+class RewrittenCandidate(BaseModel):
+    """One rewrite result addressed to its original candidate slot."""
+
+    candidate_index: int = Field(ge=0, le=2)
+    content: str
+
+
+class RewriteCandidates(BaseModel):
+    """Only the Critic-rejected candidates, each with its target index."""
+
+    candidates: list[RewrittenCandidate] = Field(min_length=1, max_length=3)
+
+
 class MemoryItem(BaseModel):
     """A durable fact extracted from real conversation only."""
 
@@ -237,7 +250,7 @@ AGENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "memory_planner": MemoryPlan,
     "dialogue_composer": DialogueComposerAnalysis,
     "prompt_composer": ResponseCandidates,
-    "rewrite": ResponseCandidates,
+    "rewrite": RewriteCandidates,
     "critic": ReplyCriticAnalysis,
     "reflection": ReflectionAnalysis,
     "proactive": ProactiveDraft,

@@ -4,7 +4,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from src.graph import _normalize_segments, build_graph, node_persona_habit_retrieval
+from src.graph import _normalize_segments, _rewrite_payload, build_graph, node_persona_habit_retrieval
 from src.storage import ChatStore
 
 
@@ -199,12 +199,42 @@ class GraphPipelineTests(unittest.TestCase):
             critique(True),
         ]
         responses["rewrite"] = [
-            {"candidates": ["只改第二条"]},
+            {"candidates": [{"candidate_index": 1, "content": "只改第二条"}]},
         ]
         result, counts = self.invoke(responses)
         self.assertEqual(counts["prompt_composer"], 1)
         self.assertEqual(counts["rewrite"], 1)
         self.assertEqual(result["candidates"], ["原候选一", "只改第二条", "原候选三"])
+        self.assertEqual(result["fallback_candidates"], ["原候选一", "只改第二条", "原候选三"])
+
+    def test_rewrite_ignores_unrequested_candidate_indexes(self):
+        responses = self.base_responses()
+        responses["prompt_composer"] = {"candidates": ["原候选一", "原候选二", "原候选三"]}
+        responses["critic"] = [
+            partial_critique([1]),
+            critique(True),
+        ]
+        responses["rewrite"] = [{"candidates": [
+            {"candidate_index": 0, "content": "不应替换"},
+            {"candidate_index": 1, "content": "只改第二条"},
+        ]}]
+        result, _counts = self.invoke(responses)
+        self.assertEqual(result["candidates"], ["原候选一", "只改第二条", "原候选三"])
+
+    def test_rewrite_payload_contains_only_requested_candidates(self):
+        payload = _rewrite_payload({
+            "candidates": ["原候选一", "原候选二", "原候选三"],
+            "critic_analysis": {
+                "rewrite_instruction": "只改第二条",
+                "rewrite_candidate_indexes": [1],
+            },
+            "dialogue_composition": {"goal": "自然回应"},
+        })
+        self.assertEqual(
+            payload["rewrite_targets"],
+            [{"candidate_index": 1, "existing_candidate": "原候选二"}],
+        )
+        self.assertNotIn("existing_candidates", payload)
 
     def test_prompt_composer_normalizes_segment_line_breaks(self):
         responses = self.base_responses()

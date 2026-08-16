@@ -7,7 +7,9 @@ import hashlib
 import hmac
 import http.client
 import json
+import logging
 import os
+import re
 import secrets
 import threading
 import time
@@ -19,7 +21,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel
 
-from src.multi_instance import InstanceManager, UserRegistry, utc_now
+from src.multi_instance import InstanceManager, UserRegistry, configure_gateway_log_relay, utc_now
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -29,6 +31,7 @@ IDLE_TIMEOUT_SECONDS = int(os.getenv("INSTANCE_IDLE_TIMEOUT_SECONDS", "1800") or
 SESSION_TTL_SECONDS = int(os.getenv("GATEWAY_SESSION_TTL_SECONDS", str(60 * 60 * 24 * 30)) or str(60 * 60 * 24 * 30))
 SESSION_SECRET = os.getenv("GATEWAY_SESSION_SECRET", "dev-session-secret-change-me")
 SESSION_COOKIE = "chat_gateway_session"
+_JOB_POLL_PATH = re.compile(r"^/api/chat/generate/jobs/[0-9a-f]{32}$", re.IGNORECASE)
 
 registry = UserRegistry(BASE_DIR, gateway_port=GATEWAY_PORT)
 instance_manager = InstanceManager(BASE_DIR, registry, host="127.0.0.1", idle_timeout_seconds=IDLE_TIMEOUT_SECONDS)
@@ -37,6 +40,23 @@ instance_manager = InstanceManager(BASE_DIR, registry, host="127.0.0.1", idle_ti
 class AuthRequest(BaseModel):
     username: str
     password: str
+
+
+class _JobPollingAccessLogFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            method = str(record.args[1])
+            path = str(record.args[2])
+        except (IndexError, KeyError, TypeError):
+            return True
+        return not (method == "GET" and _JOB_POLL_PATH.fullmatch(path))
+
+
+def _configure_access_log_filter() -> None:
+    access_logger = logging.getLogger("uvicorn.access")
+    if any(isinstance(log_filter, _JobPollingAccessLogFilter) for log_filter in access_logger.filters):
+        return
+    access_logger.addFilter(_JobPollingAccessLogFilter())
 
 
 def _login_page(message: str = "") -> str:
@@ -159,6 +179,7 @@ def _gateway_admin_page() -> str:
                         <th>实例状态</th>
                         <th>最后活跃</th>
                         <th>数据目录</th>
+                        <th>操作</th>
                     </tr>
                 </thead>
                 <tbody id="rows"></tbody>
@@ -182,7 +203,7 @@ def _gateway_admin_page() -> str:
                 return;
             }
             if (!response.ok) {
-                document.getElementById('rows').innerHTML = '<tr><td colspan="5">读取失败</td></tr>';
+                document.getElementById('rows').innerHTML = '<tr><td colspan="6">读取失败</td></tr>';
                 return;
             }
             const data = await response.json();
@@ -190,13 +211,36 @@ def _gateway_admin_page() -> str:
             const items = Array.isArray(data.instances) ? data.instances : [];
             document.getElementById('summary').textContent = `当前登录用户：${data.current_user} · 注册用户总数：${items.length}`;
             if (!items.length) {
-                rows.innerHTML = '<tr><td colspan="5">暂无用户</td></tr>';
+                rows.innerHTML = '<tr><td colspan="6">暂无用户</td></tr>';
                 return;
             }
             rows.innerHTML = items.map((item) => {
                 const running = item.running ? '<span class="tag up">运行中</span>' : '<span class="tag down">未运行</span>';
-                return `<tr><td>${item.username || '-'}</td><td>${item.port || '-'}</td><td>${running}</td><td>${formatTime(item.last_used_at)}</td><td>${item.data_dir || '-'}</td></tr>`;
+                const action = item.username === data.current_user
+                    ? '<button class="ghost restartButton" type="button">重启实例</button>'
+                    : '-';
+                return `<tr><td>${item.username || '-'}</td><td>${item.port || '-'}</td><td>${running}</td><td>${formatTime(item.last_used_at)}</td><td>${item.data_dir || '-'}</td><td>${action}</td></tr>`;
             }).join('');
+            rows.querySelectorAll('.restartButton').forEach((button) => button.addEventListener('click', restartCurrentInstance));
+        }
+
+        async function restartCurrentInstance(event) {
+            const button = event.currentTarget;
+            button.disabled = true;
+            button.textContent = '重启中...';
+            try {
+                const response = await fetch('/gateway/instances/restart', { method: 'POST' });
+                if (!response.ok) {
+                    let detail = `重启失败 (${response.status})`;
+                    try { detail = (await response.json()).detail || detail; } catch (_) {}
+                    throw new Error(detail);
+                }
+                await loadInstances();
+            } catch (error) {
+                alert(error.message || '重启失败');
+                button.disabled = false;
+                button.textContent = '重启实例';
+            }
         }
 
         async function logout() {
@@ -309,6 +353,8 @@ def _proxy(request: Request, username: str, full_path: str) -> Response:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    configure_gateway_log_relay()
+    _configure_access_log_filter()
     stop_event = threading.Event()
 
     def _janitor() -> None:
@@ -338,6 +384,18 @@ def gateway_instances(request: Request) -> dict[str, Any]:
     if not username:
         raise HTTPException(401, "请先登录")
     return {"current_user": username, "instances": instance_manager.list_runtime()}
+
+
+@app.post("/gateway/instances/restart")
+def gateway_restart_current_instance(request: Request) -> dict[str, Any]:
+    username = _current_username(request)
+    if not username:
+        raise HTTPException(401, "请先登录")
+    try:
+        record = instance_manager.restart_instance(username)
+    except (KeyError, RuntimeError, TimeoutError) as exc:
+        raise HTTPException(503, f"实例重启失败：{exc}") from exc
+    return {"ok": True, "username": record.username, "port": record.port}
 
 
 @app.get("/gateway/admin", include_in_schema=False)

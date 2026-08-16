@@ -6,6 +6,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import os
 import shutil
 import socket
@@ -17,6 +18,23 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+
+GATEWAY_LOGGER = logging.getLogger("uvicorn.error.instance")
+_GATEWAY_LOG_HANDLER_MARKER = "_is_instance_debug_relay_handler"
+
+
+def configure_gateway_log_relay() -> None:
+    """Ensure relayed instance debug records reach the gateway terminal."""
+    GATEWAY_LOGGER.setLevel(logging.DEBUG)
+    GATEWAY_LOGGER.propagate = False
+    if any(getattr(handler, _GATEWAY_LOG_HANDLER_MARKER, False) for handler in GATEWAY_LOGGER.handlers):
+        return
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(logging.Formatter("%(levelname)s:    %(message)s"))
+    setattr(handler, _GATEWAY_LOG_HANDLER_MARKER, True)
+    GATEWAY_LOGGER.addHandler(handler)
 
 
 def utc_now() -> str:
@@ -235,20 +253,30 @@ class InstanceManager:
     def _start_process(self, record: UserRecord) -> None:
         log_path = record.user_root / "logs" / "instance.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
-        log_handle = open(log_path, "a", encoding="utf-8")
         env = os.environ.copy()
         env["CHAT_HOST"] = self.host
         env["CHAT_PORT"] = str(record.port)
         env["CHAT_DATA_DIR"] = str(record.data_dir)
         env["PERSONA_PATH"] = str(record.persona_path)
         env["PYTHONUNBUFFERED"] = "1"
+        env["PYTHONIOENCODING"] = "utf-8"
         process = subprocess.Popen(
             [sys.executable, "app.py"],
             cwd=str(self.base_dir),
             env=env,
-            stdout=log_handle,
+            stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            bufsize=1,
         )
+        if process.stdout is not None:
+            threading.Thread(
+                target=self._relay_process_output,
+                args=(record.username, process.stdout, log_path),
+                daemon=True,
+            ).start()
         self._processes[record.username] = process
         deadline = time.time() + 20
         while time.time() < deadline:
@@ -259,6 +287,34 @@ class InstanceManager:
             time.sleep(0.25)
         process.terminate()
         raise TimeoutError("实例启动超时")
+
+    @staticmethod
+    def _is_debug_log_line(line: str, in_workflow_debug_block: bool) -> tuple[bool, bool]:
+        stripped = line.lstrip()
+        if in_workflow_debug_block:
+            return True, "[/workflow-debug]" not in stripped
+        if stripped.startswith("[workflow-debug]"):
+            return True, "[/workflow-debug]" not in stripped
+        is_debug = stripped.startswith("[DEBUG]") or stripped.startswith("DEBUG:")
+        return is_debug, False
+
+    def _relay_process_output(self, username: str, output: Any, log_path: Path) -> None:
+        in_workflow_debug_block = False
+        with log_path.open("a", encoding="utf-8") as log_handle:
+            for line in iter(output.readline, ""):
+                log_handle.write(line)
+                log_handle.flush()
+                is_debug, in_workflow_debug_block = self._is_debug_log_line(line, in_workflow_debug_block)
+                if is_debug:
+                    GATEWAY_LOGGER.debug("instance=%s %s", username, line.rstrip())
+        output.close()
+
+    def restart_instance(self, username: str) -> UserRecord:
+        normalized = validate_username(username)
+        if self.registry.get_user(normalized) is None:
+            raise KeyError("用户不存在")
+        self.stop_instance(normalized)
+        return self.ensure_running(normalized)
 
     def stop_instance(self, username: str) -> None:
         normalized = validate_username(username)
