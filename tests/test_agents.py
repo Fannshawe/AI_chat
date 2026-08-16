@@ -10,11 +10,15 @@ from src.agents import (
     ReplyCriticAnalysis,
     ResponseCandidates,
     SelfEmotionUpdateAnalysis,
+    clear_agent_cache,
     get_agent,
 )
 
 
 class AgentHarnessTests(unittest.TestCase):
+    def test_clear_agent_cache_is_available(self):
+        clear_agent_cache()
+
     def test_agents_are_cached_per_provider(self):
         self.assertIs(get_agent("emotion", "default"), get_agent("emotion", "default"))
 

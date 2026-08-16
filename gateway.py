@@ -235,12 +235,27 @@ def _gateway_admin_page() -> str:
                     try { detail = (await response.json()).detail || detail; } catch (_) {}
                     throw new Error(detail);
                 }
+                clearTransientChatCache();
                 await loadInstances();
             } catch (error) {
                 alert(error.message || '重启失败');
                 button.disabled = false;
                 button.textContent = '重启实例';
             }
+        }
+
+        function clearTransientChatCache() {
+            const cacheKeys = [
+                'persona-chat:draft:v1',
+                'persona-chat:active-job:v1',
+                'persona-chat:input:v1',
+            ];
+            try {
+                cacheKeys.forEach((key) => localStorage.removeItem(key));
+                const resetKey = 'persona-chat:instance-restarted:v1';
+                localStorage.setItem(resetKey, String(Date.now()));
+                localStorage.removeItem(resetKey);
+            } catch (_) {}
         }
 
         async function logout() {

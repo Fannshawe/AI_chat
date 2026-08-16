@@ -271,12 +271,12 @@ def _middleware():
     ]
 
 
-@lru_cache(maxsize=32)
 def clear_agent_cache() -> None:
     """Invalidate the cached agent instances (call after model config changes)."""
     get_agent.cache_clear()
 
 
+@lru_cache(maxsize=32)
 def get_agent(agent_name: str, provider_name: str = "default"):
     """Return one named ``create_agent`` harness for a model provider."""
     schema = AGENT_SCHEMAS.get(agent_name)
