@@ -157,26 +157,29 @@ class TurnInterpreterAnalysis(BaseModel):
     relationship: RelationshipAnalysis
 
 
-class ResponseComposerDebug(BaseModel):
-    """Internal planning details retained in generation snapshots only."""
+class ResponseComposerAnalysis(BaseModel):
+    """A response plan and its three final candidate messages.
 
+    Field order matters: structured generation fills fields in the order
+    they are declared here, so every planning field must come before
+    ``candidates`` — otherwise the model would write candidates before it
+    has reasoned through the plan. ``strategy``, ``memory_usage``,
+    ``persona_expression``, and ``emotion_expression`` are genuine planning
+    steps (not throwaway debug output); the graph simply does not forward
+    them to downstream nodes once candidates are written.
+    """
+
+    goal: str
     strategy: list[str] = Field(default_factory=list, max_length=8)
+    structure: list[str] = Field(default_factory=list, max_length=8)
     memory_usage: list[str] = Field(default_factory=list, max_length=8)
     persona_expression: list[str] = Field(default_factory=list, max_length=8)
     emotion_expression: list[str] = Field(default_factory=list, max_length=8)
-
-
-class ResponseComposerAnalysis(BaseModel):
-    """A compact response plan and its three final candidate messages."""
-
-    goal: str
-    structure: list[str] = Field(default_factory=list, max_length=8)
     topic_plan: list[str] = Field(default_factory=list, max_length=8)
     length_plan: LengthPlan = Field(default_factory=LengthPlan)
     candidate_directives: list[CandidateDirective] = Field(min_length=3, max_length=3)
     constraints: list[str] = Field(default_factory=list, max_length=12)
     candidates: list[str] = Field(min_length=3, max_length=3)
-    debug: ResponseComposerDebug = Field(default_factory=ResponseComposerDebug)
 
 
 class CandidateCritique(BaseModel):

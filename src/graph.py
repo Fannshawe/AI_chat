@@ -505,7 +505,11 @@ def node_response_composer(state: WorkflowState) -> dict[str, Any]:
     """Create a compact plan and final candidates in one shared-context call."""
     fallback = {
         "goal": "回应当前消息并自然延续对话",
+        "strategy": ["先回应对方当前表达", "没有必要时不追问"],
         "structure": ["简短直接回应"],
+        "memory_usage": ["只使用明确相关且已存储的记忆"],
+        "persona_expression": ["遵守固定人格与表达风格"],
+        "emotion_expression": ["不过度解读情绪"],
         "topic_plan": ["优先延续当前话题"],
         "length_plan": {
             "sentence_count": 1,
@@ -524,12 +528,6 @@ def node_response_composer(state: WorkflowState) -> dict[str, Any]:
         ],
         "constraints": ["不捏造事实", "不越过关系行为边界"],
         "candidates": ["...", "...", "..."],
-        "debug": {
-            "strategy": ["先回应对方当前表达", "没有必要时不追问"],
-            "memory_usage": ["只使用明确相关且已存储的记忆"],
-            "persona_expression": ["遵守固定人格与表达风格"],
-            "emotion_expression": ["不过度解读情绪"],
-        },
     }
     result, warnings, llm_debug = _run_structured_agent(state, "response_composer", {
         "latest_message": state["user_request"],
@@ -561,8 +559,17 @@ def node_response_composer(state: WorkflowState) -> dict[str, Any]:
         key: result.get(key, fallback[key])
         for key in ("goal", "structure", "topic_plan", "length_plan", "candidate_directives", "constraints")
     }
-    composition["debug"] = result.get("debug", fallback["debug"])
-    _workflow_debug_print(state, "response_composer", {"plan": composition, "candidates": candidates})
+    # These fields are genuine planning steps the model must reason through
+    # before writing candidates (see field order in ResponseComposerAnalysis).
+    # They are logged for troubleshooting only and intentionally not
+    # forwarded to Critic or persisted in the generation snapshot.
+    planning_notes = {
+        key: result.get(key, fallback[key])
+        for key in ("strategy", "memory_usage", "persona_expression", "emotion_expression")
+    }
+    _workflow_debug_print(state, "response_composer", {
+        "plan": composition, "planning_notes": planning_notes, "candidates": candidates,
+    })
     return {
         "response_composition": composition,
         "strategy": str(result.get("goal", "")),

@@ -48,17 +48,16 @@ _active_generation_job_id: str | None = None
 _MAX_GENERATION_JOBS = 30
 
 _NODE_STAGE_MAP: dict[str, tuple[str, int]] = {
-    "context": ("读取上下文", 12),
+    "context": ("读取上下文", 0),
     "turn_interpreter": ("理解本轮语境", 32),
-    "persona_habit_retrieval": ("检索习惯", 48),
+    "user_mem_recognition": ("识别用户记忆", 48),
     "memory_planner": ("记忆规划", 58),
     "memory_retrieval": ("记忆召回", 66),
     "self_emotion": ("自身情绪校准", 74),
     "guidance": ("指导检索", 80),
-    "response_composer": ("生成候选", 92),
+    "response_composer": ("生成候选", 85),
     "critic": ("候选质检", 95),
     "critic_complete": ("完成质检", 97),
-    "user_mem_recognition": ("识别用户记忆", 98),
     "save": ("收尾", 99),
 }
 
@@ -140,15 +139,14 @@ def _execute_generation(
         result = cast(WorkflowState, chat_graph.invoke(initial_state))
     else:
         progress_callback("读取上下文", 6)
-        for step_state in chat_graph.stream(initial_state, stream_mode="values"):
-            if not isinstance(step_state, dict):
-                continue
-            result = cast(WorkflowState, step_state)
-            traces = result.get("debug_trace", [])
-            if traces:
-                node_name = str((traces[-1] or {}).get("node", ""))
+        for mode, event in chat_graph.stream(initial_state, stream_mode=["tasks", "values"]):
+            if mode == "tasks" and isinstance(event, dict) and "input" in event:
+                node_name = str(event.get("name", ""))
                 stage, progress = _stage_for_node(node_name)
                 progress_callback(stage, progress)
+                continue
+            if mode == "values" and isinstance(event, dict):
+                result = cast(WorkflowState, event)
     if result is None:
         raise RuntimeError("生成流程未返回有效结果")
 

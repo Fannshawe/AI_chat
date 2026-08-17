@@ -111,7 +111,11 @@ class AgentHarnessTests(unittest.TestCase):
 
         composer = ResponseComposerAnalysis.model_validate({
             "goal": "回应近况并自然延续话题",
+            "strategy": ["先回应"],
             "structure": ["短回应", "相关分享"],
+            "memory_usage": ["只使用确认过的创业记忆"],
+            "persona_expression": ["保持克制"],
+            "emotion_expression": ["轻微关心"],
             "topic_plan": ["项目进度"],
             "length_plan": {
                 "sentence_count": 1,
@@ -127,12 +131,6 @@ class AgentHarnessTests(unittest.TestCase):
             ],
             "constraints": ["不连续追问"],
             "candidates": ["可以啊", "你这进度挺快", "听着还行"],
-            "debug": {
-                "strategy": ["先回应"],
-                "memory_usage": ["只使用确认过的创业记忆"],
-                "persona_expression": ["保持克制"],
-                "emotion_expression": ["轻微关心"],
-            },
         })
         self.assertEqual(composer.goal, "回应近况并自然延续话题")
         self.assertEqual(composer.length_plan.char_budget, 20)

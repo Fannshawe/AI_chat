@@ -24,7 +24,7 @@
 | `turn_interpreter` | `node_turn_interpreter` | 最新消息、近期对话/情绪、当前关系 | `TurnInterpreterAnalysis`：独立的 `contact_emotion` 与 `relationship` |
 | `self_emotion` | `node_self_emotion_update` | 最新消息、近期对话、情绪、关系、Persona 情绪基线、近期事件 | `SelfEmotionUpdateAnalysis`：`events[]`、`self_emotion_state` |
 | `memory_planner` | `node_memory_planner` | 最新消息、近期对话、允许分类 | `MemoryPlan`：`requests[]` |
-| `response_composer` | `node_response_composer` | Persona、Habit、情绪、关系、记忆、技巧文档 | `ResponseComposerAnalysis`：精简计划、`candidates[3]`、debug 判断 |
+| `response_composer` | `node_response_composer` | Persona、Habit、情绪、关系、记忆、技巧文档 | `ResponseComposerAnalysis`：`goal/strategy/structure/memory_usage/persona_expression/emotion_expression/topic_plan/length_plan/candidate_directives/constraints` 计划（按此顺序生成，候选前必须先想清楚）+ `candidates[3]` |
 | `critic` | `node_reply_critic` | 最新消息、近期对话、Persona、记忆、回复计划、候选 | `ReplyCriticAnalysis`：`reviews[3]`、`passed`；失败项含 `revised_candidate` |
 | `user_mem_recognition` | `node_user_memory_recognition` | 本轮真实用户消息、精确命中的既有记忆、允许分类 | `UserMemoryRecognition`：去重后的 `memories[]` |
 | `proactive`（非图节点） | `generate_proactive_draft` | 近期对话、关系、Persona、记忆 | `ProactiveDraft`：`draft` `reason` |

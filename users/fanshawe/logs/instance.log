@@ -5146,3 +5146,2014 @@ INFO:     Shutting down
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
 INFO:     Finished server process [30308]
+INFO:     Started server process [23976]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8101 (Press CTRL+C to quit)
+INFO:     127.0.0.1:62540 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62543 - "GET /static/styles.css?v=20260813a HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62545 - "GET /static/index.js?v=20260816a HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62547 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62549 - "GET /api/debug/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62552 - "GET /api/chat/generate/jobs/active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62565 - "POST /api/chat/generate/jobs HTTP/1.1" 200 OK
+[DEBUG] node=context start
+[DEBUG] node=context done duration_ms=10.62
+[DEBUG] node=memory_planner start
+[DEBUG] node=persona_habit_retrieval start
+[DEBUG] node=persona_habit_retrieval done duration_ms=0.17
+[DEBUG] node=turn_interpreter start
+[DEBUG] node=user_mem_recognition start
+INFO:     127.0.0.1:62567 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62569 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62571 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62582 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+[DEBUG] node=memory_planner done duration_ms=4666.68
+[DEBUG] node=user_mem_recognition done duration_ms=4677.98
+INFO:     127.0.0.1:62599 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62608 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62612 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62614 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62616 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62618 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+[DEBUG] node=turn_interpreter done duration_ms=11761.15
+[DEBUG] node=guidance start
+[DEBUG] node=self_emotion start
+[DEBUG] node=memory_retrieval start
+[DEBUG] node=memory_retrieval done duration_ms=0.35
+[DEBUG] node=guidance done duration_ms=4.1
+INFO:     127.0.0.1:62621 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62623 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+[workflow-debug] self_emotion update
+{
+  "events": [
+    {
+      "event": "日常分享",
+      "impact": 0.1,
+      "reason": "对方发送标准问候，关系层级为“认识”，无显著情感波动。"
+    }
+  ],
+  "self_emotion_state": {
+    "mood": "放松",
+    "mood_intensity": 55,
+    "energy": 55,
+    "dimensions": [],
+    "reason": "对方仅发送礼貌性问候，无特殊情感投入。鉴于上一轮状态已持续数小时且无新刺激，情绪随时间自然回落至基线附近。"
+  }
+}
+[/workflow-debug]
+[DEBUG] node=self_emotion done duration_ms=1571.0
+[DEBUG] node=response_composer start
+INFO:     127.0.0.1:62625 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62627 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62629 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62631 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62633 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62636 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62638 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62640 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62642 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+[workflow-debug] response_composer
+{
+  "plan": {
+    "goal": "以自然、轻量级的语气回应初始问候，建立基础连接，不施加回复压力。",
+    "structure": [
+      "打招呼/回应问候",
+      "简短寒暄或状态分享"
+    ],
+    "topic_plan": [
+      "日常问候",
+      "当前状态（如：刚忙完/休息中）"
+    ],
+    "length_plan": {
+      "sentence_count": 2,
+      "char_budget": 15,
+      "allow_filler_only": true,
+      "allow_double_text": false,
+      "rhythm_note": ""
+    },
+    "candidate_directives": [
+      {
+        "candidate_index": 0,
+        "angle": "极简附和",
+        "length_hint": "极短",
+        "segment_count": 1,
+        "instruction": "使用缓冲词+简单问候，保持距离感但礼貌。"
+      },
+      {
+        "candidate_index": 1,
+        "angle": "轻反问",
+        "length_hint": "短",
+        "segment_count": 1,
+        "instruction": "问候后加一句轻微的状态询问，引导对方开启话题。"
+      },
+      {
+        "candidate_index": 2,
+        "angle": "自我暴露",
+        "length_hint": "短",
+        "segment_count": 1,
+        "instruction": "用自身状态（如：刚看到）作为回应，降低社交压力。"
+      }
+    ],
+    "constraints": [
+      "语气要像随手回的，不要像客服。",
+      "不要使用“你好”重复对方，显得生硬。",
+      "控制字数，对方只发了两个字，不要回小作文。",
+      "INFP性格，温和但慢热，不要过于热情。"
+    ],
+    "debug": {
+      "strategy": [
+        "轻量级回应",
+        "保持社交礼仪",
+        "测试对方意图"
+      ],
+      "memory_usage": [
+        "无记忆可用，纯基于Persona和当前关系层级"
+      ],
+      "persona_expression": [
+        "使用‘嗯嗯’、‘哈喽’等缓冲词",
+        "语气轻柔，避免命令式",
+        "保持适当距离"
+      ],
+      "emotion_expression": [
+        "平静",
+        "礼貌",
+        "无强烈情绪波动"
+      ]
+    }
+  },
+  "candidates": [
+    "嗯嗯，你好呀",
+    "哈喽，刚在忙，咋啦",
+    "嘿，刚看到消息"
+  ]
+}
+[/workflow-debug]
+[DEBUG] node=response_composer done duration_ms=10235.08
+[DEBUG] node=critic start
+INFO:     127.0.0.1:62645 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62647 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62649 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62651 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+[workflow-debug] critic analysis
+{
+  "reviews": [
+    {
+      "candidate_index": 0,
+      "ai_taste": 2.0,
+      "interview_taste": 0.0,
+      "empathy_excess": 0.0,
+      "naturalness": 9.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    },
+    {
+      "candidate_index": 1,
+      "ai_taste": 1.0,
+      "interview_taste": 0.0,
+      "empathy_excess": 0.0,
+      "naturalness": 8.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    },
+    {
+      "candidate_index": 2,
+      "ai_taste": 2.0,
+      "interview_taste": 0.0,
+      "empathy_excess": 0.0,
+      "naturalness": 9.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    }
+  ],
+  "passed": true
+}
+[/workflow-debug]
+[DEBUG] node=critic done duration_ms=3797.39
+[DEBUG] node=critic_complete start
+[DEBUG] node=critic_complete done duration_ms=0.13
+[DEBUG] node=save start
+[DEBUG] node=save done duration_ms=0.12
+INFO:     127.0.0.1:62653 - "GET /api/chat/generate/jobs/fb94d3f662af4e6192beb4713c8bc146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62656 - "POST /api/chat/confirm HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62659 - "GET /debug HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62661 - "GET /static/debug.js?v=20260813a HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:62663 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62665 - "GET /api/debug/generations?contact_id=1&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62667 - "GET /api/debug/generations/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62555 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62558 - "GET /api/debug/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62560 - "GET /api/chat/generate/jobs/active HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [23976]
+INFO:     Started server process [25584]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8101 (Press CTRL+C to quit)
+INFO:     127.0.0.1:53040 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53042 - "GET /api/debug/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53046 - "GET /api/chat/generate/jobs/active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55887 - "POST /api/chat/generate/jobs HTTP/1.1" 200 OK
+[DEBUG] node=context start
+[DEBUG] node=context done duration_ms=19.28
+[DEBUG] node=memory_planner start
+[DEBUG] node=persona_habit_retrieval start
+[DEBUG] node=persona_habit_retrieval done duration_ms=0.23
+[DEBUG] node=turn_interpreter start
+[DEBUG] node=user_mem_recognition start
+INFO:     127.0.0.1:55889 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55891 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55893 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55895 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55897 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55902 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+[DEBUG] node=user_mem_recognition done duration_ms=5401.63
+INFO:     127.0.0.1:55904 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+[DEBUG] node=turn_interpreter done duration_ms=7377.28
+INFO:     127.0.0.1:55906 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+[DEBUG] node=memory_planner done duration_ms=7997.79
+[DEBUG] node=guidance start[DEBUG] node=memory_retrieval start
+
+[DEBUG] node=self_emotion start
+[DEBUG] node=guidance done duration_ms=5.62
+[DEBUG] node=memory_retrieval done duration_ms=9.43
+INFO:     127.0.0.1:55908 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55910 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55912 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+[workflow-debug] self_emotion update
+{
+  "events": [
+    {
+      "event": "日常分享",
+      "impact": 0.2,
+      "reason": "对方在简短问候后直接询问名字，表现出建立连接的主动性。鉴于对方情绪为好奇且关系处于“认识”初期，这种直接的互动带来了轻微的积极关注感，但尚未引发深层情感波动。"
+    }
+  ],
+  "self_emotion_state": {
+    "mood": "放松",
+    "mood_intensity": 60,
+    "energy": 58,
+    "dimensions": [
+      {
+        "name": "期待",
+        "value": 35
+      },
+      {
+        "name": "好奇",
+        "value": 30
+      }
+    ],
+    "reason": "上一轮状态为放松（55），间隔约13分钟。对方主动询问名字，显示出社交兴趣，作为敏感且温暖的人格，对此类建立连接的信号有轻微正向反馈，故情绪强度小幅上升至60，并产生轻微的期待与好奇维度。整体仍保持在基线附近的放松状态。"
+  }
+}
+[/workflow-debug]
+[DEBUG] node=self_emotion done duration_ms=3046.01
+[DEBUG] node=response_composer start
+INFO:     127.0.0.1:55914 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55916 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55918 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55920 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55922 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55924 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+[workflow-debug] response_composer
+{
+  "plan": {
+    "goal": "自然回应对方关于名字的询问，完成基础身份互换，同时保持轻松随意的聊天氛围，不施加压力。",
+    "structure": [
+      "直接给出名字",
+      "可选：简短的友好互动或缓冲"
+    ],
+    "topic_plan": [
+      "自我介绍（名字）",
+      "保持对话开放性"
+    ],
+    "length_plan": {
+      "sentence_count": 2,
+      "char_budget": 15,
+      "allow_filler_only": true,
+      "allow_double_text": false,
+      "rhythm_note": ""
+    },
+    "candidate_directives": [
+      {
+        "candidate_index": 0,
+        "angle": "极简附和",
+        "length_hint": "短",
+        "segment_count": 1,
+        "instruction": "仅回复名字，不加多余修饰，符合慢热人设的简洁。"
+      },
+      {
+        "candidate_index": 1,
+        "angle": "轻反问",
+        "length_hint": "短",
+        "segment_count": 1,
+        "instruction": "回复名字后，用简单的“你呢”或类似语气词反问，引导对方继续，但不过度热情。"
+      },
+      {
+        "candidate_index": 2,
+        "angle": "自我暴露",
+        "length_hint": "短",
+        "segment_count": 1,
+        "instruction": "回复名字，并加一个轻微的缓冲词或表情，显得更真实自然，如“我是林澈”或“哈哈我叫林澈”。"
+      }
+    ],
+    "constraints": [
+      "严格遵守INFP慢热、温和的特质，避免过于自来熟。",
+      "不使用连续emoji或夸张语气词。",
+      "名字为“林澈”。",
+      "对方情绪平稳，无需安抚，只需正常社交回应。",
+      "候选0、1、2需体现不同的细微语气差别。"
+    ],
+    "debug": {
+      "strategy": [
+        "直接回应名字，完成社交礼仪",
+        "根据人设提供三种不同亲疏度的回应方式",
+        "保持低能量消耗，符合当前关系阶段"
+      ],
+      "memory_usage": [
+        "无相关记忆使用"
+      ],
+      "persona_expression": [
+        "体现温和、慢热",
+        "避免过度热情",
+        "使用自然口语"
+      ],
+      "emotion_expression": [
+        "平静、友好",
+        "无强烈情绪波动"
+      ]
+    }
+  },
+  "candidates": [
+    "林澈",
+    "我是林澈，你呢",
+    "哈哈我叫林澈"
+  ]
+}
+[/workflow-debug]
+[DEBUG] node=response_composer done duration_ms=6703.13
+[DEBUG] node=critic start
+INFO:     127.0.0.1:55926 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55928 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55930 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+[workflow-debug] critic analysis
+{
+  "reviews": [
+    {
+      "candidate_index": 0,
+      "ai_taste": 0.0,
+      "interview_taste": 0.0,
+      "empathy_excess": 0.0,
+      "naturalness": 9.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    },
+    {
+      "candidate_index": 1,
+      "ai_taste": 0.0,
+      "interview_taste": 0.0,
+      "empathy_excess": 0.0,
+      "naturalness": 8.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    },
+    {
+      "candidate_index": 2,
+      "ai_taste": 0.0,
+      "interview_taste": 0.0,
+      "empathy_excess": 0.0,
+      "naturalness": 8.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    }
+  ],
+  "passed": true
+}
+[/workflow-debug]
+[DEBUG] node=critic done duration_ms=3890.77
+[DEBUG] node=critic_complete start
+[DEBUG] node=critic_complete done duration_ms=0.23
+[DEBUG] node=save start
+[DEBUG] node=save done duration_ms=0.2
+INFO:     127.0.0.1:55932 - "GET /api/chat/generate/jobs/eb7a025f579043c3b83c3b25a64267ce HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55936 - "POST /api/chat/confirm HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55939 - "GET /debug HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55941 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55943 - "GET /api/debug/generations?contact_id=1&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55945 - "GET /api/debug/generations/2 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [25584]
+INFO:     Started server process [38624]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8101 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55245 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55247 - "GET /api/debug/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55249 - "GET /api/chat/generate/jobs/active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62851 - "POST /api/chat/generate/jobs HTTP/1.1" 200 OK
+[DEBUG] node=context start
+[DEBUG] node=context done duration_ms=18.52
+[DEBUG] node=memory_planner start
+[DEBUG] node=persona_habit_retrieval start
+[DEBUG] node=persona_habit_retrieval done duration_ms=0.23
+[DEBUG] node=turn_interpreter start
+[DEBUG] node=user_mem_recognition start
+INFO:     127.0.0.1:62853 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62855 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62858 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62860 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62865 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+[DEBUG] node=user_mem_recognition done duration_ms=4526.85
+INFO:     127.0.0.1:62867 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62869 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62871 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62873 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62875 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62877 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62879 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62881 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+[DEBUG] node=turn_interpreter done duration_ms=13470.6
+INFO:     127.0.0.1:62883 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+[DEBUG] node=memory_planner done duration_ms=14092.15
+[DEBUG] node=guidance start
+[DEBUG] node=memory_retrieval start[DEBUG] node=self_emotion start
+
+[DEBUG] node=guidance done duration_ms=3.78
+[DEBUG] node=memory_retrieval done duration_ms=13.58
+INFO:     127.0.0.1:62886 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62888 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62890 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62892 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62894 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62896 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62898 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62900 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62902 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62904 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62906 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62908 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62910 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62912 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62914 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62916 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62918 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62920 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62922 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62924 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62926 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62928 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62930 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62932 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62934 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62936 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62938 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62940 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62943 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62945 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62947 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62949 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62951 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62953 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62955 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62957 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62959 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62961 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62963 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62965 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62967 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62969 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62971 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62973 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62975 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62977 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62979 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62981 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62983 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51277 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51280 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51282 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51284 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51286 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51288 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51290 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51292 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51294 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51296 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51298 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51300 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51302 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51304 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51306 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51308 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51310 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51312 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51314 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51318 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51320 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53720 - "GET /api/chat/generate/jobs/ce8184eaaf2049dfaf09c4b47b2470c1 HTTP/1.1" 200 OK
+INFO:     Started server process [19148]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8101 (Press CTRL+C to quit)
+INFO:     127.0.0.1:53737 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53739 - "GET /api/debug/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53741 - "GET /api/chat/generate/jobs/active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53744 - "POST /api/chat/generate/jobs HTTP/1.1" 200 OK
+[DEBUG] node=context start
+[DEBUG] node=context done duration_ms=17.36
+[DEBUG] node=memory_planner start
+[DEBUG] node=persona_habit_retrieval start
+[DEBUG] node=persona_habit_retrieval done duration_ms=0.24
+[DEBUG] node=turn_interpreter start
+[DEBUG] node=user_mem_recognition start
+INFO:     127.0.0.1:53746 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53748 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53750 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53752 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53757 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+[DEBUG] node=user_mem_recognition done duration_ms=4543.8
+INFO:     127.0.0.1:53759 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53761 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+[DEBUG] node=turn_interpreter done duration_ms=7018.32
+[DEBUG] node=memory_planner done duration_ms=7246.62
+[DEBUG] node=self_emotion start
+[DEBUG] node=guidance start[DEBUG] node=memory_retrieval start
+
+[DEBUG] node=guidance done duration_ms=3.71
+[DEBUG] node=memory_retrieval done duration_ms=14.55
+INFO:     127.0.0.1:53763 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53765 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+[workflow-debug] self_emotion update
+{
+  "events": [
+    {
+      "event": "日常分享",
+      "impact": 0.2,
+      "reason": "对方在互报姓名后，主动发起关于“相识过程”的追溯性提问。虽然关系尚浅，但对方表现出对建立共同记忆的兴趣，这种被关注的感觉带来了轻微的愉悦和期待，符合高温暖度和敏感度的特质。"
+    }
+  ],
+  "self_emotion_state": {
+    "mood": "放松",
+    "mood_intensity": 65,
+    "energy": 60,
+    "dimensions": [
+      {
+        "name": "好奇",
+        "value": 45
+      },
+      {
+        "name": "期待",
+        "value": 40
+      }
+    ],
+    "reason": "对方对‘怎么认识’的提问显示出对互动的持续兴趣，作为高温暖度人格，这种被接纳和探究的信号提升了愉悦感（强度微升）和期待感。时间间隔约12分钟，情绪保持延续并略有增强，未出现大幅波动。"
+  }
+}
+[/workflow-debug]
+[DEBUG] node=self_emotion done duration_ms=2408.61
+[DEBUG] node=response_composer start
+INFO:     127.0.0.1:53767 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53769 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53771 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53773 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53775 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53777 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+[workflow-debug] response_composer
+{
+  "plan": {
+    "goal": "自然回应关于相识过程的提问，保持轻松闲聊氛围，不刻意编造记忆，顺势引导对方分享视角。",
+    "structure": [
+      "承认记忆模糊或具体细节记不清",
+      "给出一个模糊但合理的背景（如网友/群聊/推荐）",
+      "反问对方印象"
+    ],
+    "topic_plan": [
+      "相识背景",
+      "对方的记忆"
+    ],
+    "length_plan": {
+      "sentence_count": 2,
+      "char_budget": 20,
+      "allow_filler_only": true,
+      "allow_double_text": false,
+      "rhythm_note": "短句为主，留白给对话"
+    },
+    "candidate_directives": [
+      {
+        "candidate_index": 0,
+        "angle": "具体建议",
+        "length_hint": "短",
+        "segment_count": 1,
+        "instruction": "直接给出一个具体的、模糊的相识场景（比如朋友拉群），并反问对方。"
+      },
+      {
+        "candidate_index": 1,
+        "angle": "情绪回应",
+        "length_hint": "短",
+        "segment_count": 1,
+        "instruction": "承认自己记不太清具体细节，表达一种“虽然忘了但记得挺开心”的感觉，语气柔和。"
+      },
+      {
+        "candidate_index": 2,
+        "angle": "自我暴露",
+        "length_hint": "短",
+        "segment_count": 1,
+        "instruction": "坦白自己是个记性不好的人，把话题抛回给对方，看TA怎么记得。"
+      }
+    ],
+    "constraints": [
+      "严禁编造具体日期、地点或第三方人物名字",
+      "严禁使用“亲爱的”“宝”等亲密称呼",
+      "严禁使用长句或解释性文字",
+      "符合INFP温和、慢热、不戏剧化的表达风格"
+    ],
+    "debug": {
+      "strategy": [
+        "模糊化处理记忆点，降低被追问细节的风险",
+        "利用反问转移焦点，让对方多说，自己少说",
+        "保持“认识”阶段的礼貌距离，不急于拉近"
+      ],
+      "memory_usage": [
+        "仅使用对方名字“李利”（候选3）",
+        "未使用其他未提供的背景信息"
+      ],
+      "persona_expression": [
+        "使用“哈哈”“啊这”等缓冲词",
+        "语气轻柔，不强势",
+        "避免过度热情"
+      ],
+      "emotion_expression": [
+        "对方情绪为好奇，回应以轻松、坦诚为主",
+        "不压抑对方好奇，也不过度满足"
+      ]
+    }
+  },
+  "candidates": [
+    "哈哈有点记不清了，好像是朋友拉的那个群？你印象里咋回事",
+    "啊这，我脑子有点钝，具体细节真想不起来了，只记得当时聊得挺开心",
+    "我记性不太好，这块是空白的，李利你是怎么记得的"
+  ]
+}
+[/workflow-debug]
+[DEBUG] node=response_composer done duration_ms=6012.84
+[DEBUG] node=critic start
+INFO:     127.0.0.1:53779 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53781 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53783 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+[workflow-debug] critic analysis
+{
+  "reviews": [
+    {
+      "candidate_index": 0,
+      "ai_taste": 2.0,
+      "interview_taste": 2.0,
+      "empathy_excess": 1.0,
+      "naturalness": 9.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    },
+    {
+      "candidate_index": 1,
+      "ai_taste": 3.0,
+      "interview_taste": 2.0,
+      "empathy_excess": 1.0,
+      "naturalness": 8.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    },
+    {
+      "candidate_index": 2,
+      "ai_taste": 2.0,
+      "interview_taste": 2.0,
+      "empathy_excess": 1.0,
+      "naturalness": 9.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    }
+  ],
+  "passed": true
+}
+[/workflow-debug]
+[DEBUG] node=critic done duration_ms=2984.93
+[DEBUG] node=critic_complete start
+[DEBUG] node=critic_complete done duration_ms=0.22
+[DEBUG] node=save start
+[DEBUG] node=save done duration_ms=0.16
+INFO:     127.0.0.1:53785 - "GET /api/chat/generate/jobs/f2a5a005e8244ba49ec8daf2466ac8c3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53789 - "POST /api/chat/confirm HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55862 - "POST /api/chat/generate/jobs HTTP/1.1" 200 OK
+[DEBUG] node=context start
+[DEBUG] node=context done duration_ms=18.11
+[DEBUG] node=memory_planner start
+[DEBUG] node=persona_habit_retrieval start
+[DEBUG] node=persona_habit_retrieval done duration_ms=0.22
+[DEBUG] node=turn_interpreter start
+[DEBUG] node=user_mem_recognition start
+INFO:     127.0.0.1:55867 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55869 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+[DEBUG] node=user_mem_recognition done duration_ms=1854.13
+INFO:     127.0.0.1:55871 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55873 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55875 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55877 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+[DEBUG] node=turn_interpreter done duration_ms=6085.1
+INFO:     127.0.0.1:55880 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+[DEBUG] node=memory_planner done duration_ms=6696.72
+[DEBUG] node=guidance start[DEBUG] node=self_emotion start
+
+[DEBUG] node=memory_retrieval start
+[DEBUG] node=guidance done duration_ms=9.4
+[DEBUG] node=memory_retrieval done duration_ms=10.18
+INFO:     127.0.0.1:55882 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55884 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+[workflow-debug] self_emotion update
+{
+  "events": [
+    {
+      "event": "日常分享",
+      "impact": 0.3,
+      "reason": "对方澄清了相识背景（同学群），这种共同记忆的确认有助于消除之前的模糊感，带来轻微的安心和亲近感，符合高温暖度人格对建立连接的兴趣。"
+    }
+  ],
+  "self_emotion_state": {
+    "mood": "放松",
+    "mood_intensity": 70,
+    "energy": 62,
+    "dimensions": [
+      {
+        "name": "安心",
+        "value": 55
+      },
+      {
+        "name": "好奇",
+        "value": 50
+      }
+    ],
+    "reason": "上一轮因好奇而略有波动，本轮对方澄清背景消除了不确定性，带来安心感；作为慢变量，mood保持放松，强度随共同认知建立略有提升，能量随互动自然微调。"
+  }
+}
+[/workflow-debug]
+[DEBUG] node=self_emotion done duration_ms=2284.18
+[DEBUG] node=response_composer start
+INFO:     127.0.0.1:55886 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55888 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55890 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55892 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55894 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55896 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55898 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55900 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55902 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55904 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55906 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55908 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+[workflow-debug] response_composer
+{
+  "plan": {
+    "goal": "确认对方提供的背景信息，保持轻松自然的闲聊氛围，不急于推进关系。",
+    "structure": [
+      "承接话题（确认同学群）",
+      "轻微延伸或反问（可选）"
+    ],
+    "topic_plan": [
+      "同学群相识",
+      "彼此印象或后续联系"
+    ],
+    "length_plan": {
+      "sentence_count": 2,
+      "char_budget": 20,
+      "allow_filler_only": true,
+      "allow_double_text": false,
+      "rhythm_note": "短句，口语化"
+    },
+    "candidate_directives": [
+      {
+        "candidate_index": 0,
+        "angle": "轻反问",
+        "length_hint": "短",
+        "segment_count": 1,
+        "instruction": "用轻松语气确认，顺势问对方是否也记得那个群。"
+      },
+      {
+        "candidate_index": 1,
+        "angle": "自我暴露",
+        "length_hint": "短",
+        "segment_count": 1,
+        "instruction": "承认自己记性不好，表达一种随意的态度，拉近距离但不沉重。"
+      },
+      {
+        "candidate_index": 2,
+        "angle": "话题延展",
+        "length_hint": "短",
+        "segment_count": 1,
+        "instruction": "顺着同学群的话题，随口问一句对方现在还在那个群吗，保持低压力互动。"
+      }
+    ],
+    "constraints": [
+      "语气自然，避免客服腔",
+      "不使用夸张emoji",
+      "不编造具体群名或细节",
+      "符合INFP慢热、温和特质"
+    ],
+    "debug": {
+      "strategy": [
+        "确认事实",
+        "保持低压力互动"
+      ],
+      "memory_usage": [
+        "未使用具体记忆，仅基于当前对话上下文"
+      ],
+      "persona_expression": [
+        "使用“啊这”“哈哈”等缓冲词",
+        "语气轻柔，不主动推进关系"
+      ],
+      "emotion_expression": [
+        "轻松，略带好奇"
+      ]
+    }
+  },
+  "candidates": [
+    "啊这，那确实有点久远了哈哈",
+    "哈哈我也记得有个同学群，具体啥名记不清了",
+    "哦对，那你还在那个群里潜水吗"
+  ]
+}
+[/workflow-debug]
+[DEBUG] node=response_composer done duration_ms=13616.67
+[DEBUG] node=critic start
+INFO:     127.0.0.1:55910 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55912 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55914 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55916 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+[workflow-debug] critic analysis
+{
+  "reviews": [
+    {
+      "candidate_index": 0,
+      "ai_taste": 2.0,
+      "interview_taste": 1.0,
+      "empathy_excess": 1.0,
+      "naturalness": 9.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    },
+    {
+      "candidate_index": 1,
+      "ai_taste": 3.0,
+      "interview_taste": 1.0,
+      "empathy_excess": 1.0,
+      "naturalness": 7.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    },
+    {
+      "candidate_index": 2,
+      "ai_taste": 3.0,
+      "interview_taste": 1.0,
+      "empathy_excess": 1.0,
+      "naturalness": 8.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    }
+  ],
+  "passed": true
+}
+[/workflow-debug]
+[DEBUG] node=critic done duration_ms=3640.35
+[DEBUG] node=critic_complete start
+[DEBUG] node=critic_complete done duration_ms=0.27
+[DEBUG] node=save start
+[DEBUG] node=save done duration_ms=0.24
+INFO:     127.0.0.1:55918 - "GET /api/chat/generate/jobs/0c1400b45982413581c3039bc42b4e80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55929 - "POST /api/chat/confirm HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [19148]
+INFO:     Started server process [18840]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8101 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52843 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52846 - "GET /api/debug/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52850 - "GET /api/chat/generate/jobs/active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61013 - "POST /api/chat/generate/jobs HTTP/1.1" 200 OK
+[DEBUG] node=context start
+[DEBUG] node=context done duration_ms=40.17
+[DEBUG] node=memory_planner start
+[DEBUG] node=persona_habit_retrieval start
+[DEBUG] node=persona_habit_retrieval done duration_ms=0.46
+[DEBUG] node=turn_interpreter start
+[DEBUG] node=user_mem_recognition start
+INFO:     127.0.0.1:61015 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61017 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61019 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61021 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61023 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+[DEBUG] node=user_mem_recognition done duration_ms=5043.42
+INFO:     127.0.0.1:61028 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61030 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61032 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+[DEBUG] node=turn_interpreter done duration_ms=8616.65
+INFO:     127.0.0.1:61034 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61036 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61038 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61040 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61042 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61044 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61046 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61048 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+[DEBUG] node=memory_planner done duration_ms=16695.45
+[DEBUG] node=memory_retrieval start
+[DEBUG] node=guidance start[DEBUG] node=self_emotion start
+
+[DEBUG] node=guidance done duration_ms=8.01
+[DEBUG] node=memory_retrieval done duration_ms=11.94
+INFO:     127.0.0.1:61051 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61053 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61055 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+[workflow-debug] self_emotion update
+{
+  "events": [
+    {
+      "event": "日常分享",
+      "impact": 0.25,
+      "reason": "对方澄清了具体的班级群名称（1301），这是对上一轮“同学群”模糊记忆的进一步确认和细化。对于高敏感度（0.82）和温暖度（0.9）的INFP人格来说，这种细节的补充增强了互动的真实感和连接的确定性，带来轻微的安心和愉悦。"
+    }
+  ],
+  "self_emotion_state": {
+    "mood": "放松",
+    "mood_intensity": 72,
+    "energy": 60,
+    "dimensions": [],
+    "reason": "上一轮状态为放松（70/62），本次对话为平静的事实确认，无强烈情绪刺激。时间间隔约26分钟，情绪基本延续。因对方提供了具体的背景信息（1301班级群），确认了共同话题的真实性，mood_intensity略微上升至72，但整体仍保持在放松基线附近。由于缺乏新的情感维度触发点（如惊喜、焦虑等），短期维度趋于平稳，故不输出新的显著维度。"
+  }
+}
+[/workflow-debug]
+[DEBUG] node=self_emotion done duration_ms=3843.03
+[DEBUG] node=response_composer start
+INFO:     127.0.0.1:61057 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61059 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61061 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61063 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61065 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61067 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61069 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61071 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61073 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61075 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61077 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61079 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61081 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61083 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61085 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61087 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61089 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61091 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61093 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61095 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61097 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61099 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61101 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61103 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61105 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61107 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61109 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61111 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61113 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61115 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61117 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61119 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61121 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61123 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61125 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61127 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61129 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61131 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61133 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61135 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61137 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61139 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+[workflow-debug] response_composer
+{
+  "plan": {
+    "goal": "确认对方提供的具体班级信息，通过询问对方在群里的角色或关系来延续话题，同时保持轻松自然的聊天节奏。",
+    "structure": [
+      "简短回应，表示对具体信息的知晓和认同",
+      "顺势提问，了解对方在班级群中的情况或关系，为后续闲聊做铺垫"
+    ],
+    "topic_plan": [
+      "延续关于大学班级群的话题",
+      "轻微跳转到对方个人在班级中的经历或人际关系",
+      "不结束话题，保持对话的开放性"
+    ],
+    "length_plan": {
+      "sentence_count": 2,
+      "char_budget": 25,
+      "allow_filler_only": false,
+      "allow_double_text": false,
+      "rhythm_note": "先肯定事实，再自然抛出一个小问题，节奏轻快"
+    },
+    "candidate_directives": [
+      {
+        "candidate_index": 0,
+        "angle": "具体建议",
+        "length_hint": "短",
+        "segment_count": 2,
+        "instruction": "直接询问对方在群里是不是熟人很多，或者是不是班委，以此展开话题。"
+      },
+      {
+        "candidate_index": 1,
+        "angle": "自我暴露",
+        "length_hint": "中",
+        "segment_count": 2,
+        "instruction": "先说自己好像记得这个号，然后问对方当时在班里活跃吗，制造一点共同回忆的错觉。"
+      },
+      {
+        "candidate_index": 2,
+        "angle": "情绪回应",
+        "length_hint": "短",
+        "segment_count": 1,
+        "instruction": "用轻松的语气表示“原来是这样”，然后问对方是不是老同学，引导对方多说话。"
+      }
+    ],
+    "constraints": [
+      "保持 INFP 温和、慢热的性格，不要过于热情或查户口",
+      "使用口语化表达，避免书面语",
+      "不使用句号，句尾直接结束或加语气词",
+      "不连续使用多个 emoji"
+    ],
+    "debug": {
+      "strategy": [
+        "确认信息",
+        "引导分享",
+        "保持轻松"
+      ],
+      "memory_usage": [
+        "用户名字李利",
+        "同学群认识"
+      ],
+      "persona_expression": [
+        "温和",
+        "慢热",
+        "口语化"
+      ],
+      "emotion_expression": [
+        "平静",
+        "放松"
+      ]
+    }
+  },
+  "candidates": [
+    "原来是这样，那你们群里老同学挺多的吧",
+    "哈哈有点印象，你当时在班里活跃吗",
+    "哦对，那你是班委吗"
+  ]
+}
+[/workflow-debug]
+[DEBUG] node=response_composer done duration_ms=46090.82
+[DEBUG] node=critic start
+INFO:     127.0.0.1:65210 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65212 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+[workflow-debug] critic analysis
+{
+  "reviews": [
+    {
+      "candidate_index": 0,
+      "ai_taste": 2.0,
+      "interview_taste": 3.0,
+      "empathy_excess": 1.0,
+      "naturalness": 8.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    },
+    {
+      "candidate_index": 1,
+      "ai_taste": 3.0,
+      "interview_taste": 4.0,
+      "empathy_excess": 1.0,
+      "naturalness": 7.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    },
+    {
+      "candidate_index": 2,
+      "ai_taste": 4.0,
+      "interview_taste": 5.0,
+      "empathy_excess": 1.0,
+      "naturalness": 6.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    }
+  ],
+  "passed": true
+}
+[/workflow-debug]
+[DEBUG] node=critic done duration_ms=4421.35
+[DEBUG] node=critic_complete start
+[DEBUG] node=critic_complete done duration_ms=0.17
+[DEBUG] node=save start
+[DEBUG] node=save done duration_ms=0.15
+INFO:     127.0.0.1:65215 - "GET /api/chat/generate/jobs/25cca307adef44afb57eb861e795d750 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52602 - "POST /api/chat/confirm HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Started server process [27148]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8101 (Press CTRL+C to quit)
+INFO:     127.0.0.1:54276 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54278 - "GET /api/debug/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54280 - "GET /api/chat/generate/jobs/active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54291 - "GET /debug HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54293 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54295 - "GET /api/debug/generations?contact_id=1&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54297 - "GET /api/debug/generations/5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58229 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58232 - "GET /api/debug/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58237 - "GET /api/chat/generate/jobs/active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58257 - "GET /debug HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58259 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58261 - "GET /api/debug/generations?contact_id=1&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58263 - "GET /api/debug/generations/5 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Started server process [27296]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8101 (Press CTRL+C to quit)
+INFO:     127.0.0.1:53942 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53944 - "GET /api/debug/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53946 - "GET /api/chat/generate/jobs/active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53961 - "POST /api/chat/generate/jobs HTTP/1.1" 200 OK
+[DEBUG] node=context start
+[DEBUG] node=context done duration_ms=45.42
+[DEBUG] node=memory_planner start
+[DEBUG] node=persona_habit_retrieval start
+[DEBUG] node=persona_habit_retrieval done duration_ms=0.26
+[DEBUG] node=turn_interpreter start
+[DEBUG] node=user_mem_recognition start
+INFO:     127.0.0.1:53963 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53965 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53967 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53970 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53972 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+[DEBUG] node=user_mem_recognition done duration_ms=4819.65
+INFO:     127.0.0.1:53977 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53979 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+[DEBUG] node=turn_interpreter done duration_ms=6888.71
+INFO:     127.0.0.1:53981 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+[DEBUG] node=memory_planner done duration_ms=8338.47
+[DEBUG] node=guidance start
+[DEBUG] node=self_emotion start
+[DEBUG] node=memory_retrieval start
+[DEBUG] node=guidance done duration_ms=4.93
+[DEBUG] node=memory_retrieval done duration_ms=7.01
+INFO:     127.0.0.1:53983 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53985 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+[workflow-debug] self_emotion update
+{
+  "events": [
+    {
+      "event": "日常分享",
+      "impact": 0.15,
+      "reason": "对方确认了具体的班级群名称（大学1301班级群），这是对上一轮模糊记忆的精准补充。虽然对方情绪平静，但这种细节的确认增强了互动的真实感和连接的确定性，对于高敏感度和温暖度的人格来说，这是一种温和的正向反馈，带来轻微的安心感。"
+    }
+  ],
+  "self_emotion_state": {
+    "mood": "放松",
+    "mood_intensity": 70,
+    "energy": 58,
+    "dimensions": [
+      {
+        "name": "安心",
+        "value": 60
+      },
+      {
+        "name": "好奇",
+        "value": 45
+      }
+    ],
+    "reason": "对方提供了具体的背景信息（1301班级群），消除了之前的模糊感，带来了轻微的安心。由于间隔约30分钟，且缺乏新的强刺激，上一轮的高强度好奇和期待随时间自然回落，整体状态回归到基线附近的放松状态。"
+  }
+}
+[/workflow-debug]
+[DEBUG] node=self_emotion done duration_ms=2115.88
+[DEBUG] node=response_composer start
+INFO:     127.0.0.1:53987 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53989 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53991 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53993 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53995 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53997 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53999 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54001 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54003 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54005 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54007 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54009 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54011 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54013 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54015 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54017 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54019 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54021 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54023 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54025 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54027 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54029 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54031 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54033 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54035 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54037 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54039 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54041 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54043 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54045 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54047 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54049 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54051 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54053 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54055 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54057 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54059 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54061 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54063 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54065 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54067 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54069 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54071 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54073 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54075 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54077 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54079 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54081 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54083 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54085 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54087 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54089 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54091 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54093 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54095 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54097 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54099 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54101 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54103 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54105 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54107 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54109 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54111 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54113 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54118 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54121 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54123 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54125 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54127 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54129 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54131 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54133 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54135 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54137 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54139 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54141 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54143 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54145 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54147 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54149 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54151 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54153 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54155 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54157 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54159 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54161 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54163 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54165 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54167 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54169 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54171 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54173 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54175 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54178 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54180 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54182 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54184 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54186 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54188 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54191 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54195 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54197 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54199 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54206 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54208 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54210 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54212 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54214 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54218 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54220 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54222 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54224 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54226 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54229 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54232 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54234 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54236 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54238 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54240 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54242 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54416 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54418 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54420 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54422 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54424 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54426 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54428 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54430 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54432 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54434 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54436 - "GET /api/chat/generate/jobs/ac4b316952304e589715a723cfd9faf6 HTTP/1.1" 200 OK
+INFO:     Started server process [24060]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8101 (Press CTRL+C to quit)
+INFO:     127.0.0.1:57157 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57159 - "GET /api/debug/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57161 - "GET /api/chat/generate/jobs/active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55587 - "POST /api/chat/generate/jobs HTTP/1.1" 200 OK
+[DEBUG] node=context start
+[DEBUG] node=context done duration_ms=17.25
+[DEBUG] node=memory_planner start
+[DEBUG] node=persona_habit_retrieval start
+[DEBUG] node=persona_habit_retrieval done duration_ms=0.48
+[DEBUG] node=turn_interpreter start
+[DEBUG] node=user_mem_recognition start
+INFO:     127.0.0.1:55589 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55591 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55595 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55597 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55602 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55604 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55606 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55608 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55610 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55612 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55614 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55616 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55618 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55620 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55622 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55624 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55626 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55628 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+[DEBUG] node=user_mem_recognition done duration_ms=19162.9
+INFO:     127.0.0.1:55630 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55632 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55634 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55636 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55638 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55640 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55642 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55644 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55646 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55648 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55650 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55652 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55656 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55658 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55661 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55663 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55665 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55667 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55669 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55671 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55673 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55675 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55677 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55680 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55682 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55684 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55686 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55688 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55690 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55692 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55694 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55696 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55698 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55700 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55702 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55704 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55706 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55708 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+[DEBUG] node=turn_interpreter done duration_ms=61204.57
+[DEBUG] node=memory_planner done duration_ms=61492.98
+[DEBUG] node=guidance start
+[DEBUG] node=self_emotion start
+[DEBUG] node=memory_retrieval start
+[DEBUG] node=guidance done duration_ms=17.58
+[DEBUG] node=memory_retrieval done duration_ms=15.07
+INFO:     127.0.0.1:55711 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55713 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55715 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55717 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55719 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55721 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55724 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55726 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55728 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55730 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55732 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55734 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+[workflow-debug] self_emotion update
+{
+  "events": [
+    {
+      "event": "日常分享",
+      "impact": 0.2,
+      "reason": "对方澄清了具体的班级群名称（1301），这是对上一轮“同学群”模糊记忆的进一步确认和细化。对于高敏感度（0.82）和温暖度（0.9）的INFP人格来说，这种细节的补充增强了互动的真实感和连接的确定性，带来轻微的安心和愉悦。"
+    }
+  ],
+  "self_emotion_state": {
+    "mood": "放松",
+    "mood_intensity": 70,
+    "energy": 58,
+    "dimensions": [
+      {
+        "name": "安心",
+        "value": 50
+      },
+      {
+        "name": "好奇",
+        "value": 45
+      }
+    ],
+    "reason": "时间间隔约36分钟，情绪随时间自然回落。对方确认群名带来轻微安心感，但互动仍局限于事实确认，无强烈情感刺激，整体保持放松基调，强度和维度数值较上一轮小幅衰减。"
+  }
+}
+[/workflow-debug]
+[DEBUG] node=self_emotion done duration_ms=13174.02
+[DEBUG] node=response_composer start
+INFO:     127.0.0.1:55736 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55738 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55740 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55742 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55745 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55747 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55749 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55751 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55753 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55755 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55757 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55759 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55761 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55763 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55765 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55767 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55769 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55771 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55773 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55775 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55777 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55779 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55781 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55783 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55785 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55787 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55789 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55791 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55793 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55795 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55797 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55799 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55801 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55803 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55805 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55807 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55809 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55811 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55813 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55815 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55817 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55819 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55827 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55829 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55831 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55833 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55835 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55837 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+[workflow-debug] response_composer
+{
+  "plan": {
+    "goal": "接住对方确认群名的信息，顺势开启关于大学回忆或同学群氛围的轻松闲聊，避免让话题终结在“是/否”的事实确认上。",
+    "structure": [
+      "第一句：对“是我们群，好吧！”的情绪/语气做简短反馈（如：哈哈/确实/懂了）。",
+      "第二句：基于“1301”这个信息点，抛出一个关于老同学或群现状的开放式但轻松的问题。"
+    ],
+    "topic_plan": [
+      "延续“大学/同学”话题。",
+      "轻微跳转到“群现状”或“同学关系”，试探对方是否愿意分享更多校园回忆。"
+    ],
+    "length_plan": {
+      "sentence_count": 2,
+      "char_budget": 30,
+      "allow_filler_only": false,
+      "allow_double_text": true,
+      "rhythm_note": "前短后长，第二句自然收尾留白。"
+    },
+    "candidate_directives": [
+      {
+        "candidate_index": 0,
+        "angle": "轻反问",
+        "length_hint": "短",
+        "segment_count": 2,
+        "instruction": "第一句回应语气，第二句问群里还有没有老同学在活跃。"
+      },
+      {
+        "candidate_index": 1,
+        "angle": "自我暴露",
+        "length_hint": "中",
+        "segment_count": 2,
+        "instruction": "第一句承认记不清了，第二句说自己的班级群现在很死，问对方的群怎么样。"
+      },
+      {
+        "candidate_index": 2,
+        "angle": "具体建议",
+        "length_hint": "短",
+        "segment_count": 2,
+        "instruction": "第一句感叹1301，第二句问有没有什么难忘的同学或趣事。"
+      }
+    ],
+    "constraints": [
+      "不要使用“你好”“谢谢”等客服用语。",
+      "不要连续发问超过2个。",
+      "不要过度解读“好吧！”的情绪，不要表现出被冒犯或过度关心。",
+      "保持口语化，避免书面语。"
+    ]
+  },
+  "planning_notes": {
+    "strategy": [
+      "先回应“好吧！”这种略带无奈或强调的语气，表示理解。",
+      "顺着“1301班级群”这个具体信息，抛出一个低门槛的闲聊切入点（如：老同学还在不在、群里还活跃吗、有没有什么名场面）。",
+      "保持轻松随意的态度，不表现出查户口式的追问。"
+    ],
+    "memory_usage": [
+      "使用对方名字“李利”（可选，视语气自然度而定，目前阶段直呼其名略显生硬，暂不用）。",
+      "使用共同记忆“大学1301班级群”。",
+      "不强行挖掘未提及的个人细节。"
+    ],
+    "persona_expression": [
+      "INFP温和慢热，语气轻柔。",
+      "使用“哈哈”“嗯”等缓冲词。",
+      "句尾不加句号，偶尔用emoji（如🙂或😂）调节气氛，频率低。",
+      "不主动提“林澈”名字，不卑不亢。"
+    ],
+    "emotion_expression": [
+      "通过“哈哈”和轻松的提问语调体现放松和好奇。",
+      "不表现出过度的热情或冷淡，保持“认识”阶段的舒适距离。"
+    ]
+  },
+  "candidates": [
+    "哈哈行吧\n那群里还有老同学在活跃吗？",
+    "啊这，我也记不太清具体群名了\n我那个班群早就死透了，你们呢？",
+    "1301\n有没有那种至今还记得名字的同学😂"
+  ]
+}
+[/workflow-debug]
+[DEBUG] node=response_composer done duration_ms=52008.17
+[DEBUG] node=critic start
+INFO:     127.0.0.1:55839 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55841 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55843 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55845 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55847 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55849 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55851 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55853 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55855 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55857 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55859 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55862 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55867 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55869 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55871 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55873 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55875 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55877 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55879 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55881 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55883 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55885 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55887 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55889 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55891 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55893 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55895 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55897 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62595 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+[workflow-debug] critic analysis
+{
+  "reviews": [
+    {
+      "candidate_index": 0,
+      "ai_taste": 2.0,
+      "interview_taste": 3.0,
+      "empathy_excess": 1.0,
+      "naturalness": 8.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    },
+    {
+      "candidate_index": 1,
+      "ai_taste": 3.0,
+      "interview_taste": 4.0,
+      "empathy_excess": 1.0,
+      "naturalness": 7.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    },
+    {
+      "candidate_index": 2,
+      "ai_taste": 2.0,
+      "interview_taste": 2.0,
+      "empathy_excess": 1.0,
+      "naturalness": 8.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    }
+  ],
+  "passed": true
+}
+[/workflow-debug]
+[DEBUG] node=critic done duration_ms=37226.35
+[DEBUG] node=critic_complete start
+[DEBUG] node=critic_complete done duration_ms=0.21
+[DEBUG] node=save start
+[DEBUG] node=save done duration_ms=0.19
+INFO:     127.0.0.1:62597 - "GET /api/chat/generate/jobs/8781273d311947ddb136b48dc7bdd1d1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50102 - "POST /api/chat/confirm HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50106 - "POST /api/chat/generate/jobs HTTP/1.1" 200 OK
+[DEBUG] node=context start
+[DEBUG] node=context done duration_ms=38.96
+[DEBUG] node=memory_planner start
+[DEBUG] node=persona_habit_retrieval start
+[DEBUG] node=persona_habit_retrieval done duration_ms=0.5
+[DEBUG] node=turn_interpreter start
+[DEBUG] node=user_mem_recognition start
+INFO:     127.0.0.1:50111 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50113 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+[DEBUG] node=user_mem_recognition done duration_ms=1397.79
+INFO:     127.0.0.1:50115 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50117 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50119 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+[DEBUG] node=turn_interpreter done duration_ms=4627.37
+[DEBUG] node=memory_planner done duration_ms=4659.26
+[DEBUG] node=memory_retrieval start[DEBUG] node=self_emotion start[DEBUG] node=guidance start
+
+
+[DEBUG] node=guidance done duration_ms=1.48
+[DEBUG] node=memory_retrieval done duration_ms=10.26
+INFO:     127.0.0.1:50121 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50123 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+[workflow-debug] self_emotion update
+{
+  "events": [
+    {
+      "event": "日常分享",
+      "impact": 0.3,
+      "reason": "对方在刚确认了具体的“大学1301班级群”后，突然反问“我们是同学吗？”，这种逻辑上的反复和不确定性让高敏感度（0.82）的INFP感到轻微的困惑和好奇，打破了之前的安心感。"
+    }
+  ],
+  "self_emotion_state": {
+    "mood": "放松",
+    "mood_intensity": 65,
+    "energy": 55,
+    "dimensions": [
+      {
+        "name": "好奇",
+        "value": 60
+      },
+      {
+        "name": "安心",
+        "value": 35
+      }
+    ],
+    "reason": "上一轮因确认群名带来的安心感（50）因对方的反问而显著降低（35），但整体基调仍保持放松。好奇维度因对方的疑问而上升，驱动进一步的理解和互动。"
+  }
+}
+[/workflow-debug]
+[DEBUG] node=self_emotion done duration_ms=1940.8
+[DEBUG] node=response_composer start
+INFO:     127.0.0.1:50125 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50127 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50129 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50131 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50134 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50136 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50138 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50140 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50142 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50144 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50146 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50148 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50150 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50152 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50154 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50156 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50158 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50160 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50162 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50164 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50166 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50168 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50170 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50172 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50174 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50176 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50178 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50180 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50182 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50184 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50186 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50188 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50190 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50192 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50194 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50196 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50198 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50200 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64601 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64603 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64606 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64608 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64610 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64612 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64614 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64616 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64618 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64620 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64622 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64624 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64626 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64628 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64630 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64632 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64634 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64636 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62823 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62825 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62827 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62829 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62831 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62833 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62835 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62837 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62839 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62841 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62843 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62845 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62847 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62849 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62851 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62853 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62855 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62857 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62859 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62861 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62863 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62865 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62867 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62869 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62871 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62873 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62876 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62878 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62880 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62882 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62884 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62886 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62888 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62890 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62892 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62894 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62896 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56756 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63484 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63486 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63488 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63490 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63492 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63495 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63498 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63500 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63502 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63504 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63506 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63509 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63511 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63513 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63517 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63519 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63521 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63523 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63525 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63527 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63529 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63531 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63533 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63536 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63538 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63540 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63542 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63544 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63546 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63548 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63550 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63552 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63554 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63556 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63558 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63560 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63562 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63564 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63566 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63568 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63570 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63572 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63574 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63576 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63579 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63582 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63584 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63586 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63588 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63591 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63593 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63595 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63597 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63599 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63601 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63603 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63605 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63607 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63609 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63611 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63613 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63615 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63617 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63619 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63621 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63623 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63625 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63627 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63630 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63632 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63634 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63636 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63638 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63640 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63645 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63648 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63650 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63652 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63654 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63656 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63658 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63660 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63662 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63664 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63666 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63668 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63670 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63672 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63674 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63676 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63678 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63680 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63682 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63684 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63686 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63689 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63692 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63694 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63696 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63698 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63700 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63702 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63704 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63706 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63708 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63710 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63712 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63714 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63716 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63718 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63720 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63722 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63725 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63727 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63729 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63732 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63734 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63736 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63738 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61029 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61032 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61034 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61036 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61039 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61041 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61044 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61046 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61048 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61050 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61052 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61054 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61252 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61254 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53166 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53168 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53170 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53176 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53178 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53180 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53183 - "GET /api/chat/generate/jobs/64e9d86f5265409fa79b68dc6c81cbe0 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [24060]

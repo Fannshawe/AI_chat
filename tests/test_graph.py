@@ -95,7 +95,9 @@ class GraphPipelineTests(unittest.TestCase):
                 "priority": 4, "top_k": 3, "time_range": "all", "reason": "当前话题相关",
             }]},
             "response_composer": {
-                "goal": "自然回应", "structure": ["一句回应"],
+                "goal": "自然回应", "strategy": ["简短回应"],
+                "structure": ["一句回应"],
+                "memory_usage": [], "persona_expression": ["简洁"], "emotion_expression": [],
                 "topic_plan": ["延续当前话题"],
                 "length_plan": {
                     "sentence_count": 1, "char_budget": 15,
@@ -108,10 +110,6 @@ class GraphPipelineTests(unittest.TestCase):
                 ],
                 "constraints": ["不追问"],
                 "candidates": ["好呀", "可以", "听起来不错"],
-                "debug": {
-                    "strategy": ["简短回应"], "memory_usage": [],
-                    "persona_expression": ["简洁"], "emotion_expression": [],
-                },
             },
             "critic": critique(True),
             "user_mem_recognition": {
