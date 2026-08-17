@@ -1300,7 +1300,7 @@ class ChatStore:
     def _deserialize_memory_row(row: dict[str, Any]) -> dict[str, Any]:
         result = dict(row)
         result["owner_type"] = str(result.get("owner_type") or MEMORY_OWNER_CONTACT)
-        source = str(result.get("source") or ("reflection" if result["owner_type"] == MEMORY_OWNER_CONTACT else "admin"))
+        source = str(result.get("source") or ("user_mem_recognition" if result["owner_type"] == MEMORY_OWNER_CONTACT else "admin"))
         result["source"] = source
         if result.get("owner_type") == MEMORY_OWNER_CONTACT:
             result["owner_label"] = "contact"

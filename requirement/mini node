@@ -1,0 +1,7 @@
+1.合并 dialogue_composer + prompt_composer，让 dialogue_composer 直接产生 candidates ，现有 strategy、memory_usage、persona_expression、emotion_expression 更适合作为模型内部推理，不必每轮结构化输出再传给下游，但也生成用于 debug。
+2.合并 emotion + relationship 为 turn_interpreter
+3.critic + rewrite：合并一下，critic评论的时候同时给出修改后的候选词。然后再次评论。
+4.memory_planner暂时不变
+5.reflection 改为user mem recognition，与response composer 并行执行，只使用真实用户消息，和记忆库（检索记忆，避免重复），不需要已确认历史
+6.不需要Critic 的节流建议
+7.图中 self_emotion 要等 memory_retrieval 和 persona_habit_retrieval 全部完成后才运行,可以把它改为只等待前两项。guidance 的查询只需用户消息、关系阶段和对方情绪，也可在 emotion + relationship 后并行启动。

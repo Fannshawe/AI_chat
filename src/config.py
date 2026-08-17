@@ -44,17 +44,20 @@ class ModelProvider:
 
 
 AGENT_MODEL_NAMES: tuple[str, ...] = (
-    "emotion",
+    "turn_interpreter",
     "self_emotion",
-    "relationship",
     "memory_planner",
-    "dialogue_composer",
-    "prompt_composer",
-    "rewrite",
+    "response_composer",
     "critic",
-    "reflection",
+    "user_mem_recognition",
     "proactive",
 )
+
+_LEGACY_AGENT_CONFIG_ALIASES = {
+    "turn_interpreter": "emotion",
+    "response_composer": "prompt_composer",
+    "user_mem_recognition": "reflection",
+}
 
 # Runtime overrides applied by the admin UI (model name and thinking toggle).
 # Populated via apply_agent_overrides(); never written to .env.
@@ -160,13 +163,20 @@ def get_agent_model_provider(agent_name: str, provider_name: str = "default") ->
         raise KeyError(f"未知 Agent: {agent_name}")
 
     prefix = _agent_env_prefix(normalized)
-    model = _read_env(f"{prefix}_MODEL")
-    base_url = _read_env(f"{prefix}_BASE_URL")
-    api_key = _read_env(f"{prefix}_API_KEY")
-    enable_thinking = _read_bool_env(f"{prefix}_ENABLE_THINKING", default=False)
+    legacy_name = _LEGACY_AGENT_CONFIG_ALIASES.get(normalized)
+    legacy_prefix = _agent_env_prefix(legacy_name) if legacy_name else ""
+    model = _read_env(f"{prefix}_MODEL") or _read_env(f"{legacy_prefix}_MODEL")
+    base_url = _read_env(f"{prefix}_BASE_URL") or _read_env(f"{legacy_prefix}_BASE_URL")
+    api_key = _read_env(f"{prefix}_API_KEY") or _read_env(f"{legacy_prefix}_API_KEY")
+    thinking_value = _read_env(f"{prefix}_ENABLE_THINKING")
+    enable_thinking = (
+        thinking_value.lower() in {"1", "true", "yes", "on"}
+        if thinking_value is not None
+        else _read_bool_env(f"{legacy_prefix}_ENABLE_THINKING", default=False)
+    )
 
     # Apply runtime overrides from the admin UI (model name / enable_thinking).
-    override = _agent_overrides.get(normalized, {})
+    override = _agent_overrides.get(normalized) or _agent_overrides.get(legacy_name or "", {})
     if override.get("model"):
         model = override["model"]
     if "enable_thinking" in override:

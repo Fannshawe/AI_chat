@@ -208,11 +208,10 @@ class WorkflowState(_WorkflowStateRequired, total=False):
     primary_memories: list[dict[str, Any]]
     background_memories: list[dict[str, Any]]
     guidance_chunks: list[dict[str, Any]]
-    dialogue_composition: dict[str, Any]
+    response_composition: dict[str, Any]
     critic_attempts: int
     critic_analysis: dict[str, Any]
-    fallback_candidates: list[str]
-    reflection_analysis: dict[str, Any]
+    user_memory_recognition: dict[str, Any]
     strategy: str
     generation_id: int
     debug_trace: Annotated[list[dict[str, Any]], operator.add]
@@ -348,29 +347,44 @@ def node_load_context(state: WorkflowState) -> dict[str, Any]:
         "provider_name": state.get("provider_name") or store.get_setting("active_model_provider", "default"),
         "critic_attempts": 0,
         "critic_analysis": {"reviews": []},
-        "fallback_candidates": [],
     }
 
 
-def node_emotion_detection(state: WorkflowState) -> dict[str, Any]:
-    """Responsibility: detect user emotion only and preserve legacy fields."""
-    fallback = {"emotions": [{
+def node_turn_interpreter(state: WorkflowState) -> dict[str, Any]:
+    """Interpret user emotion and relationship evidence in one shared-context call."""
+    emotion_fallback = {"emotions": [{
         "subject": "对方", "emotion": "unknown", "intensity": 0.0,
-        "confidence": 0.2, "reason": "情绪节点未返回可靠结构",
+        "confidence": 0.2, "reason": "本轮缺少可靠的情绪证据",
     }]}
-    result, warnings, llm_debug = _run_structured_agent(state, "emotion", {
+    current_relationship = state["relationship"]
+    relationship_fallback = {
+        "changes": [], "suggested_level": current_relationship["current_level"],
+        "stage_reason": "证据不足，保持当前阶段", "serious_event": False,
+        "behavior_boundaries": ["保持当前关系阶段对应的自然边界"],
+    }
+    result, warnings, llm_debug = _run_structured_agent(state, "turn_interpreter", {
+        "allowed_levels": RELATIONSHIP_LEVELS,
         "latest_message": state["user_request"],
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
         "recent_emotional_state": _emotions_with_time(state.get("recent_emotions", [])),
-        "instruction": "只分析对方当前情绪。证据不足时输出 emotion=unknown。保持 emotion/intensity/confidence/reason 字段。",
-    }, fallback)
+        "current_relationship": current_relationship,
+    }, {"contact_emotion": emotion_fallback, "relationship": relationship_fallback})
+    contact_emotion = result.get("contact_emotion", emotion_fallback)
+    relationship = result.get("relationship", relationship_fallback)
     emotions = [
-        item for item in result.get("emotions", [])
+        item for item in contact_emotion.get("emotions", [])
         if isinstance(item, dict) and str(item.get("subject", "对方")) == "对方"
     ]
     if not emotions:
-        emotions = fallback["emotions"]
-    return {"contact_emotion_analysis": {"emotions": emotions[:4]}, "warnings": warnings, "_debug_llm": llm_debug}
+        emotions = emotion_fallback["emotions"]
+    if not isinstance(relationship, dict):
+        relationship = relationship_fallback
+    return {
+        "contact_emotion_analysis": {"emotions": emotions[:4]},
+        "relationship_analysis": relationship,
+        "warnings": warnings,
+        "_debug_llm": llm_debug,
+    }
 
 
 def node_self_emotion_update(state: WorkflowState) -> dict[str, Any]:
@@ -409,23 +423,6 @@ def node_self_emotion_update(state: WorkflowState) -> dict[str, Any]:
     }, fallback)
     _workflow_debug_print(state, "self_emotion update", result)
     return {"self_emotion_update": result, "warnings": warnings, "_debug_llm": llm_debug}
-
-
-def node_relationship_state(state: WorkflowState) -> dict[str, Any]:
-    """Responsibility: propose score events, stage, and boundaries. Persistence: save node."""
-    current = state["relationship"]
-    fallback = {
-        "changes": [], "suggested_level": current["current_level"],
-        "stage_reason": "证据不足，保持当前阶段", "serious_event": False,
-        "behavior_boundaries": ["保持当前关系阶段对应的自然边界"],
-    }
-    result, warnings, llm_debug = _run_structured_agent(state, "relationship", {
-        "allowed_levels": RELATIONSHIP_LEVELS,
-        "current_relationship": current,
-        "latest_message": state["user_request"],
-        "recent_conversation_with_time": _history_with_time(state.get("history", [])),
-    }, fallback)
-    return {"relationship_analysis": result, "warnings": warnings, "_debug_llm": llm_debug}
 
 
 def _flatten_habits(value: Any, prefix: str = "") -> list[tuple[str, Any]]:
@@ -504,15 +501,11 @@ def node_chat_guidance(state: WorkflowState) -> dict[str, Any]:
     return {"guidance_chunks": guidance_retriever.search(query, limit=5)}
 
 
-def node_dialogue_composer(state: WorkflowState) -> dict[str, Any]:
-    """Responsibility: produce an eight-part response plan, never final text. Persistence: snapshot."""
+def node_response_composer(state: WorkflowState) -> dict[str, Any]:
+    """Create a compact plan and final candidates in one shared-context call."""
     fallback = {
         "goal": "回应当前消息并自然延续对话",
-        "strategy": ["先回应对方当前表达", "没有必要时不追问"],
         "structure": ["简短直接回应"],
-        "memory_usage": ["只使用明确相关且已存储的记忆"],
-        "persona_expression": ["遵守固定人格与表达风格"],
-        "emotion_expression": ["不过度解读情绪"],
         "topic_plan": ["优先延续当前话题"],
         "length_plan": {
             "sentence_count": 1,
@@ -530,8 +523,15 @@ def node_dialogue_composer(state: WorkflowState) -> dict[str, Any]:
              "instruction": "顺着说一句，再抛一个自然的小问题"},
         ],
         "constraints": ["不捏造事实", "不越过关系行为边界"],
+        "candidates": ["...", "...", "..."],
+        "debug": {
+            "strategy": ["先回应对方当前表达", "没有必要时不追问"],
+            "memory_usage": ["只使用明确相关且已存储的记忆"],
+            "persona_expression": ["遵守固定人格与表达风格"],
+            "emotion_expression": ["不过度解读情绪"],
+        },
     }
-    result, warnings, llm_debug = _run_structured_agent(state, "dialogue_composer", {
+    result, warnings, llm_debug = _run_structured_agent(state, "response_composer", {
         "latest_message": state["user_request"],
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
         "persona": {"core": state.get("persona_core", {}), "personality": state.get("persona_personality", {})},
@@ -556,243 +556,132 @@ def node_dialogue_composer(state: WorkflowState) -> dict[str, Any]:
         "background_memories": state.get("background_memories", [])[:2],
         "chat_skill_documents": state.get("guidance_chunks", [])[:2],
     }, fallback)
+    candidates = [_normalize_segments(str(item)) for item in result.get("candidates", [])][:3]
+    composition = {
+        key: result.get(key, fallback[key])
+        for key in ("goal", "structure", "topic_plan", "length_plan", "candidate_directives", "constraints")
+    }
+    composition["debug"] = result.get("debug", fallback["debug"])
+    _workflow_debug_print(state, "response_composer", {"plan": composition, "candidates": candidates})
     return {
-        "dialogue_composition": result,
+        "response_composition": composition,
         "strategy": str(result.get("goal", "")),
+        "candidates": candidates,
         "warnings": warnings,
         "_debug_llm": llm_debug,
     }
 
 
-def _prompt_composer_payload(state: WorkflowState) -> dict[str, Any]:
-    dialogue_plan = state.get("dialogue_composition", {})
-    relationship = state.get("relationship", {})
-    relationship_boundaries = state.get("relationship_analysis", {}).get("behavior_boundaries", [])
-    return {
-        "latest_message": state["user_request"],
-        "persona": {
-            "core": state.get("persona_core", {}),
-            "personality": {
-                "expression_style": state.get("persona_personality", {}).get("expression_style", {}),
-            },
-        },
-        "relevant_habits": state.get("relevant_habits", {}),
-        "contact_emotion": _primary_contact_emotion_summary(state),
-        "self_emotion_state": _self_emotion_state_summary(state),
-        "relationship": {
-            "current_level": relationship.get("current_level"),
-        },
-        "relationship_boundaries": relationship_boundaries,
-        "relevant_memories": (state.get("primary_memories") or state.get("memories", []))[:3],
-        "dialogue_plan": {
-            "goal": dialogue_plan.get("goal", ""),
-            "structure": dialogue_plan.get("structure", []),
-            "length_plan": dialogue_plan.get("length_plan", {}),
-            "candidate_directives": dialogue_plan.get("candidate_directives", []),
-            "constraints": dialogue_plan.get("constraints", []),
-            "topic_plan": dialogue_plan.get("topic_plan", []),
-        },
-        "candidate_count": 3,
-    }
-
-
-def _rewrite_payload(state: WorkflowState) -> dict[str, Any]:
-    critic_analysis = state.get("critic_analysis", {})
-    rewrite_indexes = [
-        int(index) for index in critic_analysis.get("rewrite_candidate_indexes", [])
-        if int(index) in {0, 1, 2}
-    ]
-    candidates = state.get("candidates", [])
-    payload = dict(state.get("dialogue_composition", {}))
-    payload.update({
-        "rewrite_instruction": str(critic_analysis.get("rewrite_instruction", "")),
-        "rewrite_candidate_indexes": rewrite_indexes,
-        "rewrite_targets": [
-            {"candidate_index": index, "existing_candidate": candidates[index]}
-            for index in rewrite_indexes
-            if index < len(candidates)
-        ],
-    })
-    return payload
-
-
-def _merge_rewrite_candidates(state: WorkflowState, rewritten: list[dict[str, Any]]) -> list[str]:
-    rewrite_indexes = [
-        int(index) for index in state.get("critic_analysis", {}).get("rewrite_candidate_indexes", [])
-        if int(index) in {0, 1, 2}
-    ]
-    existing = [str(item).strip() for item in state.get("candidates", [])]
-    if not rewrite_indexes or len(existing) != 3:
-        return existing
-
-    candidates = list(existing)
-    for item in rewritten:
-        if not isinstance(item, dict):
-            continue
-        candidate_index = item.get("candidate_index")
-        content = item.get("content")
-        if (
-            isinstance(candidate_index, int)
-            and candidate_index in rewrite_indexes
-            and isinstance(content, str)
-        ):
-            candidates[candidate_index] = _normalize_segments(content)
-    return candidates
-
-
-def node_prompt_composer(state: WorkflowState) -> dict[str, Any]:
-    """Responsibility: write final candidate replies from the plan. Persistence: snapshot only."""
-    fallback = {"candidates": state.get("fallback_candidates") or ["...", "...", "..."]}
-    result, warnings, llm_debug = _run_structured_agent(
-        state, "prompt_composer", _prompt_composer_payload(state), fallback,
-    )
-    candidates = [_normalize_segments(str(item)) for item in result.get("candidates", [])][:3]
-    _workflow_debug_print(state, "prompt_composer candidates", candidates)
-    output: dict[str, Any] = {"candidates": candidates, "warnings": warnings, "_debug_llm": llm_debug}
-    if len(candidates) == 3 and not state.get("fallback_candidates"):
-        output["fallback_candidates"] = list(candidates)
-    return output
-
-
-def node_rewrite(state: WorkflowState) -> dict[str, Any]:
-    """Responsibility: rewrite only critic-rejected candidates. Persistence: snapshot only."""
-    fallback = {"candidates": state.get("candidates", [])}
-    result, warnings, llm_debug = _run_structured_agent(
-        state, "rewrite", _rewrite_payload(state), fallback,
-    )
-    rewritten = [item for item in result.get("candidates", []) if isinstance(item, dict)]
-    candidates = _merge_rewrite_candidates(state, rewritten)
-    _workflow_debug_print(state, "rewrite candidates", candidates)
-    return {"candidates": candidates, "warnings": warnings, "_debug_llm": llm_debug}
-
-
-def _critic_score(review: dict[str, Any]) -> float:
-    critiques = review.get("candidates", [])
-    if not critiques:
-        return float("-inf")
-    return sum(
-        float(item.get("naturalness", 0)) - float(item.get("ai_taste", 10))
-        - float(item.get("interview_taste", 10)) - float(item.get("empathy_excess", 10))
-        for item in critiques
-    ) / len(critiques)
-
-
 def node_reply_critic(state: WorkflowState) -> dict[str, Any]:
-    """Responsibility: review Style, Persona, and Memory use. Persistence: snapshot only."""
-    fallback = {"candidates": [], "passed": True, "rewrite_candidate_indexes": []}
+    """Review candidates and inline-revise rejected items before the next review."""
+    fallback = {
+        "reviews": [{
+            "candidate_index": index, "ai_taste": 0, "interview_taste": 0,
+            "empathy_excess": 0, "naturalness": 8, "persona_consistent": True,
+            "memory_consistent": True, "passed": True, "issues": [],
+            "rewrite_instruction": "", "revised_candidate": "",
+        } for index in range(3)],
+        "passed": True,
+    }
     review, warnings, llm_debug = _run_structured_agent(state, "critic", {
         "latest_message": state["user_request"],
         "recent_conversation_with_time": _history_with_time(state.get("history", [])),
         "persona": {"core": state.get("persona_core", {}), "personality": state.get("persona_personality", {})},
         "relevant_memories": state.get("primary_memories") or state.get("memories", []),
-        "dialogue_plan": state.get("dialogue_composition", {}),
+        "response_plan": state.get("response_composition", {}),
         "candidates": state["candidates"],
         "review_dimensions": ["style", "persona", "memory"],
     }, fallback)
     attempts = state.get("critic_attempts", 0) + 1
     history = [*state.get("critic_analysis", {}).get("reviews", []), review]
-    candidate_reviews = review.get("candidates", [])
-    rewrite_indexes = [
-        int(item.get("candidate_index", -1))
-        for item in candidate_reviews
-        if isinstance(item, dict) and not bool(item.get("passed", True)) and int(item.get("candidate_index", -1)) in {0, 1, 2}
-    ]
-    rewrite_indexes = sorted(set(rewrite_indexes))
-    rewrite_instruction = "\n".join(
-        str(item.get("rewrite_instruction", "")).strip()
-        for item in candidate_reviews
-        if isinstance(item, dict)
-        and int(item.get("candidate_index", -1)) in rewrite_indexes
-        and str(item.get("rewrite_instruction", "")).strip()
-    )
-    fallback_candidates = list(state.get("fallback_candidates") or state.get("candidates", []))
-    current_candidates = state.get("candidates", [])
-    if len(fallback_candidates) == 3 and len(current_candidates) == 3:
-        for item in candidate_reviews:
-            if not isinstance(item, dict) or not bool(item.get("passed", True)):
-                continue
-            candidate_index = item.get("candidate_index")
-            if isinstance(candidate_index, int) and candidate_index in {0, 1, 2}:
-                fallback_candidates[candidate_index] = current_candidates[candidate_index]
+    candidate_reviews = review.get("reviews", [])
+    candidates = list(state.get("candidates", []))
+    revised_indexes: list[int] = []
+    for item in candidate_reviews:
+        if not isinstance(item, dict) or bool(item.get("passed", True)):
+            continue
+        candidate_index = item.get("candidate_index")
+        revised = item.get("revised_candidate")
+        if isinstance(candidate_index, int) and candidate_index in {0, 1, 2} and isinstance(revised, str) and revised.strip():
+            candidates[candidate_index] = _normalize_segments(revised)
+            revised_indexes.append(candidate_index)
     _workflow_debug_print(state, "critic analysis", review)
     result: dict[str, Any] = {
         "critic_attempts": attempts,
         "critic_analysis": {
             "reviews": history,
             "passed": bool(review.get("passed", True)),
-            "rewrite_instruction": rewrite_instruction,
-            "rewrite_candidate_indexes": rewrite_indexes,
+            "revised_candidate_indexes": sorted(set(revised_indexes)),
         },
-        "fallback_candidates": fallback_candidates,
+        "candidates": candidates,
         "warnings": warnings,
         "_debug_llm": llm_debug,
     }
     if not review.get("passed", True) and attempts >= CRITIC_MAX_ATTEMPTS:
-        result["warnings"] = [*warnings, "Reply Critic两次重写后仍未通过，已返回最佳候选并记录告警。"]
+        result["warnings"] = [*warnings, "Reply Critic 达到最大复评次数，已返回最后一版候选并记录告警。"]
     return result
 
 
 def route_after_critic(state: WorkflowState) -> str:
     if state.get("critic_analysis", {}).get("passed", True) or state.get("critic_attempts", 0) >= CRITIC_MAX_ATTEMPTS:
-        return "reflection"
-    return "rewrite"
+        return "critic_complete"
+    return "critic"
 
 
-def node_reflection(state: WorkflowState) -> dict[str, Any]:
-    """Responsibility: decide durable memories and Persona updates. Persistence: save node."""
+def node_user_memory_recognition(state: WorkflowState) -> dict[str, Any]:
+    """Recognize durable facts from the current real user message and existing memory only."""
     fallback = {"memories": []}
-    result, warnings, llm_debug = _run_structured_agent(state, "reflection", {
-        "latest_real_message": state["user_request"],
-        "recent_conversation_with_time": _history_with_time(state.get("history", []), 8),
-        "existing_relevant_memories": _reflection_memories_summary(
-            state.get("primary_memories") or state.get("memories", [])
-        ),
+    existing_memories = [
+        item for item in store.search_memories(state["contact_id"], state["user_request"], limit=12)
+        if item.get("retrieval_mode") == "exact"
+    ]
+    result, warnings, llm_debug = _run_structured_agent(state, "user_mem_recognition", {
+        "latest_real_user_message": state["user_request"],
+        "existing_relevant_memories": _reflection_memories_summary(existing_memories, limit=12),
         "allowed_memory_types": USER_MEMORY_CATEGORIES,
-        "instruction": "只基于真实用户消息与已确认历史，输出值得长期保存的新记忆；不要把候选回复当成事实。，已有的记忆不需要再重复输出。",
+        "instruction": "只基于本轮真实用户消息判断；已有记忆不重复输出，不使用历史聊天或候选回复。",
     }, fallback)
-    return {"reflection_analysis": result, "warnings": warnings, "_debug_llm": llm_debug}
+    return {"user_memory_recognition": result, "warnings": warnings, "_debug_llm": llm_debug}
 
 
 def node_content_save(state: WorkflowState) -> dict[str, Any]:
     """Collect final candidates; all DB persistence is deferred to /api/chat/confirm."""
-    final_candidates = state.get("candidates", [])
-    if not state.get("critic_analysis", {}).get("passed", True) and state.get("critic_attempts", 0) >= CRITIC_MAX_ATTEMPTS:
-        final_candidates = state.get("fallback_candidates", final_candidates)
-    return {"candidates": final_candidates}
+    return {"candidates": state.get("candidates", [])}
+
+
+def node_critic_complete(_: WorkflowState) -> dict[str, Any]:
+    """Mark the end of the bounded critic loop for the final graph barrier."""
+    return {}
 
 
 def build_graph():
     graph = StateGraph(WorkflowState)
     graph.add_node("context", _trace_node("context", node_load_context))
-    graph.add_node("emotion", _trace_node("emotion", node_emotion_detection))
-    graph.add_node("relationship", _trace_node("relationship", node_relationship_state))
+    graph.add_node("turn_interpreter", _trace_node("turn_interpreter", node_turn_interpreter))
     graph.add_node("persona_habit_retrieval", _trace_node("persona_habit_retrieval", node_persona_habit_retrieval))
     graph.add_node("self_emotion", _trace_node("self_emotion", node_self_emotion_update))
     graph.add_node("memory_planner", _trace_node("memory_planner", node_memory_planner))
     graph.add_node("memory_retrieval", _trace_node("memory_retrieval", node_memory_retrieval))
     graph.add_node("guidance", _trace_node("guidance", node_chat_guidance))
-    graph.add_node("dialogue_composer", _trace_node("dialogue_composer", node_dialogue_composer))
-    graph.add_node("prompt_composer", _trace_node("prompt_composer", node_prompt_composer))
-    graph.add_node("rewrite", _trace_node("rewrite", node_rewrite))
+    graph.add_node("response_composer", _trace_node("response_composer", node_response_composer))
     graph.add_node("critic", _trace_node("critic", node_reply_critic))
-    graph.add_node("reflection", _trace_node("reflection", node_reflection))
+    graph.add_node("user_mem_recognition", _trace_node("user_mem_recognition", node_user_memory_recognition))
+    graph.add_node("critic_complete", _trace_node("critic_complete", node_critic_complete))
     graph.add_node("save", _trace_node("save", node_content_save))
     graph.set_entry_point("context")
-    graph.add_edge("context", "emotion")
-    graph.add_edge("context", "relationship")
+    graph.add_edge("context", "turn_interpreter")
     graph.add_edge("context", "persona_habit_retrieval")
     graph.add_edge("context", "memory_planner")
+    graph.add_edge("context", "user_mem_recognition")
     graph.add_edge("memory_planner", "memory_retrieval")
-    graph.add_edge(["emotion", "relationship", "persona_habit_retrieval", "memory_retrieval"], "self_emotion")
-    graph.add_edge("self_emotion", "guidance")
-    graph.add_edge("guidance", "dialogue_composer")
-    graph.add_edge("dialogue_composer", "prompt_composer")
-    graph.add_edge("prompt_composer", "critic")
-    graph.add_edge("rewrite", "critic")
+    graph.add_edge("turn_interpreter", "self_emotion")
+    graph.add_edge("turn_interpreter", "guidance")
+    graph.add_edge(["self_emotion", "guidance", "persona_habit_retrieval", "memory_retrieval"], "response_composer")
+    graph.add_edge("response_composer", "critic")
     graph.add_conditional_edges("critic", route_after_critic, {
-        "rewrite": "rewrite", "reflection": "reflection",
+        "critic": "critic", "critic_complete": "critic_complete",
     })
-    graph.add_edge("reflection", "save")
+    graph.add_edge(["critic_complete", "user_mem_recognition"], "save")
     graph.add_edge("save", END)
     return graph.compile()
 

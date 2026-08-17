@@ -134,7 +134,7 @@ async function loadMemories() {
     const row = document.createElement("div");
     row.className = "list-item";
     const body = document.createElement("div");
-    body.innerHTML = `<h3>${escapeText(item.category)} ${item.sensitive ? '<span class="badge-sensitive">敏感</span>' : ""}</h3><p>${escapeText(item.content)}</p><div class="code-note">创建时间：${escapeText(item.created_at || "")}</div><div class="code-note">来源：${escapeText(item.source_label || "contact memory / reflection")}</div>`;
+    body.innerHTML = `<h3>${escapeText(item.category)} ${item.sensitive ? '<span class="badge-sensitive">敏感</span>' : ""}</h3><p>${escapeText(item.content)}</p><div class="code-note">创建时间：${escapeText(item.created_at || "")}</div><div class="code-note">来源：${escapeText(item.source_label || "contact memory / user_mem_recognition")}</div>`;
     const actions = document.createElement("div");
     actions.className = "list-actions";
     const edit = document.createElement("button");
@@ -357,15 +357,12 @@ async function loadModels() {
 }
 
 const AGENT_DISPLAY_NAMES = {
-  emotion: "Emotion（用户情绪）",
+  turn_interpreter: "Turn Interpreter（情绪与关系）",
   self_emotion: "Self Emotion（自身情绪）",
-  relationship: "Relationship（关系）",
   memory_planner: "Memory Planner（记忆规划）",
-  dialogue_composer: "Dialogue Composer（对话规划）",
-  prompt_composer: "Prompt Composer（生成回复）",
-  rewrite: "Rewrite（重写）",
-  critic: "Critic（质检）",
-  reflection: "Reflection（反思）",
+  response_composer: "Response Composer（规划与生成）",
+  critic: "Critic（质检与改写）",
+  user_mem_recognition: "User Memory Recognition（用户记忆识别）",
   proactive: "Proactive（主动消息）",
 };
 

@@ -34,6 +34,7 @@ ShortEmotionDimension = Literal[
 RelationshipLevel = Literal["陌生人", "认识", "朋友", "暧昧", "恋人"]
 RelationshipDimension = Literal["trust", "familiarity", "intimacy", "attraction", "attachment", "comfort"]
 MemoryCategory = Literal["episodic", "semantic", "emotional", "shared_experience"]
+UserMemoryCategory = Literal["episodic", "semantic", "emotional"]
 CandidateAngle = Literal[
     "情绪回应", "轻反问", "玩笑吐槽", "极简附和", "自我暴露", "具体建议", "话题延展", "暂不回复",
 ]
@@ -149,23 +150,37 @@ class CandidateDirective(BaseModel):
     instruction: str = Field(description="这条候选怎么写、不写什么")
 
 
-class DialogueComposerAnalysis(BaseModel):
-    """A response plan; this node never writes the final reply."""
+class TurnInterpreterAnalysis(BaseModel):
+    """One turn-level interpretation with independent emotion and relationship outputs."""
 
-    goal: str
+    contact_emotion: EmotionAnalysis
+    relationship: RelationshipAnalysis
+
+
+class ResponseComposerDebug(BaseModel):
+    """Internal planning details retained in generation snapshots only."""
+
     strategy: list[str] = Field(default_factory=list, max_length=8)
-    structure: list[str] = Field(default_factory=list, max_length=8)
     memory_usage: list[str] = Field(default_factory=list, max_length=8)
     persona_expression: list[str] = Field(default_factory=list, max_length=8)
     emotion_expression: list[str] = Field(default_factory=list, max_length=8)
+
+
+class ResponseComposerAnalysis(BaseModel):
+    """A compact response plan and its three final candidate messages."""
+
+    goal: str
+    structure: list[str] = Field(default_factory=list, max_length=8)
     topic_plan: list[str] = Field(default_factory=list, max_length=8)
     length_plan: LengthPlan = Field(default_factory=LengthPlan)
     candidate_directives: list[CandidateDirective] = Field(min_length=3, max_length=3)
     constraints: list[str] = Field(default_factory=list, max_length=12)
+    candidates: list[str] = Field(min_length=3, max_length=3)
+    debug: ResponseComposerDebug = Field(default_factory=ResponseComposerDebug)
 
 
 class CandidateCritique(BaseModel):
-    """Human-likeness scores for one generated candidate."""
+    """Human-likeness scores and an inline replacement for one candidate."""
 
     candidate_index: int = Field(ge=0, le=2)
     ai_taste: float = Field(ge=0, le=10, description="AI味/客服味，越低越好")
@@ -177,39 +192,20 @@ class CandidateCritique(BaseModel):
     passed: bool
     issues: list[str] = Field(default_factory=list, max_length=5)
     rewrite_instruction: str = ""
+    revised_candidate: str = ""
 
 
 class ReplyCriticAnalysis(BaseModel):
-    """Post-generation review used to trigger bounded rewrites."""
+    """Post-generation review with replacements for every rejected candidate."""
 
-    candidates: list[CandidateCritique] = Field(min_length=3, max_length=3)
+    reviews: list[CandidateCritique] = Field(min_length=3, max_length=3)
     passed: bool
-    rewrite_candidate_indexes: list[int] = Field(default_factory=list, max_length=3)
-
-
-class ResponseCandidates(BaseModel):
-    """Exactly three editable candidate messages."""
-
-    candidates: list[str] = Field(min_length=3, max_length=3)
-
-
-class RewrittenCandidate(BaseModel):
-    """One rewrite result addressed to its original candidate slot."""
-
-    candidate_index: int = Field(ge=0, le=2)
-    content: str
-
-
-class RewriteCandidates(BaseModel):
-    """Only the Critic-rejected candidates, each with its target index."""
-
-    candidates: list[RewrittenCandidate] = Field(min_length=1, max_length=3)
 
 
 class MemoryItem(BaseModel):
     """A durable fact extracted from real conversation only."""
 
-    category: MemoryCategory
+    category: UserMemoryCategory
     content: str
     sensitive: bool = False
 
@@ -230,8 +226,8 @@ class CoreUpdateProposal(BaseModel):
     reason: str
 
 
-class ReflectionAnalysis(BaseModel):
-    """Post-response decisions about durable memory and persona updates."""
+class UserMemoryRecognition(BaseModel):
+    """Durable user facts recognized from the current real user message only."""
 
     memories: list[MemoryItem] = Field(default_factory=list, max_length=8)
 
@@ -244,15 +240,12 @@ class ProactiveDraft(BaseModel):
 
 
 AGENT_SCHEMAS: dict[str, type[BaseModel]] = {
-    "emotion": EmotionAnalysis,
+    "turn_interpreter": TurnInterpreterAnalysis,
     "self_emotion": SelfEmotionUpdateAnalysis,
-    "relationship": RelationshipAnalysis,
     "memory_planner": MemoryPlan,
-    "dialogue_composer": DialogueComposerAnalysis,
-    "prompt_composer": ResponseCandidates,
-    "rewrite": RewriteCandidates,
+    "response_composer": ResponseComposerAnalysis,
     "critic": ReplyCriticAnalysis,
-    "reflection": ReflectionAnalysis,
+    "user_mem_recognition": UserMemoryRecognition,
     "proactive": ProactiveDraft,
 }
 

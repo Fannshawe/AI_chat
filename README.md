@@ -6,13 +6,13 @@
 
 - FastAPI 本地服务与现代化聊天页面
 - 独立管理后台：Persona YAML、Core 提案、记忆、情绪、关系、指导文档、导入导出、模型切换
-- LangGraph 工作流：上下文（预加载 Persona Core + Personality） → User Emotion → Relationship → Persona Habit Retrieval → Memory Planner → Memory Retrieval → AI Emotion Update → 技巧文档 → Dialogue Composer → Prompt Composer → Reply Critic → Reflection → 保存
+- LangGraph 工作流：上下文 → Turn Interpreter（对方情绪 + 关系）→ 并行自身情绪/技巧检索/习惯检索/记忆检索 → Response Composer（计划 + 候选）→ Reply Critic（评审 + 改写 + 复评）；User Memory Recognition 与回复链并行，最终汇合保存
 - 每个 LLM 节点保留独立的 LangChain v1 `create_agent()`，节点直接调用 `agent.invoke()`
 - Pydantic 结构化输出，交给 LangChain 自动优先选择 `ProviderStrategy`，不支持时再回退；结果从 `structured_response` 读取，不再手工解析模型 JSON
 - `ModelRetryMiddleware` 处理瞬时模型故障，`ModelCallLimitMiddleware` 限制单节点调用次数
 - 最近短期上下文
 - SQLite 长期记忆与可读 JSON 全量导出
-- Persona YAML 模板：Core 与 Personality 在上下文加载阶段固定注入，Habit 作为按需检索层由 Persona Habit Retrieval 选择性注入；Habit 可由 Reflection 自动更新
+- Persona YAML 模板：Core 与 Personality 在上下文加载阶段固定注入，Habit 作为按需检索层由 Persona Habit Retrieval 选择性注入
 - 四类长期记忆：episodic、semantic、emotional、shared_experience
 - 六维关系状态：trust、familiarity、intimacy、attraction、attachment、comfort
 - 六阶段关系状态机：陌生人、认识、朋友、暧昧、恋人；严重事件才允许降级
@@ -23,10 +23,10 @@
 - 主动聊天草稿（不自动发送）
 - OpenAI 兼容模型供应商切换
 - Memory Planner：先决定检索类型、查询、关键词、优先级、Top K 和时间范围，再本地检索
-- Dialogue Composer：只产出目标、策略、结构、记忆用法、人格表达、情绪表达、话题规划和限制
-- Prompt Composer：唯一生成最终候选的节点，并接收 Critic 修改建议重写
-- Reply Critic：按 Style、Persona、Memory、AI 味、采访味、过度共情和自然度评审，最多触发两次重写
-- Reflection：决定保存哪些长期记忆、自动更新哪些 Habit、提出哪些 Core 修改候选
+- Turn Interpreter：在同一份上下文中分别输出对方情绪和关系状态判断，避免重复注入聊天历史
+- Response Composer：一次输出精简回复计划和 3 个最终候选；策略、记忆用法、人格表达和情绪表达仅进入 debug 快照
+- Reply Critic：按 Style、Persona、Memory、AI 味、采访味、过度共情和自然度评审，并直接给出不通过候选的改写版本后复评
+- User Memory Recognition：只从本轮真实用户消息识别新记忆，并与检索到的记忆库比对去重
 - 候选选择反馈：只记录最终选择的候选序号，不额外保存编辑过程
 
 ## 启动
@@ -34,18 +34,16 @@
 ### 单实例模式
 
 1. 保持现有 `.env` 中以下变量可用：
-   - `AGENT_EMOTION_BASE_URL` / `AGENT_EMOTION_API_KEY` / `AGENT_EMOTION_MODEL`
+   - `AGENT_TURN_INTERPRETER_BASE_URL` / `AGENT_TURN_INTERPRETER_API_KEY` / `AGENT_TURN_INTERPRETER_MODEL`
    - `AGENT_SELF_EMOTION_BASE_URL` / `AGENT_SELF_EMOTION_API_KEY` / `AGENT_SELF_EMOTION_MODEL`
-   - `AGENT_RELATIONSHIP_BASE_URL` / `AGENT_RELATIONSHIP_API_KEY` / `AGENT_RELATIONSHIP_MODEL`
    - `AGENT_MEMORY_PLANNER_BASE_URL` / `AGENT_MEMORY_PLANNER_API_KEY` / `AGENT_MEMORY_PLANNER_MODEL`
-   - `AGENT_DIALOGUE_COMPOSER_BASE_URL` / `AGENT_DIALOGUE_COMPOSER_API_KEY` / `AGENT_DIALOGUE_COMPOSER_MODEL`
-   - `AGENT_PROMPT_COMPOSER_BASE_URL` / `AGENT_PROMPT_COMPOSER_API_KEY` / `AGENT_PROMPT_COMPOSER_MODEL`
-   - `AGENT_REWRITE_BASE_URL` / `AGENT_REWRITE_API_KEY` / `AGENT_REWRITE_MODEL`
+   - `AGENT_RESPONSE_COMPOSER_BASE_URL` / `AGENT_RESPONSE_COMPOSER_API_KEY` / `AGENT_RESPONSE_COMPOSER_MODEL`
    - `AGENT_CRITIC_BASE_URL` / `AGENT_CRITIC_API_KEY` / `AGENT_CRITIC_MODEL`
-   - `AGENT_REFLECTION_BASE_URL` / `AGENT_REFLECTION_API_KEY` / `AGENT_REFLECTION_MODEL`
+   - `AGENT_USER_MEM_RECOGNITION_BASE_URL` / `AGENT_USER_MEM_RECOGNITION_API_KEY` / `AGENT_USER_MEM_RECOGNITION_MODEL`
    - `AGENT_PROACTIVE_BASE_URL` / `AGENT_PROACTIVE_API_KEY` / `AGENT_PROACTIVE_MODEL`
    - 可选：每个节点独立 `AGENT_<NAME>_ENABLE_THINKING=true|false`
-   - `WORKFLOW_DEBUG`：是否在终端输出 `prompt_composer` 候选词、`critic` 分析结果、`prompt_rewriter` 输出候选词
+   - 迁移兼容：未配置新变量时，Turn Interpreter 回退使用 `AGENT_EMOTION_*`，Response Composer 回退使用 `AGENT_PROMPT_COMPOSER_*`，User Memory Recognition 回退使用 `AGENT_REFLECTION_*`
+   - `WORKFLOW_DEBUG`：是否在终端输出 Response Composer 的计划/候选和 Critic 分析结果
    - `CRITIC_MAX_ATTEMPTS`：Reply Critic 最大评审次数，默认 `3`
 2. 安装依赖：`pip install -r requirements.txt`
 3. 启动：`python app.py`
@@ -84,19 +82,19 @@
 
 ## 新回复流程
 
-当前主流程为：上下文（预加载 Persona Core + Personality） → User Emotion → Relationship → Persona Habit Retrieval → Memory Planner → Memory Retrieval → AI Emotion Update → 聊天技巧文档 → Dialogue Composer → Prompt Composer → Reply Critic → Reflection → 内容保存。
+当前主流程为：上下文（预加载 Persona Core + Personality）后，Turn Interpreter、Persona Habit Retrieval、Memory Planner 和 User Memory Recognition 并行启动。Memory Planner 完成本地检索；Turn Interpreter 同时触发 AI Emotion Update 和聊天技巧检索。自身情绪、技巧、习惯和记忆汇合后，由 Response Composer 一次产出计划和候选；Reply Critic 直接改写不通过候选并复评。最终结果与并行的 User Memory Recognition 汇合后保存。
 
 其中 Persona Habit Retrieval 对应 Persona 的第三层 Habit（生活习惯）：它会从 `persona_habits` 中按当前话题筛出 `relevant_habits`，而不是把全部 Habit 一次性塞进 Prompt。
 
 AI Emotion Update 读取 Previous AI Emotion、User Emotion、Relationship、Persona emotionProfile、Conversation Event 与时间衰减信息。User Emotion 只描述对方，不直接修改 AI。
 
-Reply Critic 会增加一次模型调用；若首轮不通过，会在 `CRITIC_MAX_ATTEMPTS` 限制内继续执行“修改建议 → Prompt Composer 重写 → 复评”。仍不通过时返回综合评分最高的候选，并在页面显示质量预警。若 `WORKFLOW_DEBUG=true`，终端还会打印 `prompt_composer` 候选词、`critic` 结构化分析结果，以及重写轮次的 `prompt_rewriter` 候选词。
+Reply Critic 会增加一次模型调用；若首轮不通过，会在 `CRITIC_MAX_ATTEMPTS` 限制内直接返回改写后的候选并再次复评。仍不通过时返回最后一版候选并记录质量预警。若 `WORKFLOW_DEBUG=true`，终端会打印 Response Composer 的计划/候选和每轮 Critic 结构化分析结果。
 
-Reflection 只保存有长期价值且有明确证据的内容。Habit 会自动写回 `persona.yaml`；Core 修改只进入待确认提案；Personality 禁止自动修改。
+User Memory Recognition 只使用本轮真实用户消息和记忆库检索结果；它不会读取聊天历史、候选回复或 Persona，也不会自动修改 Habit、Core 或 Personality。
 
 ## 模型供应商
 
-`default` 供应商由 `AGENT_PROMPT_COMPOSER_*` 自动映射。可选的多供应商配置使用 `MODEL_PROVIDERS_JSON`，密钥仍从独立环境变量读取：
+`default` 供应商由 `DEFAULT_*` 配置；每个工作流节点可使用上方的 `AGENT_<NAME>_*` 独立配置。可选的多供应商配置使用 `MODEL_PROVIDERS_JSON`，密钥仍从独立环境变量读取：
 
 ```json
 {"deepseek":{"model":"deepseek-chat","base_url":"https://api.example.com/v1","api_key_env":"DEEPSEEK_API_KEY"}}
@@ -116,7 +114,7 @@ Agent 定义集中在 `agents.py`，并按模型供应商缓存。外层 `graph.
 
 `data/` 默认被 Git 忽略。聊天内容可能包含高度私密信息，请不要把数据库、导出文件、上传图片或 `.env` 提交到仓库。
 
-六维关系和变更日志保存在 SQLite；生成快照保存本轮 Memory Plan、Dialogue Composer、Critic 与 Reflection 结果。Core 修改提案保存在 SQLite，批准后写回 `persona.yaml`。
+六维关系和变更日志保存在 SQLite；生成快照保存本轮 Memory Plan、Response Composer、Critic 与 User Memory Recognition 结果。Core 修改提案可由后台手工维护。
 
 ## 图片说明
 

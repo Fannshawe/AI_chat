@@ -20,7 +20,7 @@ from starlette.concurrency import run_in_threadpool
 
 from src.config import AGENT_MODEL_NAMES, GUIDANCE_DIR, STATIC_DIR, apply_agent_overrides, get_agent_model_provider, get_model_providers
 from src.graph import WorkflowState
-from src.graph import DEBUG, build_graph, generate_proactive_draft, node_reflection
+from src.graph import DEBUG, build_graph, generate_proactive_draft
 from src.guidance import guidance_retriever
 from src.prompt_loader import clear_prompt_cache
 from src.storage import (
@@ -49,18 +49,16 @@ _MAX_GENERATION_JOBS = 30
 
 _NODE_STAGE_MAP: dict[str, tuple[str, int]] = {
     "context": ("读取上下文", 12),
-    "emotion": ("识别情绪", 24),
-    "relationship": ("关系评估", 36),
+    "turn_interpreter": ("理解本轮语境", 32),
     "persona_habit_retrieval": ("检索习惯", 48),
     "memory_planner": ("记忆规划", 58),
     "memory_retrieval": ("记忆召回", 66),
     "self_emotion": ("自身情绪校准", 74),
     "guidance": ("指导检索", 80),
-    "dialogue_composer": ("整合策略", 86),
-    "prompt_composer": ("生成候选", 92),
+    "response_composer": ("生成候选", 92),
     "critic": ("候选质检", 95),
-    "rewrite": ("候选重写", 97),
-    "reflection": ("记忆反思", 98),
+    "critic_complete": ("完成质检", 97),
+    "user_mem_recognition": ("识别用户记忆", 98),
     "save": ("收尾", 99),
 }
 
@@ -163,14 +161,14 @@ def _execute_generation(
             "provider_name": result.get("provider_name", "default"),
             "final_candidates": result.get("candidates", []),
             "strategy": result.get("strategy", ""),
-            "emotion_analysis": result.get("emotion_analysis", {}),
+            "contact_emotion_analysis": result.get("contact_emotion_analysis", {}),
             "relationship_analysis": result.get("relationship_analysis", {}),
             "self_emotion_update": result.get("self_emotion_update", {}),
             "memory_plan": result.get("memory_plan", {}),
             "memories": result.get("memories", []),
-            "dialogue_composition": result.get("dialogue_composition", {}),
+            "response_composition": result.get("response_composition", {}),
             "critic_analysis": result.get("critic_analysis", {}),
-            "reflection_analysis": result.get("reflection_analysis", {}),
+            "user_memory_recognition": result.get("user_memory_recognition", {}),
             "debug_trace": result.get("debug_trace", []),
             "warnings": result.get("warnings", []),
         }
@@ -189,7 +187,7 @@ def _execute_generation(
         "generation_id": draft_id,
         "strategy": result.get("strategy", ""),
         "candidates": result.get("candidates", []),
-        "dialogue_plan": result.get("dialogue_composition", {}),
+        "dialogue_plan": result.get("response_composition", {}),
         "critic": result.get("critic_analysis", {}),
         "relationship": result.get("relationship", {}),
         "warnings": result.get("warnings", []),
@@ -480,7 +478,7 @@ def confirm_send(request: ConfirmRequest) -> dict[str, Any]:
     input_message_id = int(user_msg["id"])
 
     # 2. Save emotion events.
-    for item in pending["emotion_analysis"].get("emotions", [])[:4]:
+    for item in pending["contact_emotion_analysis"].get("emotions", [])[:4]:
         if isinstance(item, dict):
             store.add_emotion(contact_id, item)
 
@@ -491,10 +489,10 @@ def confirm_send(request: ConfirmRequest) -> dict[str, Any]:
     store.save_self_emotion_state(contact_id, pending["self_emotion_update"].get("self_emotion_state", {}))
     store.add_conversation_events(contact_id, pending["self_emotion_update"].get("events", []))
 
-    # 5. Save memories extracted by the reflection node.
-    reflection = pending["reflection_analysis"]
+    # 5. Save memories recognized from the real user message.
+    user_memory_recognition = pending["user_memory_recognition"]
 
-    for item in reflection.get("memories", [])[:8]:
+    for item in user_memory_recognition.get("memories", [])[:8]:
         if not isinstance(item, dict) or not str(item.get("content", "")).strip():
             continue
         category = str(item.get("category", "semantic"))
@@ -508,14 +506,17 @@ def confirm_send(request: ConfirmRequest) -> dict[str, Any]:
 
     # 6. Save generation record with full analysis.
     analysis = {
-        "emotion": pending["emotion_analysis"],
+        "turn_interpreter": {
+            "contact_emotion": pending["contact_emotion_analysis"],
+            "relationship": pending["relationship_analysis"],
+        },
         "relationship": pending["relationship_analysis"],
         "self_emotion": pending["self_emotion_update"],
         "memory_plan": pending["memory_plan"],
         "retrieved_memories": pending["memories"],
-        "dialogue_composer": pending["dialogue_composition"],
+        "response_composer": pending["response_composition"],
         "critic": pending["critic_analysis"],
-        "reflection": reflection,
+        "user_mem_recognition": user_memory_recognition,
         "warnings": pending["warnings"],
         "debug_trace": pending["debug_trace"],
     }

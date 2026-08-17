@@ -4,39 +4,35 @@
 
 | Node | 主要输入（来自 state / 外部） | 主要输出（写回 state） |
 |---|---|---|
-| `context` (`node_load_context`) | `contact_id?` `provider_name?`；外部：`store` | `contact_id` `history` `persona_core` `persona_personality` `persona_habits` `emotion_profile` `relationship` `recent_emotions` `self_emotion_state` `provider_name` `critic_attempts` `critic_analysis` `fallback_candidates` |
-| `emotion` (`node_emotion_detection`) | `user_request` `history` `recent_emotions` | `emotion_analysis` `warnings` `_debug_llm` |
-| `relationship` (`node_relationship_state`) | `relationship` `user_request` `history` | `relationship_analysis` `warnings` `_debug_llm` |
-| `persona_habit_retrieval` (`node_persona_retrieval`) | `user_request` `persona_habits` | `relevant_habits` |
-| `self_emotion` (`node_self_emotion_update`) | `user_request` `history` `emotion_analysis` `self_emotion_state` `relationship` `relationship_analysis` `emotion_profile` `contact_id` `memories`；外部：`store.list_conversation_events` | `self_emotion_update` `warnings` `_debug_llm` |
-| `memory_planner` (`node_memory_planner`) | `user_request` `history`；可选读取：`emotion_analysis` `relationship_analysis` | `memory_plan` `warnings` `_debug_llm` |
-| `memory_retrieval` (`node_memory_retrieval`) | `contact_id` `memory_plan`；外部：`store.search_memories_by_plan` `store.get_ai_memory_profile` | `memories` |
-| `guidance` (`node_chat_guidance`) | `user_request` `relationship.current_level` `emotion_analysis`；外部：`guidance_retriever` | `guidance_chunks` |
-| `dialogue_composer` (`node_dialogue_composer`) | `user_request` `history` `persona_core` `persona_personality` `relevant_habits` `emotion_analysis` `self_emotion_update/self_emotion_state` `relationship` `relationship_analysis` `memories` `guidance_chunks` | `dialogue_composition` `strategy` `warnings` `_debug_llm` |
-| `prompt_composer` (`node_prompt_composer`) | `provider_name` `critic_attempts` `image_data_urls` + `_prompt_composer_payload`所需字段（`user_request` `history` `persona_*` `relevant_habits` `emotion_analysis` `self_emotion*` `relationship*` `memories` `dialogue_composition` `critic_analysis` `candidates`） | `candidates` `_debug_llm`；首次成功且有 3 条候选时额外写 `fallback_candidates`；失败时可能回退 `fallback_candidates` 并返回 `warnings` |
-| `critic` (`node_reply_critic`) | `user_request` `history` `persona_*` `memories` `dialogue_composition` `candidates` `critic_attempts` `critic_analysis` | `critic_attempts` `critic_analysis` `warnings` `_debug_llm` |
-| `reflection` (`node_reflection`) | `user_request` `history` `candidates` `memories` `self_emotion_update/self_emotion_state` `persona_habits` | `reflection_analysis` `warnings` `_debug_llm` |
-| `save` (`node_content_save`) | `contact_id` `input_message_id?` `user_request` `emotion_analysis` `relationship_analysis` `self_emotion_update` `reflection_analysis` `memory_plan` `memories` `dialogue_composition` `critic_analysis` `critic_attempts` `strategy` `candidates` `fallback_candidates` `warnings` `debug_trace`；外部：`store` | `input_message_id` `relationship` `generation_id` `candidates` |
+| `context` (`node_load_context`) | `contact_id?` `provider_name?`；外部：`store` | Persona、历史、关系、情绪状态、`critic_attempts`、`critic_analysis` |
+| `turn_interpreter` (`node_turn_interpreter`) | `user_request` `history` `recent_emotions` `relationship` | `contact_emotion_analysis` `relationship_analysis` `warnings` `_debug_llm` |
+| `persona_habit_retrieval` | `user_request` `persona_habits` | `relevant_habits` |
+| `memory_planner` | `user_request` `history` | `memory_plan` `warnings` `_debug_llm` |
+| `memory_retrieval` | `contact_id` `memory_plan`；外部：`store.search_memories_by_plan` | `memories` `primary_memories` `background_memories` |
+| `self_emotion` | `user_request` `history` `contact_emotion_analysis` `relationship_analysis` `self_emotion_state`；外部：事件库 | `self_emotion_update` `warnings` `_debug_llm` |
+| `guidance` | `user_request` `relationship.current_level` `contact_emotion_analysis`；外部：`guidance_retriever` | `guidance_chunks` |
+| `response_composer` | Persona、相关 Habit、对方/自身情绪、关系、记忆、技巧文档 | `response_composition` `strategy` `candidates` `warnings` `_debug_llm` |
+| `critic` | `user_request` `history` Persona、记忆、`response_composition`、`candidates` | `critic_attempts` `critic_analysis`、必要时替换后的 `candidates` |
+| `user_mem_recognition` | 当前 `user_request` 与精确命中的既有记忆；外部：`store.search_memories` | `user_memory_recognition` `warnings` `_debug_llm` |
+| `critic_complete` | 最终 Critic 状态 | 空输出，仅作为与用户记忆识别汇合的 barrier |
+| `save` | 最终 `candidates` | `candidates`；实际持久化仍在确认发送 API 中执行 |
 
 ## 表 2：所有 LLM（Agent）的输入和输出
 
 | Agent | 由哪个节点调用 | LLM 输入（payload 关键字段） | 结构化输出（Schema） |
 |---|---|---|---|
-| `emotion` | `node_emotion_detection` | `latest_message` `recent_conversation_with_time` `recent_emotional_state` `instruction` | `EmotionAnalysis`：`emotions[]`，项字段 `subject` `emotion` `intensity` `confidence` `reason` |
-| `ai_emotion` | `node_ai_emotion_update` | `latest_message` `recent_conversation_with_time` `user_emotion` `previous_ai_emotion` `relationship` `relationship_judgment` `persona_emotion_profile` `recent_events` | `AIEmotionUpdateAnalysis`：`events[]`、`ai_emotion{mood, energy, dimensions[], reason}` |
-| `relationship` | `node_relationship_state` | `allowed_levels` `current_relationship` `latest_message` `recent_conversation_with_time` | `RelationshipAnalysis`：`changes[]` `suggested_level` `stage_reason` `serious_event` `behavior_boundaries[]` |
-| `memory_planner` | `node_memory_planner` | `latest_message` `recent_conversation_with_time` `available_memory_types` `instruction` | `MemoryPlan`：`requests[]`，项字段 `memory_type` `query` `keywords[]` `priority` `top_k` `time_range` `reason` |
-| `dialogue_composer` | `node_dialogue_composer` | `latest_message` `recent_conversation_with_time` `persona` `relevant_habits` `emotion` `ai_emotion` `relationship` `relationship_judgment` `memories` `chat_skill_documents` | `DialogueComposerAnalysis`：`goal` `strategy[]` `structure[]` `memory_usage[]` `persona_expression[]` `emotion_expression[]` `topic_plan[]` `constraints[]` |
-| `prompt_composer` | `node_prompt_composer` / `_invoke_prompt_composer` | `latest_message` `recent_conversation_with_time` `persona` `relevant_habits` `emotion_analysis` `ai_emotion` `relationship` `relationship_boundaries` `relevant_memories` `dialogue_plan` `rewrite_instruction` `rewrite_candidate_indexes` `existing_candidates` `candidate_count`（首轮可带图片） | `ResponseCandidates`：`candidates[3]` |
-| `critic` | `node_reply_critic` | `latest_message` `recent_conversation_with_time` `persona` `relevant_memories` `dialogue_plan` `candidates` `review_dimensions` | `ReplyCriticAnalysis`：`candidates[]`（含 `candidate_index` `ai_taste` `interview_taste` `empathy_excess` `naturalness` `persona_consistent` `memory_consistent` `passed` `issues[]` `rewrite_instruction`），以及 `passed` `rewrite_candidate_indexes[]` |
-| `reflection` | `node_reflection` | `latest_real_message` `recent_conversation_with_time` `generated_candidates` `existing_relevant_memories` `ai_emotion` `current_habits` `allowed_memory_types` `rules` | `ReflectionAnalysis`：`memories[]` |
-| `proactive`（非图节点） | `generate_proactive_draft` | `recent_conversation_with_time` `relationship` `persona` `memories` | `ProactiveDraft`：`draft` `reason` |
+| `turn_interpreter` | `node_turn_interpreter` | 最新消息、近期对话/情绪、当前关系 | `TurnInterpreterAnalysis`：独立的 `contact_emotion` 与 `relationship` |
+| `self_emotion` | `node_self_emotion_update` | 最新消息、近期对话、情绪、关系、Persona 情绪基线、近期事件 | `SelfEmotionUpdateAnalysis`：`events[]`、`self_emotion_state` |
+| `memory_planner` | `node_memory_planner` | 最新消息、近期对话、允许分类 | `MemoryPlan`：`requests[]` |
+| `response_composer` | `node_response_composer` | Persona、Habit、情绪、关系、记忆、技巧文档 | `ResponseComposerAnalysis`：精简计划、`candidates[3]`、debug 判断 |
+| `critic` | `node_reply_critic` | 最新消息、近期对话、Persona、记忆、回复计划、候选 | `ReplyCriticAnalysis`：`reviews[3]`、`passed`；失败项含 `revised_candidate` |
+| `user_mem_recognition` | `node_user_memory_recognition` | 本轮真实用户消息、精确命中的既有记忆、允许分类 | `UserMemoryRecognition`：去重后的 `memories[]` |
+| `proactive`（非图节点） | `generate_proactive_draft` | 近期对话、关系、Persona、记忆 | `ProactiveDraft`：`draft` `reason` |
 
 ## 备注
 
-- 以上 LLM 输入都通过 `_run_structured_agent` 或 `_invoke_prompt_composer` 封装，实际请求体统一是：`{"messages": [{"role": "user", "content": json(payload)}]}`。
-- `context` 节点启动时会预加载 Persona 的前两层：`persona_core`（Core Identity）和 `persona_personality`（Personality）；第三层 `persona_habits`（Habit / 生活习惯）只是在 state 中备好，供后续按需检索。
-- `persona_habit_retrieval` 对应 Persona 第三层 Habit（生活习惯）：它不直接把全部 Habit 注入 Prompt，而是从 `persona_habits` 中按当前 `user_request` 选出 `relevant_habits`。
-- 当前图主流程：`context → emotion / relationship / persona_habit_retrieval / memory_planner` 并行，随后 `memory_planner → memory_retrieval`，再由 `emotion + relationship + persona_habit_retrieval + memory_retrieval → ai_emotion → guidance → dialogue_composer → prompt_composer → critic → reflection → save`。
-- `memory_plan` 在运行控制流里只直接提供给 `memory_retrieval`；`save` 仅做分析快照持久化。
-- `context`、`persona_habit_retrieval`、`memory_retrieval`、`guidance`、`save` 不调用 LLM。
+- 所有 LLM 输入通过 `_run_structured_agent` 封装，实际请求体统一为 `{"messages": [{"role": "user", "content": json(payload)}]}`。
+- `turn_interpreter`、Persona Habit Retrieval、Memory Planner 与 User Memory Recognition 在 context 后并行开始；User Memory Recognition 不读取历史聊天，且只接收精确命中的记忆以避免提示词噪声。
+- Turn Interpreter 完成后并行触发 Self Emotion 与 Guidance；Self Emotion、Guidance、Habit Retrieval 和 Memory Retrieval 汇合后执行 Response Composer。
+- Critic 对失败候选直接改写并自循环复评。`critic_complete` 与 User Memory Recognition 的 fan-in barrier 完成后才进入 `save`。
+- `context`、`persona_habit_retrieval`、`memory_retrieval`、`guidance`、`critic_complete`、`save` 不调用 LLM。

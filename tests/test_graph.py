@@ -4,7 +4,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from src.graph import _normalize_segments, _rewrite_payload, build_graph, node_persona_habit_retrieval
+from src.graph import _normalize_segments, build_graph, node_persona_habit_retrieval
 from src.storage import ChatStore
 
 
@@ -24,42 +24,24 @@ class FakeAgent:
         return {"structured_response": response}
 
 
-def critique(passed, naturalness=8, instruction=""):
-    return {
-        "candidates": [{
-            "candidate_index": index,
-            "ai_taste": 1,
-            "interview_taste": 1,
-            "empathy_excess": 1,
-            "naturalness": naturalness,
-            "persona_consistent": True,
-            "memory_consistent": True,
-            "passed": passed,
-            "issues": [] if passed else ["需要更自然"],
-            "rewrite_instruction": instruction if not passed else "",
-        } for index in range(3)],
-        "passed": passed,
-        "rewrite_candidate_indexes": [] if passed else [0, 1, 2],
-    }
-
-
-def partial_critique(failed_indexes, instruction_prefix="需要修改"):
+def critique(passed, failed_indexes=(), revised_candidates=None):
     failed = set(failed_indexes)
+    revised_candidates = revised_candidates or {}
     return {
-        "candidates": [{
+        "reviews": [{
             "candidate_index": index,
             "ai_taste": 6 if index in failed else 1,
-            "interview_taste": 6 if index in failed else 1,
-            "empathy_excess": 6 if index in failed else 1,
+            "interview_taste": 1,
+            "empathy_excess": 1,
             "naturalness": 4 if index in failed else 8,
             "persona_consistent": True,
             "memory_consistent": True,
             "passed": index not in failed,
-            "issues": [f"{index} 需要更自然"] if index in failed else [],
-            "rewrite_instruction": f"{instruction_prefix}{index}" if index in failed else "",
+            "issues": ["需要更自然"] if index in failed else [],
+            "rewrite_instruction": "改得更自然" if index in failed else "",
+            "revised_candidate": revised_candidates.get(index, "") if index in failed else "",
         } for index in range(3)],
-        "passed": not failed,
-        "rewrite_candidate_indexes": sorted(failed),
+        "passed": passed,
     }
 
 
@@ -82,16 +64,18 @@ class GraphPipelineTests(unittest.TestCase):
 
     def base_responses(self):
         return {
-            "emotion": {"emotions": [{
-                "subject": "对方", "emotion": "开心", "intensity": 0.8,
-                "confidence": 0.9, "reason": "用户分享了积极近况",
-            }]},
-            "relationship": {
-                "changes": [{"dimension": "familiarity", "delta": 2, "reason": "自然分享近况"}],
-                "suggested_level": "认识",
-                "stage_reason": "保持当前阶段",
-                "serious_event": False,
-                "behavior_boundaries": ["保持自然称呼"],
+            "turn_interpreter": {
+                "contact_emotion": {"emotions": [{
+                    "subject": "对方", "emotion": "开心", "intensity": 0.8,
+                    "confidence": 0.9, "reason": "用户分享了积极近况",
+                }]},
+                "relationship": {
+                    "changes": [{"dimension": "familiarity", "delta": 2, "reason": "自然分享近况"}],
+                    "suggested_level": "认识",
+                    "stage_reason": "保持当前阶段",
+                    "serious_event": False,
+                    "behavior_boundaries": ["保持自然称呼"],
+                },
             },
             "self_emotion": {
                 "events": [{"event": "好消息", "impact": 0.7, "reason": "用户在分享开心的事"}],
@@ -110,9 +94,8 @@ class GraphPipelineTests(unittest.TestCase):
                 "memory_type": "semantic", "query": "咖啡偏好", "keywords": ["咖啡"],
                 "priority": 4, "top_k": 3, "time_range": "all", "reason": "当前话题相关",
             }]},
-            "dialogue_composer": {
-                "goal": "自然回应", "strategy": ["简短回应"], "structure": ["一句回应"],
-                "memory_usage": [], "persona_expression": ["简洁"], "emotion_expression": [],
+            "response_composer": {
+                "goal": "自然回应", "structure": ["一句回应"],
                 "topic_plan": ["延续当前话题"],
                 "length_plan": {
                     "sentence_count": 1, "char_budget": 15,
@@ -124,11 +107,14 @@ class GraphPipelineTests(unittest.TestCase):
                     {"candidate_index": 2, "angle": "轻反问", "length_hint": "短", "segment_count": 1, "instruction": "问一句"},
                 ],
                 "constraints": ["不追问"],
+                "candidates": ["好呀", "可以", "听起来不错"],
+                "debug": {
+                    "strategy": ["简短回应"], "memory_usage": [],
+                    "persona_expression": ["简洁"], "emotion_expression": [],
+                },
             },
-            "prompt_composer": {"candidates": ["好呀", "可以", "听起来不错"]},
-            "rewrite": {"candidates": ["改好的一", "改好的二", "改好的三"]},
             "critic": critique(True),
-            "reflection": {
+            "user_mem_recognition": {
                 "memories": [{
                     "category": "semantic",
                     "content": "用户喜欢手冲咖啡",
@@ -153,96 +139,39 @@ class GraphPipelineTests(unittest.TestCase):
             })
         return result, counts
 
-    def test_full_pipeline_persists_reflection_and_relationship(self):
+    def test_full_pipeline_returns_recognized_memory_and_relationship_analysis(self):
         result, counts = self.invoke(self.base_responses())
         self.assertEqual(result["candidates"], ["好呀", "可以", "听起来不错"])
+        self.assertEqual(counts["turn_interpreter"], 1)
+        self.assertEqual(counts["response_composer"], 1)
         self.assertEqual(counts["critic"], 1)
-        self.assertEqual(self.store.get_relationship(self.contact_id)["familiarity"], 12)
-        self.assertEqual(self.store.get_self_emotion_state(self.contact_id)["mood"], "开心")
-        self.assertEqual(self.store.list_memories(self.contact_id)[0]["category"], "semantic")
-        self.assertIn("created_at", self.store.list_memories(self.contact_id)[0])
-        self.assertGreater(result["generation_id"], 0)
+        self.assertEqual(counts["user_mem_recognition"], 1)
+        self.assertEqual(result["relationship_analysis"]["changes"][0]["dimension"], "familiarity")
+        self.assertEqual(result["self_emotion_update"]["self_emotion_state"]["mood"], "开心")
+        self.assertEqual(result["user_memory_recognition"]["memories"][0]["category"], "semantic")
+        trace_nodes = [entry["node"] for entry in result["debug_trace"]]
+        self.assertLess(trace_nodes.index("critic_complete"), trace_nodes.index("save"))
+        self.assertLess(trace_nodes.index("user_mem_recognition"), trace_nodes.index("save"))
 
-    def test_critic_allows_two_rewrites_and_returns_fallback_candidates(self):
+    def test_critic_revises_failed_candidate_then_reviews_again(self):
         responses = self.base_responses()
-        responses["prompt_composer"] = [
-            {"candidates": ["初稿一", "初稿二", "初稿三"]},
-        ]
-        responses["rewrite"] = [
-            {"candidates": ["二稿一", "二稿二", "二稿三"]},
-            {"candidates": ["三稿一", "三稿二", "三稿三"]},
-        ]
         responses["critic"] = [
-            critique(False, naturalness=9, instruction="第一次修改"),
-            critique(False, naturalness=6, instruction="第二次修改"),
-            critique(False, naturalness=5, instruction="仍未通过"),
-        ]
-        result, counts = self.invoke(responses)
-        self.assertEqual(counts["prompt_composer"], 1)
-        self.assertEqual(counts["rewrite"], 2)
-        self.assertEqual(counts["critic"], 3)
-        self.assertEqual(result["candidates"], ["初稿一", "初稿二", "初稿三"])
-        self.assertTrue(any("最佳候选" in warning for warning in result["warnings"]))
-
-    def test_critic_marks_only_failed_candidates_for_rewrite(self):
-        responses = self.base_responses()
-        responses["critic"] = partial_critique([1])
-        result, _counts = self.invoke(responses)
-        self.assertEqual(result["critic_analysis"]["rewrite_candidate_indexes"], [1])
-        self.assertIn("需要修改1", result["critic_analysis"]["rewrite_instruction"])
-
-    def test_rewrite_only_replaces_failed_candidates(self):
-        responses = self.base_responses()
-        responses["prompt_composer"] = {"candidates": ["原候选一", "原候选二", "原候选三"]}
-        responses["critic"] = [
-            partial_critique([1]),
+            critique(False, failed_indexes=[1], revised_candidates={1: "只改第二条"}),
             critique(True),
         ]
-        responses["rewrite"] = [
-            {"candidates": [{"candidate_index": 1, "content": "只改第二条"}]},
-        ]
         result, counts = self.invoke(responses)
-        self.assertEqual(counts["prompt_composer"], 1)
-        self.assertEqual(counts["rewrite"], 1)
-        self.assertEqual(result["candidates"], ["原候选一", "只改第二条", "原候选三"])
-        self.assertEqual(result["fallback_candidates"], ["原候选一", "只改第二条", "原候选三"])
+        self.assertEqual(counts["response_composer"], 1)
+        self.assertEqual(counts["critic"], 2)
+        self.assertEqual(result["candidates"], ["好呀", "只改第二条", "听起来不错"])
+        self.assertEqual(result["critic_analysis"]["revised_candidate_indexes"], [])
 
-    def test_rewrite_ignores_unrequested_candidate_indexes(self):
+    def test_response_composer_normalizes_segment_line_breaks(self):
         responses = self.base_responses()
-        responses["prompt_composer"] = {"candidates": ["原候选一", "原候选二", "原候选三"]}
-        responses["critic"] = [
-            partial_critique([1]),
-            critique(True),
-        ]
-        responses["rewrite"] = [{"candidates": [
-            {"candidate_index": 0, "content": "不应替换"},
-            {"candidate_index": 1, "content": "只改第二条"},
-        ]}]
-        result, _counts = self.invoke(responses)
-        self.assertEqual(result["candidates"], ["原候选一", "只改第二条", "原候选三"])
-
-    def test_rewrite_payload_contains_only_requested_candidates(self):
-        payload = _rewrite_payload({
-            "candidates": ["原候选一", "原候选二", "原候选三"],
-            "critic_analysis": {
-                "rewrite_instruction": "只改第二条",
-                "rewrite_candidate_indexes": [1],
-            },
-            "dialogue_composition": {"goal": "自然回应"},
-        })
-        self.assertEqual(
-            payload["rewrite_targets"],
-            [{"candidate_index": 1, "existing_candidate": "原候选二"}],
-        )
-        self.assertNotIn("existing_candidates", payload)
-
-    def test_prompt_composer_normalizes_segment_line_breaks(self):
-        responses = self.base_responses()
-        responses["prompt_composer"] = {"candidates": [
+        responses["response_composer"]["candidates"] = [
             "今天去公司了。\n\n结果老板不在😂\n\n下午就提前回来了。",
             "哈哈哈",
             "一\n二\n三\n四\n五\n六",
-        ]}
+        ]
         result, _counts = self.invoke(responses)
         self.assertEqual(
             result["candidates"][0].split("\n"),
