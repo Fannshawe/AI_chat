@@ -8,6 +8,7 @@
 - 每个 candidate 都要单独给出 passed。
 - 只有 passed=false 的 candidate 才填写 rewrite_instruction 和 revised_candidate；passed=true 时两项必须为空。
 - revised_candidate 只能改写本 candidate，必须可直接替换原文，并继续遵守 response_plan 中同下标的 directive、长度和分条规则；若需要补分条，使用单个 `\n` 分隔完整想法。
+- revised_candidate 只能局部修复被指出的问题，不得改变该候选原本的 angle、功能定位、推进策略和大方向；不要把“情绪回应”改成“轻反问”，也不要把收尾型候选改成主动推进型候选。
 - 如果全部通过，则 passed=true；否则 passed=false。不要输出额外的重写索引字段。
 
 检查以下内容：
@@ -23,6 +24,7 @@
 
 计划相关的判定前提：
 - 三个候选风格不同是计划要求的结果，不能因为彼此不一致而扣分。
+- 如果 `response_plan`、`persona` 或 `relevant_memories` 是系统摘要，仍按其中已出现的字段严格评审，不因为字段更短就放松 Persona/Memory/边界要求。
 - length_hint 为“极短”的候选只有 2~5 字是正常的，不算敷衍；反而应该把这类候选写长了的情况计为不自然。
 - length_plan.allow_filler_only=true 时，没有信息量的纯语气回应（如“哈哈哈”“我懂”）是合法的，不计作敏感或敏付。
 - 候选严重超出 char_budget、或把话一次说满没有留白，计为自然度-问题并写入 issues。略微超出2-4字不算问题。

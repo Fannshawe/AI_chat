@@ -8,11 +8,11 @@
         "iterations": 120000
       },
       "port": 8101,
-      "user_root": "C:\\Users\\fix1wx\\Documents\\Chat_LangChain\\users\\fanshawe",
-      "data_dir": "C:\\Users\\fix1wx\\Documents\\Chat_LangChain\\users\\fanshawe\\data",
-      "persona_path": "C:\\Users\\fix1wx\\Documents\\Chat_LangChain\\users\\fanshawe\\data\\persona.yaml",
+      "user_root": "C:\\Users\\fix1wx\\Documents\\python\\Chat_LangChain\\users\\fanshawe",
+      "data_dir": "C:\\Users\\fix1wx\\Documents\\python\\Chat_LangChain\\users\\fanshawe\\data",
+      "persona_path": "C:\\Users\\fix1wx\\Documents\\python\\Chat_LangChain\\users\\fanshawe\\data\\persona.yaml",
       "created_at": "2026-08-13T08:29:54.944990+00:00",
-      "last_used_at": "2026-08-22T04:16:15.031846+00:00"
+      "last_used_at": "2026-08-25T03:05:32.088623+00:00"
     }
   }
 }

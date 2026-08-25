@@ -151,6 +151,13 @@ class GraphPipelineTests(unittest.TestCase):
         self.assertLess(trace_nodes.index("critic_complete"), trace_nodes.index("save"))
         self.assertLess(trace_nodes.index("user_mem_recognition"), trace_nodes.index("save"))
 
+    def test_response_composition_keeps_full_formal_plan_fields(self):
+        result, _counts = self.invoke(self.base_responses())
+        self.assertEqual(result["response_composition"]["strategy"], ["简短回应"])
+        self.assertEqual(result["response_composition"]["memory_usage"], [])
+        self.assertEqual(result["response_composition"]["persona_expression"], ["简洁"])
+        self.assertEqual(result["response_composition"]["emotion_expression"], [])
+
     def test_critic_revises_failed_candidate_then_reviews_again(self):
         responses = self.base_responses()
         responses["critic"] = [

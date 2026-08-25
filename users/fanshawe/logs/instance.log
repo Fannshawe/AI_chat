@@ -1,0 +1,264 @@
+INFO:     Started server process [31288]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8101 (Press CTRL+C to quit)
+INFO:     127.0.0.1:63899 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63903 - "POST /api/chat/generate/jobs HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:63905 - "POST /api/chat/generate/jobs HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:63907 - "POST /api/chat/generate/jobs HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:63910 - "POST /api/chat/generate/jobs HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:63913 - "POST /api/chat/generate/jobs HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:63915 - "POST /api/chat/generate/jobs HTTP/1.1" 422 Unprocessable Entity
+INFO:     Shutting down
+INFO:     Started server process [33024]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8101 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52549 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52551 - "POST /api/chat/generate/jobs HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:52555 - "GET /api/debug/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52557 - "GET /api/chat/generate/jobs/active HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52563 - "POST /api/chat/generate/jobs HTTP/1.1" 200 OK
+[DEBUG] node=context start
+[DEBUG] node=context done duration_ms=70.6
+[DEBUG] node=memory_planner start
+[DEBUG] node=persona_habit_retrieval start
+[DEBUG] node=persona_habit_retrieval done duration_ms=2.7
+[DEBUG] node=turn_interpreter start
+[DEBUG] node=user_mem_recognition start
+INFO:     127.0.0.1:52566 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52568 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52570 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52572 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52574 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52576 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52578 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52580 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52582 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52584 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52589 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+[DEBUG] node=memory_planner done duration_ms=11434.8
+[DEBUG] node=user_mem_recognition done duration_ms=11411.01
+INFO:     127.0.0.1:52591 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52593 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52595 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52597 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52599 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+[DEBUG] node=turn_interpreter done duration_ms=23175.01
+[DEBUG] node=guidance start
+[DEBUG] node=memory_retrieval start[DEBUG] node=self_emotion start
+
+[DEBUG] node=memory_retrieval done duration_ms=3.41
+[DEBUG] node=guidance done duration_ms=12.95
+INFO:     127.0.0.1:52602 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52604 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52606 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+[workflow-debug] self_emotion update
+{
+  "events": [
+    {
+      "event": "寒暄",
+      "impact": 0.1,
+      "reason": "对方发送标准问候“你好”，关系处于“认识”阶段，触发轻微的社会性正向反馈，但因缺乏深度内容，影响极低。"
+    }
+  ],
+  "self_emotion_state": {
+    "mood": "放松",
+    "mood_intensity": 62,
+    "energy": 62,
+    "dimensions": [
+      {
+        "name": "期待",
+        "value": 25
+      }
+    ],
+    "reason": "间隔仅3分钟，情绪状态基本延续。收到问候作为社交礼仪回应，结合高温暖度人格，产生轻微且礼貌的期待感，整体维持放松基调。"
+  }
+}
+[/workflow-debug]
+[DEBUG] node=self_emotion done duration_ms=4923.32
+[DEBUG] node=response_composer start
+INFO:     127.0.0.1:52608 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52610 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59597 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59604 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59606 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64744 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58296 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58596 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64092 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64094 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52225 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49677 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49680 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49682 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49685 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49887 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49889 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49891 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49893 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49896 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52837 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65385 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65387 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65389 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+[workflow-debug] response_composer
+{
+  "goal": "礼貌回应新的好友/网友问候，建立初步的轻松氛围，不施加压力。",
+  "strategy": [
+    "直接回应",
+    "自我介绍",
+    "释放善意"
+  ],
+  "structure": [
+    "回应问候",
+    "简单自我介绍",
+    "释放友好信号"
+  ],
+  "memory_usage": [
+    "无具体记忆可用，仅基于当前关系阶段"
+  ],
+  "persona_expression": [
+    "温和",
+    "慢热",
+    "真诚",
+    "口语化",
+    "低emoji频率"
+  ],
+  "emotion_expression": [
+    "平静",
+    "轻微期待",
+    "不刻意热情"
+  ],
+  "topic_plan": [
+    "开启话题",
+    "等待对方回应"
+  ],
+  "length_plan": {
+    "sentence_count": 2,
+    "char_budget": 25,
+    "allow_filler_only": false,
+    "allow_double_text": false,
+    "rhythm_note": "自然回应，不拖沓"
+  },
+  "candidate_directives": [
+    {
+      "candidate_index": 0,
+      "angle": "极简附和",
+      "length_hint": "极短",
+      "segment_count": 1,
+      "instruction": "只回一个词，表示收到问候，不展开。"
+    },
+    {
+      "candidate_index": 1,
+      "angle": "自我暴露",
+      "length_hint": "短",
+      "segment_count": 1,
+      "instruction": "回问候并简单自我介绍，增加真实感。"
+    },
+    {
+      "candidate_index": 2,
+      "angle": "情绪回应",
+      "length_hint": "短",
+      "segment_count": 1,
+      "instruction": "回问候并加一个表情，显得友好但不越界。"
+    }
+  ],
+  "constraints": [
+    "不要长篇大论",
+    "不要追问对方是谁",
+    "保持礼貌距离"
+  ],
+  "candidates": [
+    "你好",
+    "你好呀，我是林澈",
+    "你好 🙂"
+  ]
+}
+[/workflow-debug]
+[DEBUG] node=response_composer done duration_ms=46963.1
+[DEBUG] node=critic start
+INFO:     127.0.0.1:65391 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65393 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65395 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65397 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65399 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65401 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65404 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65406 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65408 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65410 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65412 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65414 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65417 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65419 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65421 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65423 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65425 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65427 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65429 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65431 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65433 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65435 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+[workflow-debug] critic analysis
+{
+  "reviews": [
+    {
+      "candidate_index": 0,
+      "ai_taste": 1.0,
+      "interview_taste": 1.0,
+      "empathy_excess": 1.0,
+      "naturalness": 9.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    },
+    {
+      "candidate_index": 1,
+      "ai_taste": 4.0,
+      "interview_taste": 1.0,
+      "empathy_excess": 1.0,
+      "naturalness": 6.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    },
+    {
+      "candidate_index": 2,
+      "ai_taste": 3.0,
+      "interview_taste": 1.0,
+      "empathy_excess": 1.0,
+      "naturalness": 8.0,
+      "persona_consistent": true,
+      "memory_consistent": true,
+      "passed": true,
+      "issues": [],
+      "rewrite_instruction": "",
+      "revised_candidate": ""
+    }
+  ],
+  "passed": true
+}
+[/workflow-debug]
+[DEBUG] node=critic done duration_ms=24604.05
+[DEBUG] node=critic_complete start
+[DEBUG] node=critic_complete done duration_ms=0.58
+[DEBUG] node=save start
+[DEBUG] node=save done duration_ms=0.59
+INFO:     127.0.0.1:65437 - "GET /api/chat/generate/jobs/960e0866048b4fbd9a1b142c786ebe15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62315 - "POST /api/chat/confirm HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60554 - "GET /debug HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60556 - "GET /static/debug.js?v=20260813a HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60558 - "GET /api/bootstrap HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60560 - "GET /api/debug/generations?contact_id=1&limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60562 - "GET /api/debug/generations/1 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [33024]
