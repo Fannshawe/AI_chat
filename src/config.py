@@ -90,7 +90,7 @@ def _read_bool_env(name: str, default: bool = False) -> bool:
 
 
 WORKFLOW_DEBUG = _read_bool_env("WORKFLOW_DEBUG", default=False)
-CRITIC_MAX_ATTEMPTS = max(1, int(os.getenv("CRITIC_MAX_ATTEMPTS", "3")))
+CRITIC_MAX_ATTEMPTS = max(0, int(os.getenv("CRITIC_MAX_ATTEMPTS", "3")))
 
 
 def _agent_env_prefix(agent_name: str) -> str:

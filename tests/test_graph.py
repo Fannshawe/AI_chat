@@ -170,6 +170,17 @@ class GraphPipelineTests(unittest.TestCase):
         self.assertEqual(result["candidates"], ["好呀", "只改第二条", "听起来不错"])
         self.assertEqual(result["critic_analysis"]["revised_candidate_indexes"], [])
 
+    def test_skips_critic_when_max_attempts_is_zero(self):
+        responses = self.base_responses()
+
+        with patch("src.graph.CRITIC_MAX_ATTEMPTS", 0):
+            result, counts = self.invoke(responses)
+
+        self.assertEqual(counts["response_composer"], 1)
+        self.assertNotIn("critic", counts)
+        self.assertEqual(counts["user_mem_recognition"], 1)
+        self.assertEqual(result["candidates"], ["好呀", "可以", "听起来不错"])
+
     def test_response_composer_normalizes_segment_line_breaks(self):
         responses = self.base_responses()
         responses["response_composer"]["candidates"] = [

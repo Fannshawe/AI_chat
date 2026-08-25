@@ -640,6 +640,12 @@ def route_after_critic(state: WorkflowState) -> str:
     return "critic"
 
 
+def route_after_response_composer(_: WorkflowState) -> str:
+    if CRITIC_MAX_ATTEMPTS <= 0:
+        return "critic_complete"
+    return "critic"
+
+
 def node_user_memory_recognition(state: WorkflowState) -> dict[str, Any]:
     """Recognize durable facts from the current real user message and existing memory only."""
     fallback = {"memories": []}
@@ -689,7 +695,9 @@ def build_graph():
     graph.add_edge("turn_interpreter", "self_emotion")
     graph.add_edge("turn_interpreter", "guidance")
     graph.add_edge(["self_emotion", "guidance", "persona_habit_retrieval", "memory_retrieval"], "response_composer")
-    graph.add_edge("response_composer", "critic")
+    graph.add_conditional_edges("response_composer", route_after_response_composer, {
+        "critic": "critic", "critic_complete": "critic_complete",
+    })
     graph.add_conditional_edges("critic", route_after_critic, {
         "critic": "critic", "critic_complete": "critic_complete",
     })
