@@ -265,7 +265,7 @@ function applyGenerationResult(result, inputElement) {
   state.pendingPreviewMessage = result.message || null;
   state.generationId = result.generation_id;
   updateLatestDebugLink();
-  renderCandidates(result.candidates, result.strategy, result.dialogue_plan?.strategy || [], result.critic);
+  renderCandidates(result.candidates, result.strategy, result.candidate_modes || result.dialogue_plan?.strategy || [], result.critic);
   if (result.relationship?.current_level) {
     $("#relationshipBadge").textContent = `关系：${result.relationship.current_level}`;
   }
@@ -330,13 +330,12 @@ function persistCurrentDraftState() {
   if (zone.classList.contains("hidden")) return;
   const candidates = [...document.querySelectorAll("#candidateGrid .candidate-card textarea")].map((node) => node.value);
   if (!candidates.length) return;
-  const modes = [...document.querySelectorAll("#candidateGrid .candidate-card .candidate-mode")].map((node) => node.textContent || "候选回复");
   saveDraftCache({
     contactId: state.contactId,
     generationId: state.generationId,
     strategy: $("#strategyText").textContent || "",
     candidates,
-    modes,
+    modes: [...document.querySelectorAll("#candidateGrid .candidate-card .candidate-mode")].map((node) => node.textContent || "候选回复"),
     previewMessage: state.pendingPreviewMessage,
     savedAt: Date.now(),
   });
@@ -357,7 +356,7 @@ function restoreDraftCache() {
   state.pendingPreviewMessage = cached.previewMessage || null;
   state.generationId = cached.generationId || state.generationId;
   updateLatestDebugLink();
-  renderCandidates(cached.candidates, cached.strategy || "已恢复上次候选", cached.modes || []);
+  renderCandidates(cached.candidates, cached.strategy || "已恢复上次候选", cached.modes || [], {});
   toast("已恢复上次未确认的候选回复");
 }
 
@@ -429,7 +428,7 @@ function hasSameUserBubble(content) {
 function finalCritiques(critic) {
   const reviews = critic?.reviews || [];
   const review = reviews[reviews.length - 1];
-  return review?.candidates || [];
+  return review?.reviews || review?.candidates || [];
 }
 
 function segmentCount(text) {

@@ -185,6 +185,12 @@ def _execute_generation(
         "generation_id": draft_id,
         "strategy": result.get("strategy", ""),
         "candidates": result.get("candidates", []),
+        "candidate_modes": [
+            str(item.get("angle") or "候选回复")
+            for item in result.get("response_composition", {}).get("candidate_directives", [])
+            if isinstance(item, dict)
+        ],
+        "response_plan": result.get("response_composition", {}),
         "dialogue_plan": result.get("response_composition", {}),
         "critic": result.get("critic_analysis", {}),
         "relationship": result.get("relationship", {}),

@@ -550,8 +550,8 @@ def node_response_composer(state: WorkflowState) -> dict[str, Any]:
             "stage_reason": state.get("relationship_analysis", {}).get("stage_reason"),
             "behavior_boundaries": state.get("relationship_analysis", {}).get("behavior_boundaries", []),
         },
-        "memories": _memory_summary(state.get("primary_memories") or state.get("memories", []), limit=4),
-        "background_memories": _memory_summary(state.get("background_memories", []), limit=2),
+        "memories": state.get("primary_memories") or state.get("memories", []),
+        "background_memories": state.get("background_memories", [])[:2],
         "chat_skill_documents": state.get("guidance_chunks", [])[:2],
     }, fallback)
     candidates = [_normalize_segments(str(item)) for item in result.get("candidates", [])][:3]
