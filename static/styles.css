@@ -369,6 +369,13 @@ h1 {
   line-height: 1.45;
 }
 
+.candidate-instruction {
+  margin: -4px 0 0;
+  color: #746b62;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .candidate-card textarea {
   min-height: 76px;
   padding: 2px 0;

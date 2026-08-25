@@ -1,5 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
-const state = { contactId: null, generationId: null, debugEnabled: true, pendingPreviewMessage: null };
+const state = { contactId: null, generationId: null, debugEnabled: true, pendingPreviewMessage: null, currentPlan: {} };
 const DRAFT_CACHE_KEY = "persona-chat:draft:v1";
 const JOB_CACHE_KEY = "persona-chat:active-job:v1";
 const INPUT_CACHE_KEY = "persona-chat:input:v1";
@@ -154,6 +154,7 @@ function clearTransientChatState(notify = false) {
   clearActiveJobId();
   state.generationId = null;
   state.pendingPreviewMessage = null;
+  state.currentPlan = {};
   updateLatestDebugLink();
   const input = $("#messageInput");
   input.value = "";
@@ -265,7 +266,7 @@ function applyGenerationResult(result, inputElement) {
   state.pendingPreviewMessage = result.message || null;
   state.generationId = result.generation_id;
   updateLatestDebugLink();
-  renderCandidates(result.candidates, result.strategy, result.candidate_modes || result.dialogue_plan?.strategy || [], result.critic);
+  renderCandidates(result.candidates, result.strategy, result.response_plan || result.dialogue_plan || {}, result.critic);
   if (result.relationship?.current_level) {
     $("#relationshipBadge").textContent = `关系：${result.relationship.current_level}`;
   }
@@ -335,7 +336,7 @@ function persistCurrentDraftState() {
     generationId: state.generationId,
     strategy: $("#strategyText").textContent || "",
     candidates,
-    modes: [...document.querySelectorAll("#candidateGrid .candidate-card .candidate-mode")].map((node) => node.textContent || "候选回复"),
+    plan: state.currentPlan || {},
     previewMessage: state.pendingPreviewMessage,
     savedAt: Date.now(),
   });
@@ -356,7 +357,7 @@ function restoreDraftCache() {
   state.pendingPreviewMessage = cached.previewMessage || null;
   state.generationId = cached.generationId || state.generationId;
   updateLatestDebugLink();
-  renderCandidates(cached.candidates, cached.strategy || "已恢复上次候选", cached.modes || [], {});
+  renderCandidates(cached.candidates, cached.strategy || "已恢复上次候选", cached.plan || {}, {});
   toast("已恢复上次未确认的候选回复");
 }
 
@@ -435,16 +436,30 @@ function segmentCount(text) {
   return String(text ?? "").split("\n").map((segment) => segment.trim()).filter(Boolean).length || 1;
 }
 
-function renderCandidates(candidates, strategy, modes = [], critic = {}) {
+function candidateModes(plan = {}) {
+  return Array.isArray(plan.candidate_directives)
+    ? plan.candidate_directives.map((item) => item?.angle || "候选回复")
+    : [];
+}
+
+function renderCandidates(candidates, strategy, plan = {}, critic = {}) {
+  state.currentPlan = plan || {};
   $("#strategyText").textContent = strategy;
   const grid = $("#candidateGrid");
   grid.innerHTML = "";
+  const directives = Array.isArray(plan.candidate_directives) ? plan.candidate_directives : [];
+  const modes = candidateModes(plan);
   candidates.forEach((candidate, index) => {
     const card = document.createElement("article");
     card.className = "candidate-card";
     const mode = document.createElement("span");
     mode.className = "candidate-mode";
     mode.textContent = modes[index] || "候选回复";
+    const directive = directives[index];
+    const instructionText = String(directive?.instruction || "").trim();
+    const instruction = document.createElement("p");
+    instruction.className = "candidate-instruction";
+    instruction.textContent = instructionText;
     const segmentBadge = document.createElement("span");
     segmentBadge.className = "candidate-segments";
     const isSilence = candidate === "（暂不回复）" || modes[index] === "暂不回复";
@@ -461,7 +476,9 @@ function renderCandidates(candidates, strategy, modes = [], critic = {}) {
       persistCurrentDraftState();
     });
     updateSegmentBadge(candidate);
-    card.append(mode, segmentBadge, textarea);
+    card.append(mode);
+    if (instructionText) card.appendChild(instruction);
+    card.append(segmentBadge, textarea);
     const critique = finalCritiques(critic).find(item => item.candidate_index === index);
     if (critique && !critique.passed) {
       const warning = document.createElement("p");
