@@ -557,18 +557,20 @@ def node_response_composer(state: WorkflowState) -> dict[str, Any]:
     candidates = [_normalize_segments(str(item)) for item in result.get("candidates", [])][:3]
     composition = {
         key: result.get(key, fallback[key])
-        for key in ("goal", "structure", "topic_plan", "length_plan", "candidate_directives", "constraints")
-    }
-    # These fields are genuine planning steps the model must reason through
-    # before writing candidates (see field order in ResponseComposerAnalysis).
-    # They are logged for troubleshooting only and intentionally not
-    # forwarded to Critic or persisted in the generation snapshot.
-    planning_notes = {
-        key: result.get(key, fallback[key])
-        for key in ("strategy", "memory_usage", "persona_expression", "emotion_expression")
+        for key in ("goal", "strategy", "structure", "topic_plan", "length_plan", "candidate_directives", "constraints")
     }
     _workflow_debug_print(state, "response_composer", {
-        "plan": composition, "planning_notes": planning_notes, "candidates": candidates,
+        "goal": composition.get("goal", ""),
+        "strategy": result.get("strategy", fallback["strategy"]),
+        "structure": composition.get("structure", []),
+        "memory_usage": result.get("memory_usage", fallback["memory_usage"]),
+        "persona_expression": result.get("persona_expression", fallback["persona_expression"]),
+        "emotion_expression": result.get("emotion_expression", fallback["emotion_expression"]),
+        "topic_plan": composition.get("topic_plan", []),
+        "length_plan": composition.get("length_plan", {}),
+        "candidate_directives": composition.get("candidate_directives", []),
+        "constraints": composition.get("constraints", []),
+        "candidates": candidates,
     })
     return {
         "response_composition": composition,
