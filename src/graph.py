@@ -195,6 +195,7 @@ class WorkflowState(_WorkflowStateRequired, total=False):
     history: list[dict[str, Any]]
     persona_core: dict[str, Any]
     persona_personality: dict[str, Any]
+    expression_style: dict[str, Any]
     persona_habits: dict[str, Any]
     emotion_profile: dict[str, Any]
     relevant_habits: dict[str, Any]
@@ -332,14 +333,13 @@ def node_load_context(state: WorkflowState) -> dict[str, Any]:
     contact_id = int(state.get("contact_id") or contacts[0]["id"])
     profile = store.get_persona_profile()
     personality = profile.get("personality", {})
+    expression_style = profile.get("expression_style", {})
     return {
         "contact_id": contact_id,
         "history": store.list_messages(contact_id, SHORT_TERM_MESSAGE_LIMIT),
         "persona_core": profile.get("core", {}),
-        "persona_personality": {
-            **(personality if isinstance(personality, dict) else {}),
-            "expression": profile.get("expression", {}),
-        },
+        "persona_personality": personality if isinstance(personality, dict) else {},
+        "expression_style": expression_style if isinstance(expression_style, dict) else {},
         "persona_habits": profile.get("habits", {}),
         "emotion_profile": store.get_emotion_profile(),
         "relationship": store.get_relationship(contact_id),
@@ -360,8 +360,8 @@ def node_emotion_detection(state: WorkflowState) -> dict[str, Any]:
     }]}
     result, warnings, llm_debug = _run_structured_agent(state, "emotion", {
         "latest_message": state["user_request"],
-        "recent_conversation_with_time": _history_with_time(state.get("history", [])),
-        "recent_emotional_state": _emotions_with_time(state.get("recent_emotions", [])),
+        "recent_conversation_with_time": _history_with_time(state.get("history", [])[-4:]),
+        "recent_emotional_state": _emotions_with_time(state.get("recent_emotions", [])[-4:]),
         "instruction": "只分析对方当前情绪。证据不足时输出 emotion=unknown。保持 emotion/intensity/confidence/reason 字段。",
     }, fallback)
     emotions = [
@@ -392,7 +392,7 @@ def node_self_emotion_update(state: WorkflowState) -> dict[str, Any]:
     }
     result, warnings, llm_debug = _run_structured_agent(state, "self_emotion", {
         "latest_message": state["user_request"],
-        "recent_conversation_with_time": _history_with_time(state.get("history", [])),
+        "recent_conversation_with_time": _history_with_time(state.get("history", [])[-4:]),
         "contact_emotion": state.get("contact_emotion_analysis", {}),
         "previous_self_emotion_state": previous,
         "current_time": datetime.now().astimezone().isoformat(),
@@ -402,7 +402,7 @@ def node_self_emotion_update(state: WorkflowState) -> dict[str, Any]:
             "base_dimensions": emotion_profile.get("base_dimensions", {}),
         },
         "relationship": state.get("relationship", {}),
-        "relationship_judgment": state.get("relationship_analysis", {}),
+        # "relationship_judgment": state.get("relationship_analysis", {}),
         "persona_emotion_profile": emotion_profile,
         "persona_personality": state.get("persona_personality", {}),
         "recent_events": _events_with_time(store.list_conversation_events(state["contact_id"], 8)),
@@ -423,7 +423,7 @@ def node_relationship_state(state: WorkflowState) -> dict[str, Any]:
         "allowed_levels": RELATIONSHIP_LEVELS,
         "current_relationship": current,
         "latest_message": state["user_request"],
-        "recent_conversation_with_time": _history_with_time(state.get("history", [])),
+        "recent_conversation_with_time": _history_with_time(state.get("history", [])[-4:]),
     }, fallback)
     return {"relationship_analysis": result, "warnings": warnings, "_debug_llm": llm_debug}
 
@@ -472,7 +472,7 @@ def node_memory_planner(state: WorkflowState) -> dict[str, Any]:
     ]}
     result, warnings, llm_debug = _run_structured_agent(state, "memory_planner", {
         "latest_message": state["user_request"],
-        "recent_conversation_with_time": _history_with_time(state.get("history", [])),
+        # "recent_conversation_with_time": _history_with_time(state.get("history", [])),
         "available_memory_types": USER_MEMORY_CATEGORIES,
         "instruction": "扩展话题关键词和近义联想，但不要臆造事实。",
     }, fallback)
@@ -533,27 +533,27 @@ def node_dialogue_composer(state: WorkflowState) -> dict[str, Any]:
     }
     result, warnings, llm_debug = _run_structured_agent(state, "dialogue_composer", {
         "latest_message": state["user_request"],
-        "recent_conversation_with_time": _history_with_time(state.get("history", [])),
+        "recent_conversation_with_time": _history_with_time(state.get("history", [])[-4:]),
         "persona": {"core": state.get("persona_core", {}), "personality": state.get("persona_personality", {})},
         "relevant_habits": state.get("relevant_habits", {}),
         "contact_emotion": _primary_contact_emotion_summary(state),
         "self_emotion_state": _self_emotion_state_summary(state),
         "relationship": {
             "current_level": state.get("relationship", {}).get("current_level"),
-            "trust": state.get("relationship", {}).get("trust"),
-            "familiarity": state.get("relationship", {}).get("familiarity"),
-            "intimacy": state.get("relationship", {}).get("intimacy"),
-            "attraction": state.get("relationship", {}).get("attraction"),
-            "attachment": state.get("relationship", {}).get("attachment"),
-            "comfort": state.get("relationship", {}).get("comfort"),
+            # "trust": state.get("relationship", {}).get("trust"),
+            # "familiarity": state.get("relationship", {}).get("familiarity"),
+            # "intimacy": state.get("relationship", {}).get("intimacy"),
+            # "attraction": state.get("relationship", {}).get("attraction"),
+            # "attachment": state.get("relationship", {}).get("attachment"),
+            # "comfort": state.get("relationship", {}).get("comfort"),
         },
         "relationship_judgment": {
             "suggested_level": state.get("relationship_analysis", {}).get("suggested_level"),
-            "stage_reason": state.get("relationship_analysis", {}).get("stage_reason"),
-            "behavior_boundaries": state.get("relationship_analysis", {}).get("behavior_boundaries", []),
+            # "stage_reason": state.get("relationship_analysis", {}).get("stage_reason"),
+            # "behavior_boundaries": state.get("relationship_analysis", {}).get("behavior_boundaries", []),
         },
         "memories": state.get("primary_memories") or state.get("memories", []),
-        "background_memories": state.get("background_memories", [])[:2],
+        # "background_memories": state.get("background_memories", [])[:2],
         "chat_skill_documents": state.get("guidance_chunks", [])[:2],
     }, fallback)
     return {
@@ -567,26 +567,26 @@ def node_dialogue_composer(state: WorkflowState) -> dict[str, Any]:
 def _prompt_composer_payload(state: WorkflowState) -> dict[str, Any]:
     dialogue_plan = state.get("dialogue_composition", {})
     relationship = state.get("relationship", {})
-    relationship_boundaries = state.get("relationship_analysis", {}).get("behavior_boundaries", [])
+    # relationship_boundaries = state.get("relationship_analysis", {}).get("behavior_boundaries", [])
     return {
         "latest_message": state["user_request"],
+        "current_time": datetime.now().astimezone().isoformat(),
         "persona": {
             "core": state.get("persona_core", {}),
-            "personality": {
-                "expression_style": state.get("persona_personality", {}).get("expression_style", {}),
-            },
+            "expression_style": state.get("expression_style", {}),
         },
-        "relevant_habits": state.get("relevant_habits", {}),
-        "contact_emotion": _primary_contact_emotion_summary(state),
-        "self_emotion_state": _self_emotion_state_summary(state),
+        # "relevant_habits": state.get("relevant_habits", {}),
+        # "contact_emotion": _primary_contact_emotion_summary(state),
+        # "self_emotion_state": _self_emotion_state_summary(state),
         "relationship": {
             "current_level": relationship.get("current_level"),
         },
-        "relationship_boundaries": relationship_boundaries,
-        "relevant_memories": (state.get("primary_memories") or state.get("memories", []))[:3],
+        # "relationship_boundaries": relationship_boundaries,
+        # "relevant_memories": (state.get("primary_memories") or state.get("memories", []))[:3],
         "dialogue_plan": {
             "goal": dialogue_plan.get("goal", ""),
             "structure": dialogue_plan.get("structure", []),
+            "memory_usage": dialogue_plan.get("memory_usage", []),
             "length_plan": dialogue_plan.get("length_plan", {}),
             "candidate_directives": dialogue_plan.get("candidate_directives", []),
             "constraints": dialogue_plan.get("constraints", []),
@@ -682,8 +682,8 @@ def node_reply_critic(state: WorkflowState) -> dict[str, Any]:
     fallback = {"candidates": [], "passed": True, "rewrite_candidate_indexes": []}
     review, warnings, llm_debug = _run_structured_agent(state, "critic", {
         "latest_message": state["user_request"],
-        "recent_conversation_with_time": _history_with_time(state.get("history", [])),
-        "persona": {"core": state.get("persona_core", {}), "personality": state.get("persona_personality", {})},
+        # "recent_conversation_with_time": _history_with_time(state.get("history", [])[-4:]),
+        "persona": {"core": state.get("persona_core", {}), "personality": state.get("persona_personality", {}), "expression_style": state.get("expression_style", {})},
         "relevant_memories": state.get("primary_memories") or state.get("memories", []),
         "dialogue_plan": state.get("dialogue_composition", {}),
         "candidates": state["candidates"],
@@ -742,13 +742,13 @@ def node_reflection(state: WorkflowState) -> dict[str, Any]:
     """Responsibility: decide durable memories and Persona updates. Persistence: save node."""
     fallback = {"memories": []}
     result, warnings, llm_debug = _run_structured_agent(state, "reflection", {
-        "latest_real_message": state["user_request"],
+        # "latest_real_message": state["user_request"],
         "recent_conversation_with_time": _history_with_time(state.get("history", []), 8),
         "existing_relevant_memories": _reflection_memories_summary(
             state.get("primary_memories") or state.get("memories", [])
         ),
         "allowed_memory_types": USER_MEMORY_CATEGORIES,
-        "instruction": "只基于真实用户消息与已确认历史，输出值得长期保存的新记忆；不要把候选回复当成事实。，已有的记忆不需要再重复输出。",
+        "instruction": "只基于user消息，输出值得长期保存的新记忆。，已有的记忆不需要再重复输出。",
     }, fallback)
     return {"reflection_analysis": result, "warnings": warnings, "_debug_llm": llm_debug}
 

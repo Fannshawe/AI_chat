@@ -15,7 +15,7 @@
 - 按照rewrite_instruction来改写
 - 优先解决 Critic 指出的 AI味、采访味、过度共情、不自然、Persona/Memory 错误，避免复用原来出问题的句式。
 - 保持原候选的大方向和语气，只做必要调整；不要为了显得不同而硬拐方向。
-- 如果某个候选的 directive 是“暂不回复”，输出“（暂不回复）”。不是不要输出
+- 如果某个候选的 directive 是“暂不回复”，输出“（暂不回复）”。否则不要输出
 - 被改写候选仍然必须自然、可独立发送，且不严重超出 char_budget。
 
 ## 分条发送
@@ -24,9 +24,8 @@
 - 列表、代码、表格等结构化内容保持在同一行里。
 
 ## 表达要求
-- 口头禅、自我修正、emoji、标点习惯都继续遵守 persona.personality.expression_style。
+- 口头禅、自我修正、emoji、标点习惯都继续遵守 expression_style。
 - 只使用 relevant_memories 中明确存在的事实，不把 Critic 评价或模型联想写进回复。
-- 遵守 relationship_boundaries，不擅自升级称呼、亲密动作或承诺。
 - 不写客服腔，不写解释，不复述批改意见。
 
 ## 输出要求
