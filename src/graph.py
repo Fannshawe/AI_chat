@@ -534,7 +534,7 @@ def node_dialogue_composer(state: WorkflowState) -> dict[str, Any]:
     result, warnings, llm_debug = _run_structured_agent(state, "dialogue_composer", {
         "latest_message": state["user_request"],
         "recent_conversation_with_time": _history_with_time(state.get("history", [])[-4:]),
-        "persona": {"core": state.get("persona_core", {}), "personality": state.get("persona_personality", {})},
+        "persona": {"core": state.get("persona_core", {}), "personality": state.get("persona_personality", {}), "expression_style": state.get("expression_style", {})},
         "relevant_habits": state.get("relevant_habits", {}),
         "contact_emotion": _primary_contact_emotion_summary(state),
         "self_emotion_state": _self_emotion_state_summary(state),
@@ -605,6 +605,7 @@ def _rewrite_payload(state: WorkflowState) -> dict[str, Any]:
     candidates = state.get("candidates", [])
     payload = dict(state.get("dialogue_composition", {}))
     payload.update({
+        "persona": {"core": state.get("persona_core", {}), "expression_style": state.get("expression_style", {})},
         "rewrite_instruction": str(critic_analysis.get("rewrite_instruction", "")),
         "rewrite_candidate_indexes": rewrite_indexes,
         "rewrite_targets": [

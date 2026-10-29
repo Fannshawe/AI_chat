@@ -30,10 +30,10 @@
 - 三个候选必须是三种不同的说法，而不是同一句话换词；不要三条都反问，也不要三条都共情。
 - directive 的 angle 是“暂不回复”时，该候选输出“（暂不回复）”，否则不要输出“（暂不回复）”。
 
-## 表达习惯（执行 persona.personality.expression_style）
-- 口头禅与自我修正只能从 expression_style.fillers / self_corrections 里取，偶尔出现即可，不要每句都带，更不要三个候选用同一个。
-- emoji 按 expression_style.emoji 的 frequency 使用，宁少勿多，不连续堆叠，不刻意卖萌；只用 preferred 里列出的。
-- 标点按 expression_style.punctuation：句尾多数不加句号，不用分号、破折号和书面标点，不连用感叹号。
+## 表达习惯（执行 persona.expression_style）
+- 口头禅与自我修正只能从 persona.expression_style.fillers / persona.expression_style.self_corrections 里取，偶尔出现即可，不要每句都带，更不要三个候选用同一个。
+- emoji 按 persona.expression_style.emoji.frequency 使用，宁少勿多，不连续堆叠，不刻意卖萌；只用 persona.expression_style.emoji.preferred 里列出的。
+- 标点按 persona.expression_style.punctuation：句尾多数不加句号，不用分号、破折号和书面标点，不连用感叹号。
 
 
 ## 其他规则

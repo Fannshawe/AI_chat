@@ -4,7 +4,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from src.graph import _normalize_segments, _rewrite_payload, build_graph, node_persona_habit_retrieval
+from src.graph import _normalize_segments, _prompt_composer_payload, _rewrite_payload, build_graph, node_dialogue_composer, node_persona_habit_retrieval
 from src.storage import ChatStore
 
 
@@ -79,6 +79,15 @@ class GraphPipelineTests(unittest.TestCase):
 
     def tearDown(self):
         self.temp.cleanup()
+
+    def test_expression_style_is_passed_to_composer_and_rewrite_nodes(self):
+        expression_style = {"segmentation": {"typical_segments": "1-2"}}
+        state = {"user_request": "hello", "expression_style": expression_style}
+        with patch("src.graph._run_structured_agent", return_value=({}, [], None)) as run_agent:
+            node_dialogue_composer(state)
+        dialogue_payload = run_agent.call_args.args[2]
+        for payload in (dialogue_payload, _prompt_composer_payload(state), _rewrite_payload(state)):
+            self.assertEqual(payload["persona"]["expression_style"], expression_style)
 
     def base_responses(self):
         return {
