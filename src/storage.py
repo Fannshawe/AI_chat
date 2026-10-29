@@ -23,7 +23,7 @@ from typing import Any, Iterator
 
 import yaml
 
-from .config import DATABASE_PATH, PERSONA_PATH, UPLOAD_DIR
+from .config import DATABASE_PATH, PERSONA_PATH
 
 
 RELATIONSHIP_LEVELS = ["陌生人", "认识", "朋友", "暧昧", "恋人"]
@@ -78,10 +78,9 @@ class ChatStore:
     与后续维护。
     """
 
-    def __init__(self, db_path: Path | str = DATABASE_PATH, upload_dir: Path | str = UPLOAD_DIR):
-        """绑定数据库文件路径与上传目录路径。"""
+    def __init__(self, db_path: Path | str = DATABASE_PATH):
+        """绑定数据库文件路径。"""
         self.db_path = Path(db_path)
-        self.upload_dir = Path(upload_dir)
         self.persona_path = PERSONA_PATH
         self.ai_memory_path = self.db_path.parent / "ai_memory.yaml"
         self.export_dir = self.db_path.parent / "export"
@@ -143,7 +142,6 @@ class ChatStore:
         - 该联系人存在一条关系记录；
         - 各联系人存在对应的自身情绪初始状态。
         """
-        self.upload_dir.mkdir(parents=True, exist_ok=True)
         with self.connect() as connection:
             connection.executescript(
                 """
@@ -158,7 +156,6 @@ class ChatStore:
                     contact_id INTEGER NOT NULL,
                     role TEXT NOT NULL,
                     content TEXT NOT NULL DEFAULT '',
-                    image_paths TEXT NOT NULL DEFAULT '[]',
                     created_at TEXT NOT NULL,
                     FOREIGN KEY(contact_id) REFERENCES contacts(id) ON DELETE CASCADE
                 );
@@ -266,6 +263,11 @@ class ChatStore:
                 CREATE INDEX IF NOT EXISTS idx_persona_proposals_contact ON persona_update_proposals(contact_id, id);
                 """
             )
+            message_columns = {
+                row[1] for row in connection.execute("PRAGMA table_info(messages)").fetchall()
+            }
+            if "image_paths" in message_columns:
+                connection.execute("ALTER TABLE messages DROP COLUMN image_paths")
             generation_columns = {
                 row[1] for row in connection.execute("PRAGMA table_info(generations)").fetchall()
             }
@@ -336,6 +338,8 @@ class ChatStore:
                     (int(contact["id"]), json.dumps({}, ensure_ascii=False), now),
                 )
             connection.execute("DROP TABLE IF EXISTS personas")
+            if "image_paths" in message_columns:
+                self.refresh_yaml_snapshots({"03_messages.yaml"})
 
     def list_contacts(self) -> list[dict[str, Any]]:
         """按 id 升序返回所有联系人。"""
@@ -364,19 +368,14 @@ class ChatStore:
         contact_id: int,
         role: str,
         content: str,
-        image_paths: list[str] | None = None,
         created_at: str | None = None,
     ) -> dict[str, Any]:
-        """插入一条消息并返回可直接给 API 使用的字典。
-
-        image_paths 等 JSON 字段使用 ensure_ascii=False 序列化，
-        以保证中文内容可读。
-        """
+        """插入一条文本消息并返回可直接给 API 使用的字典。"""
         with self.connect() as connection:
             cursor = connection.execute(
-                     """INSERT INTO messages(contact_id, role, content, image_paths, created_at)
-                         VALUES (?, ?, ?, ?, ?)""",
-                     (contact_id, role, content, json.dumps(image_paths or [], ensure_ascii=False), created_at or utc_now()),
+                     """INSERT INTO messages(contact_id, role, content, created_at)
+                         VALUES (?, ?, ?, ?)""",
+                     (contact_id, role, content, created_at or utc_now()),
             )
             self._mark_exports(connection, "03_messages.yaml")
             row = connection.execute("SELECT * FROM messages WHERE id = ?", (cursor.lastrowid,)).fetchone()
@@ -401,9 +400,8 @@ class ChatStore:
 
     @staticmethod
     def _message_dict(row: sqlite3.Row) -> dict[str, Any]:
-        """将消息行标准化，并反序列化 JSON 字段。"""
+        """将消息行标准化。"""
         result = dict(row)
-        result["image_paths"] = _loads(result.get("image_paths"), [])
         result.pop("source_generation_id", None)
         return result
 
@@ -1282,7 +1280,6 @@ class ChatStore:
     @staticmethod
     def _deserialize_message_row(row: dict[str, Any]) -> dict[str, Any]:
         result = dict(row)
-        result["image_paths"] = _loads(result.get("image_paths"), [])
         result.pop("source_generation_id", None)
         return result
 

@@ -67,7 +67,7 @@ class GraphPipelineTests(unittest.TestCase):
     def setUp(self):
         self.temp = TemporaryDirectory()
         root = Path(self.temp.name)
-        self.store = ChatStore(root / "chat.db", root / "uploads")
+        self.store = ChatStore(root / "chat.db")
         self.store.persona_path = root / "data" / "persona.yaml"
         self.store.persona_path.parent.mkdir(parents=True, exist_ok=True)
         self.store.persona_path.write_text(

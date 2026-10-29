@@ -18,7 +18,7 @@ class ImportTests(unittest.TestCase):
     def test_chat_import_extracts_memories_in_batches(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
-            store = ChatStore(root / "chat.db", root / "uploads")
+            store = ChatStore(root / "chat.db")
             store.persona_path = root / "persona.yaml"
             store.initialize()
             contact_id = store.list_contacts()[0]["id"]
@@ -60,7 +60,7 @@ class ImportTests(unittest.TestCase):
     def test_chat_import_reports_reflection_failure_and_skips_empty_input(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
-            store = ChatStore(root / "chat.db", root / "uploads")
+            store = ChatStore(root / "chat.db")
             store.persona_path = root / "persona.yaml"
             store.initialize()
             contact_id = store.list_contacts()[0]["id"]
@@ -88,7 +88,7 @@ class ImportTests(unittest.TestCase):
     def test_memory_import_round_trip_and_deduplication(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
-            store = ChatStore(root / "chat.db", root / "uploads")
+            store = ChatStore(root / "chat.db")
             store.persona_path = root / "persona.yaml"
             store.initialize()
             contact_id = store.list_contacts()[0]["id"]
@@ -108,7 +108,7 @@ class ImportTests(unittest.TestCase):
     def test_invalid_memory_import_does_not_write(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
-            store = ChatStore(root / "chat.db", root / "uploads")
+            store = ChatStore(root / "chat.db")
             store.persona_path = root / "persona.yaml"
             store.initialize()
             contact_id = store.list_contacts()[0]["id"]

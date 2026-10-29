@@ -183,7 +183,6 @@ def _execute_generation(
         "role": "user",
         "content": content,
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "image_paths": [],
     }
     return {
         "message": preview_message,

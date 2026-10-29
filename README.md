@@ -19,7 +19,7 @@
 - User Emotion 与 AI Emotion 分离：用户情绪保留旧字段输出，AI Emotion 作为持久内部状态单独更新
 - AI Emotion 持久化：Mood、Energy 与多维短期 Emotion 按轮保存，并记录 Conversation Event
 - Markdown 指导文档本地关键词检索
-- 纯文本、图片输入和历史聊天导入
+- 纯文本输入和历史聊天导入
 - 主动聊天草稿（不自动发送）
 - OpenAI 兼容模型供应商切换
 - Memory Planner：先决定检索类型、查询、关键词、优先级、Top K 和时间范围，再本地检索
@@ -112,18 +112,13 @@ Agent 定义集中在 `agents.py`，并按模型供应商缓存。外层 `graph.
 ## 数据位置
 
 - SQLite：`data/chat.db`
-- 聊天图片：`data/uploads/`
 - Persona 模板：`persona.yaml`
 - 提示词：`prompt/`
 - 指导文档：`guidance_docs/`
 
-`data/` 默认被 Git 忽略。聊天内容可能包含高度私密信息，请不要把数据库、导出文件、上传图片或 `.env` 提交到仓库。
+`data/` 默认被 Git 忽略。聊天内容可能包含高度私密信息，请不要把数据库、导出文件或 `.env` 提交到仓库。
 
 六维关系和变更日志保存在 SQLite；生成快照保存本轮 Memory Plan、Dialogue Composer、Critic 与 Reflection 结果。Core 修改提案保存在 SQLite，批准后写回 `persona.yaml`。
-
-## 图片说明
-
-图片以 OpenAI 兼容的多模态消息格式发送给当前模型。若模型不支持图片，系统会自动退回文字上下文，并在页面提示警告。
 
 ## 当前发送语义
 

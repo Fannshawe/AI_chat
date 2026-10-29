@@ -15,7 +15,6 @@ load_dotenv(BASE_DIR / ".env")
 
 DATA_DIR = BASE_DIR / "data"
 DATABASE_PATH = DATA_DIR / "chat.db"
-UPLOAD_DIR = DATA_DIR / "uploads"
 PROMPT_DIR = BASE_DIR / "prompt"
 GUIDANCE_DIR = BASE_DIR / "guidance_docs"
 PERSONA_PATH = DATA_DIR / "persona.yaml"

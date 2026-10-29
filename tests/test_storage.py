@@ -11,7 +11,7 @@ class ChatStoreTests(unittest.TestCase):
     def setUp(self):
         self.temp = TemporaryDirectory()
         root = Path(self.temp.name)
-        self.store = ChatStore(root / "chat.db", root / "uploads")
+        self.store = ChatStore(root / "chat.db")
         self.store.persona_path = root / "data" / "persona.yaml"
         self.store.persona_path.parent.mkdir(parents=True, exist_ok=True)
         self.store.initialize()
@@ -21,12 +21,39 @@ class ChatStoreTests(unittest.TestCase):
         self.temp.cleanup()
 
     def test_real_message_round_trip(self):
-        saved = self.store.save_message(self.contact_id, "user", "喜欢猫", ["/uploads/a.jpg"])
+        saved = self.store.save_message(self.contact_id, "user", "喜欢猫")
         messages = self.store.list_messages(self.contact_id)
         self.assertEqual(saved["content"], "喜欢猫")
-        self.assertEqual(messages[0]["image_paths"], ["/uploads/a.jpg"])
+        self.assertEqual(messages[0]["content"], "喜欢猫")
+        self.assertNotIn("image_paths", saved)
+        self.assertNotIn("image_paths", messages[0])
         self.assertNotIn("source_generation_id", saved)
         self.assertNotIn("source_generation_id", messages[0])
+
+    def test_initialize_removes_legacy_image_column_and_preserves_messages(self):
+        timestamp = "2026-10-01T10:00:00+00:00"
+        saved = self.store.save_message(self.contact_id, "user", "旧消息", created_at=timestamp)
+        generation_id = self.store.save_generation(self.contact_id, saved["id"], "回应", ["你好"], {})
+        with self.store.connect() as connection:
+            connection.execute("ALTER TABLE messages ADD COLUMN image_paths TEXT NOT NULL DEFAULT '[]'")
+            connection.execute("UPDATE messages SET image_paths=?", ('["/uploads/legacy.png"]',))
+
+        self.store.initialize()
+        self.store.initialize()
+
+        self.assertEqual(self.store.get_message(saved["id"]), saved)
+        self.assertEqual(self.store.get_message(saved["id"])["created_at"], timestamp)
+        exported = self.store.export_all()
+        self.assertNotIn("image_paths", exported["messages"][0])
+        self.assertEqual(exported["generations"][0]["id"], generation_id)
+        self.assertEqual(exported["generations"][0]["input_message_id"], saved["id"])
+        with self.store.connect() as connection:
+            columns = {row[1] for row in connection.execute("PRAGMA table_info(messages)")}
+            self.assertNotIn("image_paths", columns)
+            self.assertEqual(connection.execute("PRAGMA foreign_key_check").fetchall(), [])
+        messages = yaml.safe_load((self.store.export_dir / "03_messages.yaml").read_text(encoding="utf-8"))
+        self.assertNotIn("image_paths", messages[0])
+        self.assertFalse((self.store.db_path.parent / "uploads").exists())
 
     def test_memory_deduplication_and_search(self):
         first = self.store.add_memory(self.contact_id, "semantic", "对方喜欢猫")
@@ -190,7 +217,7 @@ class ChatStoreTests(unittest.TestCase):
         self.assertEqual(generations[0]["candidates"], ["一", "二", "三"])
 
     def test_export_yaml_files_splits_data_for_debugging(self):
-        self.store.save_message(self.contact_id, "user", "你好", ["/uploads/demo.png"])
+        self.store.save_message(self.contact_id, "user", "你好")
         self.store.add_memory(self.contact_id, "semantic", "对方喜欢 YAML")
         self.store.save_self_emotion_state(self.contact_id, {
             "mood": "开心",
@@ -207,7 +234,8 @@ class ChatStoreTests(unittest.TestCase):
         self.assertTrue((export_dir / "06_emotions.yaml").exists())
 
         messages = yaml.safe_load((export_dir / "03_messages.yaml").read_text(encoding="utf-8"))
-        self.assertEqual(messages[0]["image_paths"], ["/uploads/demo.png"])
+        self.assertEqual(messages[0]["content"], "你好")
+        self.assertNotIn("image_paths", messages[0])
 
         emotions = yaml.safe_load((export_dir / "06_emotions.yaml").read_text(encoding="utf-8"))
         self.assertEqual(emotions["self_emotion_states"][0]["dimensions"]["好奇"], 70)
