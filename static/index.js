@@ -3,7 +3,6 @@ const state = { contactId: null, generationId: null, debugEnabled: true, pending
 const DRAFT_CACHE_KEY = "persona-chat:draft:v1";
 const JOB_CACHE_KEY = "persona-chat:active-job:v1";
 const INPUT_CACHE_KEY = "persona-chat:input:v1";
-const INSTANCE_RESTARTED_KEY = "persona-chat:instance-restarted:v1";
 const JOB_POLL_INTERVAL_MS = 1000;
 const STAGE_STEPS = [
   { name: "读取上下文", target: 14 },
@@ -35,14 +34,6 @@ function toast(message) {
   element.classList.add("show");
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => element.classList.remove("show"), 3600);
-}
-
-async function logout() {
-  try {
-    await fetch("/gateway/logout", { method: "POST" });
-  } finally {
-    window.location.href = "/";
-  }
 }
 
 async function copyText(value) {
@@ -146,24 +137,6 @@ function clearActiveJobId() {
   try {
     localStorage.removeItem(JOB_CACHE_KEY);
   } catch (_) {}
-}
-
-function clearTransientChatState(notify = false) {
-  clearDraftCache();
-  clearInputCache();
-  clearActiveJobId();
-  state.generationId = null;
-  state.pendingPreviewMessage = null;
-  updateLatestDebugLink();
-  const input = $("#messageInput");
-  input.value = "";
-  input.style.height = "auto";
-  $("#candidateGrid").innerHTML = "";
-  $("#strategyText").textContent = "";
-  $("#draftZone").classList.add("hidden");
-  stopProgress(false);
-  setGenerateButtonBusy(false);
-  if (notify) toast("实例已重启，已清除未确认的临时内容");
 }
 
 function currentProgressStage(percent) {
@@ -601,13 +574,4 @@ $("#proactiveButton").onclick = async (event) => {
     event.currentTarget.textContent = originalLabel || "✦ 生成主动聊天草稿";
   }
 };
-const logoutButton = $("#logoutButton");
-if (logoutButton) {
-  logoutButton.onclick = logout;
-}
-window.addEventListener("storage", (event) => {
-  if (event.key === INSTANCE_RESTARTED_KEY && event.newValue) {
-    clearTransientChatState(true);
-  }
-});
 load();

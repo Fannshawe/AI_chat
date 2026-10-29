@@ -36,11 +36,6 @@ function toast(message) {
   toast.timer = setTimeout(() => element.classList.remove("show"), 3200);
 }
 
-async function logout() {
-  await fetch("/gateway/logout", { method: "POST" });
-  window.location.href = "/";
-}
-
 function escapeText(value) {
   const span = document.createElement("span");
   span.textContent = value ?? "";
@@ -502,7 +497,3 @@ $("#importForm").onsubmit = async (event) => {
   }
 })();
 
-const logoutButton = $("#logoutButton");
-if (logoutButton) {
-  logoutButton.onclick = logout;
-}

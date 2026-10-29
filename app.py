@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 import threading
 from contextlib import asynccontextmanager
@@ -834,6 +833,4 @@ def select_model(request: ModelSelectionRequest) -> dict[str, str]:
 if __name__ == "__main__":
     import uvicorn
 
-    host = os.getenv("CHAT_HOST", "127.0.0.1").strip() or "127.0.0.1"
-    port = int(os.getenv("CHAT_PORT", "8000") or "8000")
-    uvicorn.run("app:app", host=host, port=port, reload=False)
+    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=False)

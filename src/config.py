@@ -13,12 +13,12 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent  # project root (one level above src/)
 load_dotenv(BASE_DIR / ".env")
 
-DATA_DIR = Path(os.getenv("CHAT_DATA_DIR", BASE_DIR / "data")).resolve()
+DATA_DIR = BASE_DIR / "data"
 DATABASE_PATH = DATA_DIR / "chat.db"
 UPLOAD_DIR = DATA_DIR / "uploads"
 PROMPT_DIR = BASE_DIR / "prompt"
 GUIDANCE_DIR = BASE_DIR / "guidance_docs"
-PERSONA_PATH = Path(os.getenv("PERSONA_PATH", DATA_DIR / "persona.yaml")).resolve()
+PERSONA_PATH = DATA_DIR / "persona.yaml"
 STATIC_DIR = BASE_DIR / "static"
 SHORT_TERM_MESSAGE_LIMIT = int(os.getenv("SHORT_TERM_MESSAGE_LIMIT", "100"))
 

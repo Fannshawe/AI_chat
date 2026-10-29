@@ -31,8 +31,6 @@
 
 ## 启动
 
-### 单实例模式
-
 1. 保持现有 `.env` 中以下变量可用：
    - `AGENT_EMOTION_BASE_URL` / `AGENT_EMOTION_API_KEY` / `AGENT_EMOTION_MODEL`
    - `AGENT_SELF_EMOTION_BASE_URL` / `AGENT_SELF_EMOTION_API_KEY` / `AGENT_SELF_EMOTION_MODEL`
@@ -54,30 +52,11 @@
 
 也可以用 `uvicorn app:app --host 127.0.0.1 --port 8000` 启动。
 
-### 多实例网关模式
-
-当需要“一个 8000 入口 + 每个用户一个独立实例”时，启动网关而不是直接启动聊天实例：
-
-1. 运行 `python gateway.py`
-2. 浏览器打开 `http://127.0.0.1:8000`
-3. 用户在入口页自行注册或登录
-4. 网关会自动为每个用户分配固定内部端口，并将请求代理到该用户自己的实例
-
-默认行为：
-
-- 网关端口：`8000`（可用 `GATEWAY_PORT` 覆盖）
-- 用户实例端口：从 `8101` 开始固定分配
-- 用户数据目录：`users/<用户名>/data/`
-- 用户 persona 文件：`users/<用户名>/data/persona.yaml`
-- 空闲实例回收：默认 30 分钟，可用 `INSTANCE_IDLE_TIMEOUT_SECONDS` 调整
-- 登录保持时长：默认 30 天，可用 `GATEWAY_SESSION_TTL_SECONDS` 调整
-- 会话签名密钥：`GATEWAY_SESSION_SECRET`（务必改成你自己的随机字符串）
-
-首个注册用户会自动继承项目当前的旧 `data/` 目录，便于把现有单用户数据迁移为第一个用户实例。
+启动后直接进入聊天页面，无需注册或登录。数据统一保存在根目录 `data/`，Persona 文件为 `data/persona.yaml`。旧 `users/` 目录保留但不再读取；如需沿用其中某个用户的数据，请先备份，再将该用户的 `data/` 内容迁移到根目录 `data/`，不要直接覆盖需要保留的数据。
 
 ## 首次使用建议
 
-1. 先编辑根目录 `persona.yaml`，填写 Core、Personality、Habit 和表达示例。Core 与 Personality 不会被自动修改。
+1. 先在管理后台编辑 `data/persona.yaml`，填写 Core、Personality、Habit 和表达示例。Core 与 Personality 不会被自动修改。
 2. 导入历史聊天，格式为每行 `我: 内容` 或 `对方: 内容`。
 3. 在“指导文档”中维护聊天技巧。关系行为边界由 Relationship State 每轮动态生成，不由技巧文档直接决定。
 4. 回到聊天页，粘贴对方最新消息并生成候选；“暂不回复”也可能作为一个候选策略。
