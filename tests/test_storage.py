@@ -117,6 +117,30 @@ class ChatStoreTests(unittest.TestCase):
         self.assertIn(MEMORY_OWNER_AI, owner_types)
         self.assertTrue(all(item["retrieval_mode"] == "exact" for item in results))
 
+    def test_memory_search_returns_empty_without_matches(self):
+        self.store.add_memory(self.contact_id, "semantic", "对方喜欢手冲咖啡")
+        self.store.save_ai_memory_profile({
+            "semantic": [{"content": "我会弹钢琴"}],
+        })
+
+        for query in ["电脑故障", ""]:
+            with self.subTest(query=query):
+                self.assertEqual(self.store.search_memories(self.contact_id, query), [])
+                self.assertEqual(self.store.search_ai_memories(query), [])
+                self.assertEqual(self.store.search_memories_by_plan(self.contact_id, [{
+                    "memory_type": "semantic", "query": query, "keywords": [],
+                    "priority": 5, "top_k": 5, "time_range": "all",
+                }]), [])
+
+        self.assertEqual(
+            [item["content"] for item in self.store.search_memories(self.contact_id, "咖啡")],
+            ["对方喜欢手冲咖啡"],
+        )
+        self.assertEqual(
+            [item["content"] for item in self.store.search_ai_memories("钢琴")],
+            ["我会弹钢琴"],
+        )
+
     def test_memory_plan_soft_quota_preserves_multiple_memory_types(self):
         for index in range(5):
             self.store.add_memory(self.contact_id, "semantic", f"对方喜欢咖啡豆{index}")

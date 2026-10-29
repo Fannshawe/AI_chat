@@ -171,12 +171,10 @@ function normalizeAiMemoryItem(item) {
   if (item && typeof item === "object") {
     return {
       content: String(item.content || "").trim(),
-      source: String(item.source || "admin").trim() || "admin",
     };
   }
   return {
     content: String(item || "").trim(),
-    source: "admin",
   };
 }
 
@@ -193,7 +191,7 @@ function renderAiMemories(profile) {
       const row = document.createElement("div");
       row.className = "list-item";
       const body = document.createElement("div");
-      body.innerHTML = `<h3>${escapeText(category)}</h3><p>${escapeText(item.content)}</p><div class="code-note">来源：${escapeText(item.source)}</div>`;
+      body.innerHTML = `<h3>${escapeText(category)}</h3><p>${escapeText(item.content)}</p>`;
       const actions = document.createElement("div");
       actions.className = "list-actions";
       const edit = document.createElement("button");
@@ -202,11 +200,10 @@ function renderAiMemories(profile) {
       edit.onclick = async () => {
         const content = prompt("修改 AI memory", item.content);
         if (content === null || !content.trim()) return;
-        const source = prompt("来源", item.source) || item.source;
         const latest = await api("/api/ai-memory");
         latest[category][index] = {
+          ...(typeof latest[category][index] === "object" ? latest[category][index] : {}),
           content: content.trim(),
-          source: source.trim() || "admin",
         };
         await api("/api/ai-memory", {
           method: "PUT",
@@ -438,9 +435,8 @@ $("#aiMemoryForm").onsubmit = async (event) => {
   const latest = await api("/api/ai-memory");
   const category = $("#aiMemoryCategory").value;
   const content = $("#aiMemoryContent").value.trim();
-  const source = $("#aiMemorySource").value.trim() || "admin";
   latest[category] = Array.isArray(latest[category]) ? latest[category] : [];
-  latest[category].push({ content, source });
+  latest[category].push({ content });
   await api("/api/ai-memory", {
     method: "PUT",
     body: JSON.stringify(latest),

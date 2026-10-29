@@ -642,7 +642,7 @@ class ChatStore:
         - 每个命中的 query 双字片段 +1 分
         - 同分时按更大的 id（更新）优先
 
-        若无命中，则回退返回少量最近记忆，保证下游仍有上下文可用。
+        若无命中，则返回空列表，避免引入无关记忆。
         """
         memories = self.list_memories(contact_id, limit=1000, owner_type=MEMORY_OWNER_CONTACT)
         if category in MEMORY_CATEGORIES:
@@ -655,9 +655,7 @@ class ChatStore:
 
         ranked = sorted(memories, key=score, reverse=True)
         relevant = [item for item in ranked if score(item)[0] > 0]
-        retrieval_mode = "exact" if relevant else "fallback_recent"
-        selected = (relevant or ranked[:4])[:limit]
-        return [{**item, "retrieval_mode": retrieval_mode} for item in selected]
+        return [{**item, "retrieval_mode": "exact"} for item in relevant[:limit]]
 
     def search_ai_memories(
         self,
@@ -697,9 +695,7 @@ class ChatStore:
 
         ranked = sorted(memories, key=score, reverse=True)
         relevant = [item for item in ranked if score(item)[0] > 0]
-        retrieval_mode = "exact" if relevant else "fallback_recent"
-        selected = (relevant or ranked[:3])[:limit]
-        return [{**item, "retrieval_mode": retrieval_mode} for item in selected]
+        return [{**item, "retrieval_mode": "exact"} for item in relevant[:limit]]
 
     def search_memories_by_plan(
         self, contact_id: int, requests: list[dict[str, Any]], total_limit: int = 20,

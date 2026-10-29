@@ -24,7 +24,7 @@
 - 列表、代码、表格等结构化内容保持在同一行里。
 
 ## 表达要求
-- 口头禅、自我修正、emoji、标点习惯都继续遵守 expression_style。
+- 口头禅、自我修正、emoji、标点习惯都继续遵守 persona.expression_style。
 - 只使用 relevant_memories 中明确存在的事实，不把 Critic 评价或模型联想写进回复。
 - 不写客服腔，不写解释，不复述批改意见。
 
