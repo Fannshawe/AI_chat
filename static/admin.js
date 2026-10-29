@@ -467,12 +467,61 @@ $("#guidanceForm").onsubmit = async (event) => {
 
 $("#importForm").onsubmit = async (event) => {
   event.preventDefault();
-  const result = await api("/api/import", {
-    method: "POST",
-    body: JSON.stringify({ contact_id: contactId, text: $("#importText").value }),
-  });
-  toast(`已导入 ${result.imported} 条聊天`);
+  const button = event.target.querySelector("button");
+  const label = button.textContent;
+  let result = null;
+  try {
+    button.disabled = true;
+    button.textContent = "导入并更新记忆中...";
+    result = await api("/api/import", {
+      method: "POST",
+      body: JSON.stringify({ contact_id: contactId, text: $("#importText").value }),
+    });
+    await loadMemories();
+    const summary = `已导入 ${result.imported} 条聊天，新增 ${result.memories_added} 条记忆`;
+    toast(result.warnings?.length ? `${summary}；部分记忆提取失败：${result.warnings.join("；")}` : summary);
+  } catch (error) {
+    toast(result ? `已导入 ${result.imported} 条聊天，新增 ${result.memories_added} 条记忆，但列表刷新失败，请刷新页面` : error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = label;
+  }
 };
+
+function bindMemoryImport(buttonSelector, fileSelector, owner) {
+  const button = $(buttonSelector);
+  const input = $(fileSelector);
+  button.onclick = () => input.click();
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const label = button.textContent;
+    let result = null;
+    try {
+      if (file.size > 1_000_000) throw new Error("记忆文件不能超过 1 MB");
+      if (owner === "contact" && contactId === null) throw new Error("联系人尚未加载，请稍后重试");
+      if (owner === "contact" && !confirm("将文件中的记忆追加到当前联系人，确定导入？")) return;
+      button.disabled = true;
+      button.textContent = "导入中...";
+      const url = owner === "ai" ? "/api/ai-memory/import" : `/api/memories/${contactId}/import`;
+      result = await api(url, {
+        method: "POST",
+        body: JSON.stringify({ text: await file.text() }),
+      });
+      await loadMemories();
+      toast(`已导入 ${result.imported} 条记忆，跳过 ${result.skipped} 条重复记忆`);
+    } catch (error) {
+      toast(result ? `已导入 ${result.imported} 条记忆，但列表刷新失败，请刷新页面` : error.message);
+    } finally {
+      button.disabled = false;
+      button.textContent = label;
+      input.value = "";
+    }
+  };
+}
+
+bindMemoryImport("#importAiMemoryButton", "#importAiMemoryFile", "ai");
+bindMemoryImport("#importContactMemoryButton", "#importContactMemoryFile", "contact");
 
 (async function init() {
   try {

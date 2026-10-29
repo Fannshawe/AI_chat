@@ -57,9 +57,33 @@
 ## 首次使用建议
 
 1. 先在管理后台编辑 `data/persona.yaml`，填写 Core、Personality、Habit 和表达示例。Core 与 Personality 不会被自动修改。
-2. 导入历史聊天，格式为每行 `我: 内容` 或 `对方: 内容`。
+2. 导入历史聊天，格式为每行 `我: 内容` 或 `对方: 内容`。导入后会分批调用正常聊天使用的 Reflection，从对方的真实消息中提取有长期价值的 Contact Memory 并去重保存；页面显示新增记忆数并刷新记忆列表。不会生成新回复或重放历史情绪、关系变化。若模型不可用，聊天记录仍保留，页面会提示记忆提取失败。
 3. 在“指导文档”中维护聊天技巧。关系行为边界由 Relationship State 每轮动态生成，不由技巧文档直接决定。
 4. 回到聊天页，粘贴对方最新消息并生成候选；“暂不回复”也可能作为一个候选策略。
+
+## 导入长期记忆
+
+在管理后台的“长期记忆”页点击“导入 AI Memory”或“导入 Contact Memory”，选择 `.yaml`、`.yml` 或 `.json` 文件。导入为追加操作，不覆盖已有记忆；同分类、同内容的记忆会跳过，并显示导入和跳过数量。文件大小最多 1 MB，每条内容最多 2000 字。
+
+AI Memory 支持 episodic、semantic、emotional、shared_experience 四类，写入 `data/ai_memory.yaml`。可直接选择 `data/export/05_ai_memory.yaml`，或使用以下格式（列表项也可写成 `content` 对象）：
+
+```yaml
+semantic:
+   - 我喜欢摄影
+shared_experience:
+   - content: 我和对方第一次一起看海
+```
+
+Contact Memory 只支持前三类，导入到当前联系人。可使用相同的分类格式，或选择 `data/export/04_contact_memories.yaml` 这样的记录列表：
+
+```json
+[
+   {"category": "semantic", "content": "对方喜欢猫", "sensitive": false},
+   {"category": "episodic", "content": "一起去了书店", "sensitive": false}
+]
+```
+
+Contact Memory 导入保留敏感标记，重新生成记录 ID 和时间，不沿用源联系人 ID 或消息引用。含多个源联系人的文件需要拆分后分别导入。非法分类、空内容或格式错误会在写入前拒绝整个文件；全量数据导出的 JSON 不是记忆专用文件，请先取出对应记忆部分。
 
 ## 新回复流程
 

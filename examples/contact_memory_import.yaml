@@ -1,0 +1,9 @@
+episodic:
+  - content: 对方上周和我一起去了书店，挑了一本摄影集
+    sensitive: false
+semantic:
+  - content: 对方喜欢猫，也喜欢周末逛书店
+    sensitive: false
+emotional:
+  - content: 对方说忙完一个重要项目后，终于感觉轻松了些
+    sensitive: false

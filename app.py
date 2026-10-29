@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any, Callable, cast
 from uuid import uuid4
 
+import yaml
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -288,6 +290,10 @@ class AiMemoryProfileRequest(BaseModel):
     semantic: list[Any] = Field(default_factory=list)
     emotional: list[Any] = Field(default_factory=list)
     shared_experience: list[Any] = Field(default_factory=list)
+
+
+class MemoryImportRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=1_000_000)
 
 
 class RelationshipRequest(BaseModel):
@@ -618,6 +624,92 @@ def add_memory(request: MemoryRequest) -> dict[str, Any]:
     )
 
 
+def _parse_memory_import(text: str, categories: list[str]) -> list[dict[str, Any]]:
+    try:
+        data = yaml.safe_load(text)
+    except yaml.YAMLError as exc:
+        raise HTTPException(400, "记忆文件不是有效的 YAML/JSON") from exc
+    if isinstance(data, dict):
+        if not data or any(category not in categories for category in data):
+            raise HTTPException(400, "记忆文件包含未知分类")
+        records = []
+        for category, items in data.items():
+            if not isinstance(items, list):
+                raise HTTPException(400, "每个记忆分类必须是列表")
+            for item in items:
+                if isinstance(item, str):
+                    item = {"content": item}
+                if not isinstance(item, dict):
+                    raise HTTPException(400, "记忆项必须是文本或对象")
+                records.append({**item, "category": category})
+    elif isinstance(data, list):
+        records = data
+    else:
+        raise HTTPException(400, "记忆文件必须是分类对象或记录列表")
+    normalized = []
+    for item in records:
+        if not isinstance(item, dict) or item.get("category") not in categories:
+            raise HTTPException(400, "记忆项缺少有效分类")
+        content = item.get("content")
+        if not isinstance(content, str) or not content.strip() or len(content.strip()) > 2000:
+            raise HTTPException(400, "记忆内容必须是 1 至 2000 字的文本")
+        sensitive = item.get("sensitive", False)
+        if not isinstance(sensitive, (bool, int)) or sensitive not in (0, 1):
+            raise HTTPException(400, "sensitive 必须是布尔值或 0/1")
+        normalized.append({**item, "content": content.strip(), "sensitive": bool(sensitive)})
+    if not normalized:
+        raise HTTPException(400, "文件中没有可导入的记忆")
+    return normalized
+
+
+@app.post("/api/ai-memory/import")
+def import_ai_memory(request: MemoryImportRequest) -> dict[str, int]:
+    records = _parse_memory_import(request.text, MEMORY_CATEGORIES)
+    profile = store.get_ai_memory_profile()
+    imported = 0
+    for item in records:
+        category = item["category"]
+        contents = {
+            entry.get("content", "").strip() if isinstance(entry, dict) else str(entry).strip()
+            for entry in profile[category]
+        }
+        if item["content"] in contents:
+            continue
+        profile[category].append({
+            key: value for key, value in item.items()
+            if key not in {"category", "id", "contact_id", "owner_id", "owner_type", "source_message_id"}
+        })
+        imported += 1
+    if imported:
+        store.save_ai_memory_profile(profile)
+    return {"imported": imported, "skipped": len(records) - imported}
+
+
+@app.post("/api/memories/{contact_id}/import")
+def import_contact_memory(contact_id: int, request: MemoryImportRequest) -> dict[str, int]:
+    if not any(contact["id"] == contact_id for contact in store.list_contacts()):
+        raise HTTPException(404, "联系人不存在")
+    records = _parse_memory_import(request.text, USER_MEMORY_CATEGORIES)
+    source_contacts = {str(item["contact_id"]) for item in records if item.get("contact_id") is not None}
+    if len(source_contacts) > 1:
+        raise HTTPException(400, "文件包含多个联系人的记忆，请分别导入")
+    if any(item.get("owner_type", MEMORY_OWNER_CONTACT) != MEMORY_OWNER_CONTACT for item in records):
+        raise HTTPException(400, "Contact Memory 文件不能包含 AI 记忆")
+    imported = 0
+    for item in records:
+        with store.connect() as connection:
+            existing = connection.execute(
+                "SELECT id FROM memories WHERE contact_id=? AND owner_type=? AND category=? AND content=?",
+                (contact_id, MEMORY_OWNER_CONTACT, item["category"], item["content"]),
+            ).fetchone()
+        if existing is not None:
+            continue
+        store.add_memory(contact_id, item["category"], item["content"], item["sensitive"],
+                         owner_type=MEMORY_OWNER_CONTACT)
+        imported += 1
+    return {"imported": imported, "skipped": len(records) - imported}
+
+
 @app.put("/api/memories/{memory_id}")
 def update_memory(memory_id: int, request: MemoryRequest) -> dict[str, Any]:
     if request.category not in USER_MEMORY_CATEGORIES:
@@ -716,15 +808,58 @@ def _parse_import_text(text: str) -> list[ImportMessage]:
 
 
 @app.post("/api/import")
-def import_chat(request: ImportRequest) -> dict[str, int]:
+def import_chat(request: ImportRequest) -> dict[str, Any]:
+    if not any(int(contact["id"]) == request.contact_id for contact in store.list_contacts()):
+        raise HTTPException(404, "联系人不存在")
     records = request.messages or _parse_import_text(request.text)
-    count = 0
+    messages: list[dict[str, Any]] = []
     for item in records:
         if item.role not in {"user", "assistant"} or not item.content.strip():
             continue
-        store.save_message(request.contact_id, item.role, item.content.strip(), created_at=item.created_at)
-        count += 1
-    return {"imported": count}
+        messages.append(store.save_message(
+            request.contact_id, item.role, item.content.strip(), created_at=item.created_at,
+        ))
+
+    memories_added = 0
+    warnings: list[str] = []
+    provider_name = store.get_setting("active_model_provider", "default")
+    for offset in range(0, len(messages), 6):
+        batch = messages[offset:offset + 6]
+        user_messages = [message for message in batch if message["role"] == "user"]
+        if not user_messages:
+            continue
+        state: WorkflowState = {
+            "contact_id": request.contact_id,
+            "user_request": "\n".join(message["content"] for message in user_messages),
+            "relationship": {},
+            "candidates": [],
+            "provider_name": provider_name,
+            "history": messages[max(0, offset - 2):offset + 6],
+            "memories": store.search_memories(
+                request.contact_id, "\n".join(message["content"] for message in user_messages), limit=6,
+            ),
+        }
+        result = node_reflection(state)
+        warnings.extend(result.get("warnings", []))
+        for item in result.get("reflection_analysis", {}).get("memories", [])[:8]:
+            if not isinstance(item, dict) or not str(item.get("content", "")).strip():
+                continue
+            category = str(item.get("category", "semantic"))
+            if category not in USER_MEMORY_CATEGORIES:
+                category = "semantic"
+            content = str(item["content"]).strip()
+            with store.connect() as connection:
+                existing = connection.execute(
+                    "SELECT id FROM memories WHERE contact_id = ? AND owner_type = ? AND category = ? AND content = ?",
+                    (request.contact_id, MEMORY_OWNER_CONTACT, category, content),
+                ).fetchone()
+            store.add_memory(
+                request.contact_id, category, content, bool(item.get("sensitive", False)),
+                int(user_messages[-1]["id"]), owner_type=MEMORY_OWNER_CONTACT,
+            )
+            if existing is None:
+                memories_added += 1
+    return {"imported": len(messages), "memories_added": memories_added, "warnings": warnings}
 
 
 @app.get("/api/export")

@@ -98,11 +98,6 @@ habits:
     sleep_time: 偏晚，通常 00:30 之后睡
     wake_up: 工作日偏晚起
     work_style: 喜欢先独处整理，再开始高强度沟通
-  relationship_preference:
-  - 喜欢循序渐进地熟悉彼此
-  - 比起热闹，更看重稳定陪伴感
-  - 不喜欢刚认识就过度亲密
-  conversation_preferences: 增加对突发性恶意言语及后续纠缠行为的敏感度，遭遇无端攻击或挑衅时，优先执行安全边界保护（如简短回应或终止对话），坚决不进行解释、安抚或尝试理解对方动机。
   topics:
     favorite_movies:
     - 花样年华
