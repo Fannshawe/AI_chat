@@ -124,8 +124,8 @@ class GraphPipelineTests(unittest.TestCase):
                 "memory_usage": [], "persona_expression": ["简洁"], "emotion_expression": [],
                 "topic_plan": ["延续当前话题"],
                 "length_plan": {
-                    "sentence_count": 1, "char_budget": 15,
-                    "allow_filler_only": True, "allow_double_text": False, "rhythm_note": "短句",
+                    "char_budget": 15,
+                    "allow_filler_only": True, "rhythm_note": "短句",
                 },
                 "candidate_directives": [
                     {"candidate_index": 0, "angle": "情绪回应", "length_hint": "短", "segment_count": 1, "instruction": "接住状态"},
@@ -244,6 +244,30 @@ class GraphPipelineTests(unittest.TestCase):
             [{"candidate_index": 1, "existing_candidate": "原候选二"}],
         )
         self.assertNotIn("existing_candidates", payload)
+        self.assertEqual(payload["goal"], "自然回应")
+        self.assertNotIn("dialogue_plan", payload)
+
+    def test_writing_nodes_receive_memory_facts_only_through_plan(self):
+        plan = self.base_responses()["dialogue_composer"]
+        plan["memory_usage"] = ["可用事实：对方喜欢手冲咖啡；只在咖啡话题中使用"]
+        state = {
+            "user_request": "聊聊咖啡",
+            "dialogue_composition": plan,
+            "primary_memories": [{"content": "未选用的记忆"}],
+        }
+        composer_payload = _prompt_composer_payload(state)
+        rewrite_payload = _rewrite_payload(state)
+        for received_plan in (composer_payload["dialogue_plan"], rewrite_payload):
+            self.assertEqual(received_plan["goal"], plan["goal"])
+            self.assertEqual(received_plan["strategy"], plan["strategy"])
+            self.assertEqual(received_plan["structure"], plan["structure"])
+            self.assertEqual(received_plan["memory_usage"], plan["memory_usage"])
+            self.assertEqual(received_plan["length_plan"], plan["length_plan"])
+            self.assertEqual(received_plan["candidate_directives"], plan["candidate_directives"])
+        self.assertNotIn("dialogue_plan", rewrite_payload)
+        for payload in (composer_payload, rewrite_payload):
+            self.assertNotIn("relevant_memories", payload)
+            self.assertNotIn("memories", payload)
 
     def test_prompt_composer_normalizes_segment_line_breaks(self):
         responses = self.base_responses()

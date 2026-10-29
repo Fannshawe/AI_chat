@@ -118,10 +118,8 @@ class AgentHarnessTests(unittest.TestCase):
             "emotion_expression": ["轻微关心"],
             "topic_plan": ["项目进度"],
             "length_plan": {
-                "sentence_count": 1,
                 "char_budget": 20,
                 "allow_filler_only": True,
-                "allow_double_text": False,
                 "rhythm_note": "只回半句",
             },
             "candidate_directives": [
@@ -133,8 +131,20 @@ class AgentHarnessTests(unittest.TestCase):
         })
         self.assertEqual(composer.goal, "回应近况并自然延续话题")
         self.assertEqual(composer.length_plan.char_budget, 20)
+        self.assertNotIn("sentence_count", composer.length_plan.model_dump())
+        self.assertNotIn(
+            "sentence_count", composer.length_plan.model_json_schema()["properties"],
+        )
+        self.assertNotIn("allow_double_text", composer.length_plan.model_dump())
+        self.assertNotIn(
+            "allow_double_text", composer.length_plan.model_json_schema()["properties"],
+        )
         self.assertEqual(
             [item.length_hint for item in composer.candidate_directives], ["短", "极短", "短"],
+        )
+        self.assertEqual(
+            composer.candidate_directives[0].model_json_schema()["properties"]["length_hint"]["enum"],
+            ["极短", "短", "中", "长"],
         )
         self.assertEqual(
             [item.segment_count for item in composer.candidate_directives], [2, 1, 1],
