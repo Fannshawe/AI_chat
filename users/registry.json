@@ -3,16 +3,16 @@
     "fanshawe": {
       "username": "fanshawe",
       "password": {
-        "salt": "cMJiM0CYrhjkAqRL3h8h9Q==",
-        "hash": "ggWzUHoiFkE2dZpSRur1ks5lQruNON7/s7cGWoS7yOY=",
+        "salt": "Zpr+QRPYY9Usbce7GGvWcw==",
+        "hash": "pLUZIeiYvR8EBLYBXnwdpHztWnUpmhMNYF96GCYMHcE=",
         "iterations": 120000
       },
       "port": 8101,
       "user_root": "C:\\Users\\fix1wx\\Documents\\python\\Chat_LangChain\\users\\fanshawe",
       "data_dir": "C:\\Users\\fix1wx\\Documents\\python\\Chat_LangChain\\users\\fanshawe\\data",
       "persona_path": "C:\\Users\\fix1wx\\Documents\\python\\Chat_LangChain\\users\\fanshawe\\data\\persona.yaml",
-      "created_at": "2026-08-13T08:29:54.944990+00:00",
-      "last_used_at": "2026-08-25T11:58:17.718603+00:00"
+      "created_at": "2026-10-29T02:21:48.424754+00:00",
+      "last_used_at": "2026-10-29T02:30:19.318261+00:00"
     }
   }
 }
