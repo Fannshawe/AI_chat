@@ -37,7 +37,7 @@ MemoryCategory = Literal["episodic", "semantic", "emotional", "shared_experience
 CandidateAngle = Literal[
     "情绪回应", "轻反问", "玩笑吐槽", "极简附和", "自我暴露", "具体建议", "话题延展", "暂不回复",
 ]
-CandidateLengthHint = Literal["极短", "短", "中", "中长"]
+CandidateLengthHint = Literal["极短", "短", "中", "长"]
 ConversationEventType = Literal[
     "寒暄", "道歉", "感谢", "夸奖", "冷淡", "冲突", "和解",
     "示好", "试探", "边界确认", "表达想念", "邀约", "拒绝", "求安慰", "求建议",
@@ -132,10 +132,8 @@ class MemoryPlan(BaseModel):
 class LengthPlan(BaseModel):
     """Turn-level rhythm budget so replies read like chat instead of prose."""
 
-    sentence_count: int = Field(default=2, ge=1, le=3, description="本轮建议句子数")
-    char_budget: int = Field(default=30, ge=2, le=60, description="整轮中文字符上限")
-    allow_filler_only: bool = Field(default=True, description="是否允许没有信息量的纯语气回应")
-    allow_double_text: bool = Field(default=False, description="是否允许在末尾追加一条补充消息（Double Text）")
+    char_budget: int = Field(default=30, ge=2, le=60, description="每个候选所有消息的总字符预算；中文、英文、数字、标点和 emoji 计入，空白不计；最多容许超出4字")
+    allow_filler_only: bool = Field(default=True, description="是否许可纯语气候选；仅限收尾、低精力或明确不想多说，不要求必须生成")
     rhythm_note: str = Field(default="", description="本轮节奏的一句话说明")
 
 
@@ -144,24 +142,24 @@ class CandidateDirective(BaseModel):
 
     candidate_index: int = Field(ge=0, le=2)
     angle: CandidateAngle
-    length_hint: CandidateLengthHint
-    segment_count: int = Field(default=1, ge=1, le=5, description="这条候选建议拆成几条消息发送，按想法数量决定")
-    instruction: str = Field(description="这条候选怎么写、不写什么")
+    length_hint: CandidateLengthHint = Field(description="候选总长度的软偏好：极短2~5、短6~14、中15~27、长28字以上；服从字符预算")
+    segment_count: int = Field(default=1, ge=1, le=5, description="候选消息的目标条数；完整自然表达优先，不为凑数拆分，偏离本身不判失败")
+    instruction: str = Field(description="该候选的差异动作及必要承接信息；输出前消解与共同策略、必要结构、事实和边界的冲突，与 angle 一致；不复述计划、不提供成品开头或逐字回复示例")
 
 
 class DialogueComposerAnalysis(BaseModel):
     """A response plan; this node never writes the final reply."""
 
-    goal: str
-    strategy: list[str] = Field(default_factory=list, max_length=8)
-    structure: list[str] = Field(default_factory=list, max_length=8)
-    memory_usage: list[str] = Field(default_factory=list, max_length=8)
+    goal: str = Field(description="本轮要达成什么，只写一句话，不展开方法或理由")
+    strategy: list[str] = Field(default_factory=list, max_length=8, description="为什么采用这种回应方式，通常1~3条简短理由，不写内容步骤或候选指令")
+    structure: list[str] = Field(default_factory=list, max_length=8, description="必要内容及顺序，通常1~3步；可选步骤以[可选]标注，不写策略理由或成品措辞")
+    memory_usage: list[str] = Field(default_factory=list, max_length=8, description="从已提供输入选取的具体可用事实；无事实时为空，不混入语气、策略、使用步骤或禁用项")
     persona_expression: list[str] = Field(default_factory=list, max_length=8)
     emotion_expression: list[str] = Field(default_factory=list, max_length=8)
     topic_plan: list[str] = Field(default_factory=list, max_length=8)
     length_plan: LengthPlan = Field(default_factory=LengthPlan)
     candidate_directives: list[CandidateDirective] = Field(min_length=3, max_length=3)
-    constraints: list[str] = Field(default_factory=list, max_length=12)
+    constraints: list[str] = Field(default_factory=list, max_length=12, description="仅本轮特有边界；无新增边界时为空，不复述固定提示词、事实或长度预算")
 
 
 class CandidateCritique(BaseModel):

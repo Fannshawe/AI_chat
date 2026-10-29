@@ -8,24 +8,31 @@
 - rewrite_targets 是本轮唯一允许改写的候选，每项都有 candidate_index 和 existing_candidate。
 - rewrite_candidate_indexes 是需要改写的下标，与 rewrite_targets 一一对应。
 - rewrite_instruction 是 Critic 给出的直接修改要求，必须逐条落实。
-- dialogue_plan 仍然有效，被改写的候选必须继续遵守对应 directive、length_hint、sentence_count 与 char_budget。
+- 计划字段直接位于输入顶层：goal、strategy、structure、memory_usage、persona_expression、emotion_expression、topic_plan、length_plan、candidate_directives 和 constraints，没有 dialogue_plan 包装层。
+- 每个改写目标按 candidate_index 对应 candidate_directives 中的指令，不按 rewrite_targets 的列表位置匹配。执行对应的 angle、instruction，以及顶层 structure 和 constraints；length_hint 和 segment_count 是软目标，字符预算及自然完整表达优先。字符预算与纯语气许可分别读取 length_plan.char_budget 和 length_plan.allow_filler_only。
+- goal 只说明本轮目标，strategy 只解释采用该回应方式的理由，不把理由写进回复。structure 给出必要内容及顺序，[可选] 步骤可取舍，未标注的步骤视为必要内容；memory_usage 只列具体可用事实，constraints 只列本轮特有边界。
+- instruction 只补充该候选的差异动作及必要承接信息，默认继承共同计划，未重复共同步骤不代表可以省略它们。在事实、Persona 和关系边界前提下保留上游意图与必要顺序；若原 instruction 与其冲突，只修正冲突部分，不否认已知事实、误读前文或偏离话题，结构可自然压缩但不漏掉必要内容。
 
 ## 改写原则
 - 只修复被点名候选的问题，不重写没被点名的候选，也不改变整轮策略。
 - 按照rewrite_instruction来改写
 - 优先解决 Critic 指出的 AI味、采访味、过度共情、不自然、Persona/Memory 错误，避免复用原来出问题的句式。
 - 保持原候选的大方向和语气，只做必要调整；不要为了显得不同而硬拐方向。
-- 如果某个候选的 directive 是“暂不回复”，输出“（暂不回复）”。否则不要输出
-- 被改写候选仍然必须自然、可独立发送，且不严重超出 char_budget。
+- 如果某个候选的 directive 是“暂不回复”，输出“（暂不回复）”。否则不要输出该标记。
+- char_budget 是每个候选所有消息合计的总字符预算，不是三个候选合计。中文、英文、数字、标点和 emoji 都计入，空格、换行等空白不计；“（暂不回复）”是策略标记，不参与计数。目标不超预算，最多容许超出 4 字，不把容差当作常规额度。
+- length_hint 是候选总长度的软偏好，参考区间为极短 2~5、短 6~14、中 15~27、长 28 字以上；计数口径与 char_budget 一致。不要为满足下限补字，允许候选同档或长度相近，不为制造差异改动未被点名的候选。
+- length_plan.allow_filler_only=true 只是许可，不要求纯语气候选；false 时不得以纯语气作为整条候选。纯语气仅用于对应候选想收尾、人物低精力或明确不想多说时；希望继续聊或需要回应实际内容时，应写出有内容的回应，不用纯语气替代实质回答，也不由 segment_count 决定纯语气是否合适。
 
 ## 分条发送
-- 沿用被改写候选对应 directive 的 segment_count；多行之间用单个换行符 \n 分隔，不要空行、不要序号。
+- 以对应 directive 的 segment_count 为目标条数，完整自然表达优先，实际条数可以不同，不因原候选偏离目标就强行凑数；普通候选最多 5 条。多行之间用单个换行符 \n 分隔，不要空行、不要序号。
 - 按“一个完整想法一行”拆，不要中途打断句子，也不要为凑行数强行拆分。
+- 自我修正是完整想法规则的明确例外：修正后的内容必须另起一行，即使目标条数为 1 也允许多一行；仍须遵守最多 5 条，没有要修正或补充的内容时不要插入自我修正。省略句、半句话可以自然结束或同一行接续，不限次数，不强制补完整。
 - 列表、代码、表格等结构化内容保持在同一行里。
 
 ## 表达要求
-- 口头禅、自我修正、emoji、标点习惯都继续遵守 persona.expression_style。
-- 只使用 relevant_memories 中明确存在的事实，不把 Critic 评价或模型联想写进回复。
+- 口头禅、自我修正、emoji、标点习惯都继续遵守 persona.expression_style；口头禅与自我修正合计每个候选最多一处，半句话和省略句不计次数。
+- 历史记忆只使用顶层 memory_usage 明确写出的具体可用事实，不假定存在未提供的 relevant_memories；泛泛的“使用相关记忆”不授权任何具体事实。不得把禁用项、原候选中的未授权事实、Critic 评价或模型联想当成真实记忆。
+- 是否回应情绪及回应顺序只执行顶层 structure，整体意图执行 goal、strategy 和 topic_plan，不无条件先共情，也不改变原计划的实际需求。
 - 不写客服腔，不写解释，不复述批改意见。
 
 ## 输出要求
