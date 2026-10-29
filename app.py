@@ -116,6 +116,7 @@ def _trim_generation_jobs_locked() -> None:
 def _public_job_view(job: dict[str, Any]) -> dict[str, Any]:
     return {
         "job_id": job["job_id"],
+        "contact_id": job["contact_id"],
         "status": job["status"],
         "stage": job.get("stage", "排队中"),
         "progress": int(job.get("progress", 0)),
@@ -238,6 +239,8 @@ def _create_or_get_active_generation_job(contact_id: int, content: str) -> tuple
         active_id = _active_job_id_locked()
         if active_id:
             active = _generation_jobs[active_id]
+            if active["contact_id"] != contact_id:
+                raise HTTPException(409, "其他联系人正在生成回复，请稍后再试")
             return _public_job_view(active), False
 
         now = datetime.now(timezone.utc).isoformat()
@@ -392,9 +395,13 @@ def debug_page() -> FileResponse:
 
 
 @app.get("/api/bootstrap")
-def bootstrap() -> dict[str, Any]:
+def bootstrap(contact_id: int | None = None) -> dict[str, Any]:
     contacts = store.list_contacts()
-    contact = contacts[0]
+    contact = contacts[0] if contact_id is None else next(
+        (item for item in contacts if item["id"] == contact_id), None
+    )
+    if contact is None:
+        raise HTTPException(404, "联系人不存在")
     contact_id = int(contact["id"])
     return {
         "contacts": contacts,
@@ -410,6 +417,14 @@ def messages(contact_id: int, limit: int = 100) -> list[dict[str, Any]]:
     return store.list_messages(contact_id, min(max(limit, 1), 500))
 
 
+@app.post("/api/contacts", status_code=201)
+def create_contact(request: ContactRequest) -> dict[str, Any]:
+    try:
+        return store.create_contact(request.name)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
 @app.patch("/api/contacts/{contact_id}")
 def update_contact(contact_id: int, request: ContactRequest) -> dict[str, Any]:
     try:
@@ -420,6 +435,8 @@ def update_contact(contact_id: int, request: ContactRequest) -> dict[str, Any]:
 
 @app.post("/api/chat/generate/jobs")
 def create_generate_job(request: GenerateRequest) -> dict[str, Any]:
+    if not any(contact["id"] == request.contact_id for contact in store.list_contacts()):
+        raise HTTPException(404, "联系人不存在")
     content = request.content.strip()
     if not content:
         raise HTTPException(400, "消息不能为空")

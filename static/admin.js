@@ -525,8 +525,24 @@ bindMemoryImport("#importContactMemoryButton", "#importContactMemoryFile", "cont
 
 (async function init() {
   try {
-    const boot = await api("/api/bootstrap");
+    let preferredId = new URLSearchParams(location.search).get("contact_id");
+    try { preferredId ||= localStorage.getItem("persona-chat:contact:v1"); } catch (_) {}
+    let boot;
+    try {
+      boot = await api(preferredId ? `/api/bootstrap?contact_id=${encodeURIComponent(preferredId)}` : "/api/bootstrap");
+    } catch (_) {
+      boot = await api("/api/bootstrap");
+    }
     contactId = boot.active_contact.id;
+    const select = $("#adminContactSelect");
+    select.replaceChildren(...boot.contacts.map((contact) => new Option(contact.name, String(contact.id))));
+    select.value = String(contactId);
+    select.disabled = false;
+    $("#chatLink").href = `/?contact_id=${contactId}`;
+    select.onchange = () => {
+      location.href = `/admin?contact_id=${select.value}`;
+    };
+    try { localStorage.setItem("persona-chat:contact:v1", String(contactId)); } catch (_) {}
     levels = boot.levels;
     await Promise.all([
       loadPersonaProfile(),

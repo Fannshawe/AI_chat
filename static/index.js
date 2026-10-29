@@ -1,5 +1,6 @@
 const $ = (selector) => document.querySelector(selector);
-const state = { contactId: null, generationId: null, debugEnabled: true, pendingPreviewMessage: null };
+const state = { contactId: null, contacts: [], switching: true, generating: false, requests: 0, generationId: null, debugEnabled: true, pendingPreviewMessage: null };
+const CONTACT_CACHE_KEY = "persona-chat:contact:v1";
 const DRAFT_CACHE_KEY = "persona-chat:draft:v1";
 const JOB_CACHE_KEY = "persona-chat:active-job:v1";
 const INPUT_CACHE_KEY = "persona-chat:input:v1";
@@ -19,13 +20,45 @@ let progressValue = 0;
 let progressHasServerSignal = false;
 
 async function api(url, options = {}) {
-  const response = await fetch(url, { headers: { "Content-Type": "application/json", ...(options.headers || {}) }, ...options });
-  if (!response.ok) {
-    let detail = `请求失败 (${response.status})`;
-    try { detail = (await response.json()).detail || detail; } catch (_) {}
-    throw new Error(detail);
+  state.requests += 1;
+  updateContactControls();
+  try {
+    const response = await fetch(url, { headers: { "Content-Type": "application/json", ...(options.headers || {}) }, ...options });
+    if (!response.ok) {
+      let detail = `请求失败 (${response.status})`;
+      try { detail = (await response.json()).detail || detail; } catch (_) {}
+      const error = new Error(detail);
+      error.status = response.status;
+      throw error;
+    }
+    return response.status === 204 ? null : await response.json();
+  } finally {
+    state.requests -= 1;
+    updateContactControls();
   }
-  return response.status === 204 ? null : response.json();
+}
+
+function updateContactControls() {
+  const busy = state.switching || state.generating || state.requests > 0;
+  for (const selector of ["#contactSelect", "#addContactButton", "#renameContactButton"]) {
+    $(selector).disabled = busy;
+  }
+}
+
+function scopedCacheKey(key) {
+  return `${key}:${state.contactId}`;
+}
+
+function readContactCache(key) {
+  const raw = localStorage.getItem(scopedCacheKey(key)) || localStorage.getItem(key);
+  const cached = raw ? JSON.parse(raw) : null;
+  return cached?.contactId === state.contactId ? cached : null;
+}
+
+function preferredContactId() {
+  try {
+    return Number(new URLSearchParams(location.search).get("contact_id") || localStorage.getItem(CONTACT_CACHE_KEY)) || null;
+  } catch (_) { return null; }
 }
 
 function toast(message) {
@@ -58,9 +91,7 @@ async function copyText(value) {
 
 function readCachedDraft() {
   try {
-    const raw = localStorage.getItem(DRAFT_CACHE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
+    return readContactCache(DRAFT_CACHE_KEY);
   } catch (_) {
     return null;
   }
@@ -68,21 +99,20 @@ function readCachedDraft() {
 
 function saveDraftCache(payload) {
   try {
-    localStorage.setItem(DRAFT_CACHE_KEY, JSON.stringify(payload));
+    localStorage.setItem(scopedCacheKey(DRAFT_CACHE_KEY), JSON.stringify(payload));
   } catch (_) {}
 }
 
 function clearDraftCache() {
   try {
-    localStorage.removeItem(DRAFT_CACHE_KEY);
+    localStorage.removeItem(scopedCacheKey(DRAFT_CACHE_KEY));
+    if (readContactCache(DRAFT_CACHE_KEY)) localStorage.removeItem(DRAFT_CACHE_KEY);
   } catch (_) {}
 }
 
 function readCachedInput() {
   try {
-    const raw = localStorage.getItem(INPUT_CACHE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
+    return readContactCache(INPUT_CACHE_KEY);
   } catch (_) {
     return null;
   }
@@ -90,7 +120,7 @@ function readCachedInput() {
 
 function saveInputCache(value) {
   try {
-    localStorage.setItem(INPUT_CACHE_KEY, JSON.stringify({
+    localStorage.setItem(scopedCacheKey(INPUT_CACHE_KEY), JSON.stringify({
       contactId: state.contactId,
       content: String(value ?? ""),
       savedAt: Date.now(),
@@ -100,7 +130,8 @@ function saveInputCache(value) {
 
 function clearInputCache() {
   try {
-    localStorage.removeItem(INPUT_CACHE_KEY);
+    localStorage.removeItem(scopedCacheKey(INPUT_CACHE_KEY));
+    if (readContactCache(INPUT_CACHE_KEY)) localStorage.removeItem(INPUT_CACHE_KEY);
   } catch (_) {}
 }
 
@@ -120,13 +151,13 @@ function restoreInputCache() {
 
 function saveActiveJobId(jobId) {
   try {
-    localStorage.setItem(JOB_CACHE_KEY, String(jobId || ""));
+    localStorage.setItem(scopedCacheKey(JOB_CACHE_KEY), String(jobId || ""));
   } catch (_) {}
 }
 
 function readActiveJobId() {
   try {
-    const value = localStorage.getItem(JOB_CACHE_KEY);
+    const value = localStorage.getItem(scopedCacheKey(JOB_CACHE_KEY)) || localStorage.getItem(JOB_CACHE_KEY);
     return value ? value.trim() : "";
   } catch (_) {
     return "";
@@ -135,6 +166,7 @@ function readActiveJobId() {
 
 function clearActiveJobId() {
   try {
+    localStorage.removeItem(scopedCacheKey(JOB_CACHE_KEY));
     localStorage.removeItem(JOB_CACHE_KEY);
   } catch (_) {}
 }
@@ -194,6 +226,8 @@ function sleep(ms) {
 }
 
 function setGenerateButtonBusy(busy, busyText = "生成中") {
+  state.generating = busy;
+  updateContactControls();
   const button = $("#generateButton");
   if (busy) {
     button.disabled = true;
@@ -259,10 +293,11 @@ async function resumeActiveGenerationIfAny() {
       clearActiveJobId();
     }
   }
+  if (targetJob && targetJob.contact_id !== state.contactId) targetJob = null;
   if (!targetJob) {
     targetJob = await api("/api/chat/generate/jobs/active");
   }
-  if (!targetJob) return;
+  if (!targetJob || targetJob.contact_id !== state.contactId) return;
 
   if (targetJob.status === "succeeded" && targetJob.result) {
     applyGenerationResult(targetJob.result, $("#messageInput"));
@@ -476,6 +511,7 @@ function renderCandidates(candidates, strategy, modes = [], critic = {}) {
 }
 
 async function confirmCandidate(content, candidateIndex, button) {
+  if (state.switching || state.generating) return;
   if (!content.trim()) return toast("回复不能为空");
   button.disabled = true;
   try {
@@ -497,6 +533,7 @@ async function confirmCandidate(content, candidateIndex, button) {
 }
 
 async function generate() {
+  if (state.switching || state.generating) return;
   const input = $("#messageInput");
   const content = input.value.trim();
   if (!content) return toast("请输入消息");
@@ -525,11 +562,34 @@ async function generate() {
   }
 }
 
-async function load() {
+async function load(contactId = preferredContactId()) {
+  state.switching = true;
+  updateContactControls();
   try {
-    const data = await api("/api/bootstrap");
+    let data;
+    try {
+      data = await api(contactId ? `/api/bootstrap?contact_id=${contactId}` : "/api/bootstrap");
+    } catch (error) {
+      if (error.status !== 404) throw error;
+      data = await api("/api/bootstrap");
+    }
     await loadDebugSettings();
     state.contactId = data.active_contact.id;
+    state.contacts = data.contacts;
+    const select = $("#contactSelect");
+    select.replaceChildren(...data.contacts.map((contact) => new Option(contact.name, String(contact.id))));
+    select.value = String(state.contactId);
+    try { localStorage.setItem(CONTACT_CACHE_KEY, String(state.contactId)); } catch (_) {}
+    history.replaceState(null, "", `/?contact_id=${state.contactId}`);
+    $("#adminLink").href = `/admin?contact_id=${state.contactId}`;
+    state.generationId = null;
+    state.pendingPreviewMessage = null;
+    $("#draftZone").classList.add("hidden");
+    $("#candidateGrid").replaceChildren();
+    $("#messageInput").value = "";
+    $("#messageInput").style.height = "auto";
+    updateLatestDebugLink();
+    stopProgress(false);
     $("#contactName").textContent = data.active_contact.name;
     $("#chatTitle").textContent = data.active_contact.name;
     $("#relationshipBadge").textContent = `关系：${data.relationship.current_level}`;
@@ -537,8 +597,72 @@ async function load() {
     restoreInputCache();
     restoreDraftCache();
     await resumeActiveGenerationIfAny();
-  } catch (error) { toast(error.message); }
+  } catch (error) {
+    $("#contactSelect").value = String(state.contactId || "");
+    toast(error.message);
+  } finally {
+    state.switching = false;
+    updateContactControls();
+  }
 }
+
+$("#contactSelect").addEventListener("change", async (event) => {
+  const contactId = Number(event.target.value);
+  if (state.switching || state.generating || state.requests) {
+    event.target.value = String(state.contactId);
+    return;
+  }
+  saveInputCache($("#messageInput").value);
+  persistCurrentDraftState();
+  await load(contactId);
+});
+
+function editContact(create) {
+  if (state.switching || state.generating || state.requests) return;
+  const current = state.contacts.find((contact) => contact.id === state.contactId);
+  $("#contactDialog").dataset.create = String(create);
+  $("#contactDialogTitle").textContent = create ? "新增联系人" : "重命名联系人";
+  $("#contactNameInput").value = create ? "" : current?.name || "";
+  $("#contactError").textContent = "";
+  $("#contactDialog").showModal();
+  $("#contactNameInput").focus();
+}
+
+$("#contactForm").onsubmit = async (event) => {
+  event.preventDefault();
+  if (state.switching || state.generating || state.requests) return;
+  const name = $("#contactNameInput").value.trim();
+  if (!name || name.length > 80) {
+    $("#contactError").textContent = "联系人名称必须为 1 到 80 个字符";
+    return;
+  }
+  const create = $("#contactDialog").dataset.create === "true";
+  $("#saveContactButton").disabled = true;
+  $("#cancelContactButton").disabled = true;
+  saveInputCache($("#messageInput").value);
+  persistCurrentDraftState();
+  try {
+    const contact = await api(create ? "/api/contacts" : `/api/contacts/${state.contactId}`, {
+      method: create ? "POST" : "PATCH",
+      body: JSON.stringify({ name }),
+    });
+    $("#contactDialog").close();
+    await load(contact.id);
+  } catch (error) {
+    $("#contactError").textContent = error.message;
+  } finally {
+    $("#saveContactButton").disabled = false;
+    $("#cancelContactButton").disabled = false;
+  }
+};
+
+$("#cancelContactButton").onclick = () => $("#contactDialog").close();
+$("#contactDialog").addEventListener("cancel", (event) => {
+  if ($("#saveContactButton").disabled) event.preventDefault();
+});
+
+$("#addContactButton").onclick = () => editContact(true);
+$("#renameContactButton").onclick = () => editContact(false);
 
 $("#debugEnabledToggle").addEventListener("change", async (event) => {
   event.currentTarget.disabled = true;
@@ -560,6 +684,7 @@ $("#messageInput").addEventListener("input", (event) => {
   saveInputCache(event.target.value);
 });
 $("#proactiveButton").onclick = async (event) => {
+  if (state.switching || state.generating) return;
   event.currentTarget.disabled = true;
   const originalLabel = event.currentTarget.textContent;
   event.currentTarget.textContent = "草稿生成中";

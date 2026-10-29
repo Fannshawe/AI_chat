@@ -346,6 +346,29 @@ class ChatStore:
         with self.connect() as connection:
             return [dict(row) for row in connection.execute("SELECT * FROM contacts ORDER BY id")]
 
+    def create_contact(self, name: str) -> dict[str, Any]:
+        name = name.strip()
+        if not name or len(name) > 80:
+            raise ValueError("联系人名称必须为 1 到 80 个字符")
+        now = utc_now()
+        with self.connect() as connection:
+            cursor = connection.execute(
+                "INSERT INTO contacts(name, created_at, updated_at) VALUES (?, ?, ?)",
+                (name, now, now),
+            )
+            contact_id = int(cursor.lastrowid)
+            connection.execute(
+                "INSERT INTO relationships(contact_id, current_level, updated_at) VALUES (?, ?, ?)",
+                (contact_id, "认识", now),
+            )
+            connection.execute(
+                """INSERT INTO self_emotion_states(contact_id, mood, energy, dimensions, updated_at)
+                   VALUES (?, '放松', 60, ?, ?)""",
+                (contact_id, json.dumps({}, ensure_ascii=False), now),
+            )
+            self._mark_exports(connection, "01_contacts.yaml", "06_emotions.yaml", "07_relationships.yaml")
+            return dict(connection.execute("SELECT * FROM contacts WHERE id=?", (contact_id,)).fetchone())
+
     def update_contact(self, contact_id: int, name: str) -> dict[str, Any]:
         """更新联系人名称并返回更新后的记录。
 

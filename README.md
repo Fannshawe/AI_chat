@@ -5,6 +5,7 @@
 ## 已实现
 
 - FastAPI 本地服务与现代化聊天页面
+- 多联系人：聊天页新增、切换和重命名；聊天记录、Contact Memory、关系、情绪与本地输入/候选草稿按联系人隔离。刷新保留选择，管理后台支持选择联系人；Persona、AI Memory、指导文档和模型配置共享。生成或提交期间暂停切换，不接管其他联系人的生成任务。
 - 独立管理后台：Persona YAML、Core 提案、记忆、情绪、关系、指导文档、导入导出、模型切换
 - LangGraph 工作流：上下文（预加载 Persona Core + Personality） → User Emotion → Relationship → Persona Habit Retrieval → Memory Planner → Memory Retrieval → AI Emotion Update → 技巧文档 → Dialogue Composer → Prompt Composer → Reply Critic → Reflection → 保存
 - 每个 LLM 节点保留独立的 LangChain v1 `create_agent()`，节点直接调用 `agent.invoke()`

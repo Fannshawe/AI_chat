@@ -4,12 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Persona Chat · 管理后台</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20260813a">
-  <script defer src="/static/admin.js?v=20261029-memory-import"></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20261029-contacts">
+  <script defer src="/static/admin.js?v=20261029-contacts"></script>
 </head>
 <body class="admin-page">
   <main class="admin-shell">
-    <header class="admin-header"><div class="admin-title"><h1>管理后台</h1><p>统一检查人格、记忆、情绪、关系和指导依据</p></div><a class="ghost" href="/">返回聊天</a></header>
+    <header class="admin-header"><div class="admin-title"><h1>管理后台</h1><p>统一检查人格、记忆、情绪、关系和指导依据</p></div><a class="ghost" id="chatLink" href="/">返回聊天</a></header>
+    <label class="admin-contact">当前联系人<select id="adminContactSelect" disabled></select></label>
     <div class="admin-layout">
       <nav class="admin-nav">
         <button class="tab-button active" data-tab="persona">人格档案</button>

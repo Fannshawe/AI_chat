@@ -8,6 +8,8 @@ from fastapi import HTTPException
 
 from app import (
     ImportMessage, ImportRequest, MemoryImportRequest, _parse_import_text, app,
+    ContactRequest, GenerateRequest, bootstrap, create_contact, create_generate_job,
+    _create_or_get_active_generation_job,
     import_ai_memory, import_chat, import_contact_memory,
 )
 from src.config import BASE_DIR, DATA_DIR, PERSONA_PATH, STATIC_DIR
@@ -15,6 +17,40 @@ from src.storage import ChatStore
 
 
 class ImportTests(unittest.TestCase):
+    def test_contact_api_selects_and_validates_contacts(self):
+        with TemporaryDirectory() as directory:
+            store = ChatStore(Path(directory) / "chat.db")
+            store.persona_path = Path(directory) / "persona.yaml"
+            store.initialize()
+            with patch("app.store", store):
+                first_id = bootstrap()["active_contact"]["id"]
+                second = create_contact(ContactRequest(name="Second"))
+                store.save_message(first_id, "user", "private")
+                selected = bootstrap(second["id"])
+                self.assertEqual(selected["active_contact"], second)
+                self.assertEqual(selected["messages"], [])
+                self.assertEqual(len(selected["contacts"]), 2)
+                self.assertEqual(bootstrap()["active_contact"]["id"], first_id)
+                with self.assertRaises(HTTPException) as error:
+                    bootstrap(999)
+                self.assertEqual(error.exception.status_code, 404)
+                with self.assertRaises(HTTPException) as error:
+                    create_contact(ContactRequest(name="   "))
+                self.assertEqual(error.exception.status_code, 400)
+                with self.assertRaises(HTTPException) as error:
+                    create_generate_job(GenerateRequest(contact_id=999, content="hello"))
+                self.assertEqual(error.exception.status_code, 404)
+
+    def test_generation_job_cannot_be_adopted_by_another_contact(self):
+        job = {"job_id": "test", "contact_id": 1, "status": "running"}
+        with patch("app._generation_jobs", {"test": job}), patch("app._active_generation_job_id", "test"):
+            view, accepted = _create_or_get_active_generation_job(1, "hello")
+            self.assertFalse(accepted)
+            self.assertEqual(view["contact_id"], 1)
+            with self.assertRaises(HTTPException) as error:
+                _create_or_get_active_generation_job(2, "hello")
+            self.assertEqual(error.exception.status_code, 409)
+
     def test_chat_import_extracts_memories_in_batches(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)

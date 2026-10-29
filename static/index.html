@@ -4,15 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Persona Chat</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20260813a">
-  <script defer src="/static/index.js?v=20260816a"></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20261029-contacts">
+  <script defer src="/static/index.js?v=20261029-contacts"></script>
 </head>
 <body class="chat-page">
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand"><span class="brand-mark">P</span><div><strong>Persona Chat</strong><small>像你一样聊天</small></div></div>
       <div class="section-label">当前会话</div>
-      <button class="contact active" id="contactButton"><span class="avatar">TA</span><span><b id="contactName">聊天对象</b><small>长期记忆已开启</small></span></button>
+      <div class="contact-controls">
+        <select id="contactSelect" aria-label="当前联系人" disabled></select>
+        <button class="secondary contact-add" id="addContactButton" title="新增联系人" aria-label="新增联系人" disabled>+</button>
+        <button class="secondary" id="renameContactButton" disabled>重命名</button>
+      </div>
+      <div class="contact active"><span class="avatar">TA</span><span><b id="contactName">聊天对象</b><small>长期记忆已开启</small></span></div>
       <div class="sidebar-bottom">
         <button class="ghost full" id="proactiveButton">✦ 生成主动聊天草稿</button>
         <div class="debug-tools">
@@ -21,7 +26,7 @@
           <p class="debug-note">关闭后只保留节点名、耗时、warning 和 error。</p>
         </div>
         <a class="ghost full center" href="/debug">查看 Debug 面板</a>
-        <a class="ghost full center" href="/admin">⚙ 进入管理后台</a>
+        <a class="ghost full center" id="adminLink" href="/admin">⚙ 进入管理后台</a>
         <p class="privacy-note">数据保存在本机 SQLite 中，候选回复只有确认后才会记为已发送。</p>
       </div>
     </aside>
@@ -54,6 +59,18 @@
       </section>
     </main>
   </div>
+  <dialog id="contactDialog" aria-labelledby="contactDialogTitle">
+    <form id="contactForm">
+      <h2 id="contactDialogTitle">新增联系人</h2>
+      <label for="contactNameInput">名称</label>
+      <input id="contactNameInput" required maxlength="80" autocomplete="off" autofocus>
+      <p id="contactError" role="status"></p>
+      <div class="form-actions">
+        <button class="secondary" id="cancelContactButton" type="button">取消</button>
+        <button class="primary" id="saveContactButton" type="submit">保存</button>
+      </div>
+    </form>
+  </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>
 </html>

@@ -20,6 +20,33 @@ class ChatStoreTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_create_contact_initializes_and_isolates_data(self):
+        contact = self.store.create_contact("  第二位联系人  ")
+        other_id = contact["id"]
+        self.assertEqual(contact["name"], "第二位联系人")
+        self.assertEqual(len(self.store.list_contacts()), 2)
+        self.assertEqual(self.store.get_relationship(other_id)["current_level"], "认识")
+        with self.store.connect() as connection:
+            emotion = connection.execute(
+                "SELECT mood, energy FROM self_emotion_states WHERE contact_id=?", (other_id,)
+            ).fetchone()
+            self.assertEqual(tuple(emotion), ("放松", 60))
+        self.store.save_message(self.contact_id, "user", "第一人的消息")
+        self.store.add_memory(self.contact_id, "semantic", "第一人的记忆")
+        self.assertEqual(self.store.list_messages(other_id), [])
+        self.assertEqual(self.store.list_memories(other_id), [])
+        self.store.set_relationship(other_id, "朋友")
+        self.assertEqual(self.store.get_relationship(self.contact_id)["current_level"], "认识")
+        self.store.initialize()
+        self.assertEqual(len(self.store.list_contacts()), 2)
+        self.assertEqual(self.store.update_contact(other_id, "新名字")["name"], "新名字")
+
+    def test_create_contact_rejects_invalid_names(self):
+        for name in ("", "   ", "a" * 81):
+            with self.assertRaises(ValueError):
+                self.store.create_contact(name)
+        self.assertEqual(len(self.store.list_contacts()), 1)
+
     def test_real_message_round_trip(self):
         saved = self.store.save_message(self.contact_id, "user", "喜欢猫")
         messages = self.store.list_messages(self.contact_id)
