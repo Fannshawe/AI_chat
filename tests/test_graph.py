@@ -147,20 +147,35 @@ class GraphPipelineTests(unittest.TestCase):
             },
         }
 
-    def invoke(self, responses):
+    def invoke(self, responses, max_attempts=3):
         counts = {}
         lock = threading.Lock()
 
         def agent_factory(name, _provider="default"):
             return FakeAgent(name, responses, counts, lock)
 
-        with patch("src.graph.store", self.store), patch("src.graph.get_agent", side_effect=agent_factory):
+        with patch("src.graph.store", self.store), patch("src.graph.get_agent", side_effect=agent_factory), patch("src.graph.CRITIC_MAX_ATTEMPTS", max_attempts):
             result = build_graph().invoke({
                 "contact_id": self.contact_id,
                 "user_request": "今天喝了手冲咖啡",
                 "warnings": [],
             })
         return result, counts
+
+    def test_critic_limits_zero_one_and_two(self):
+        for max_attempts in (0, 1, 2):
+            with self.subTest(max_attempts=max_attempts):
+                responses = self.base_responses()
+                responses["critic"] = critique(False, instruction="rewrite")
+                result, counts = self.invoke(responses, max_attempts=max_attempts)
+                self.assertEqual(counts.get("critic", 0), max_attempts)
+                self.assertEqual(counts.get("rewrite", 0), max(0, max_attempts - 1))
+                self.assertEqual(counts["reflection"], 1)
+                self.assertEqual(result["candidates"], responses["prompt_composer"]["candidates"])
+                if max_attempts == 0:
+                    self.assertFalse(any("Reply Critic" in warning for warning in result["warnings"]))
+                else:
+                    self.assertTrue(any(f"{max_attempts}次评审上限" in warning for warning in result["warnings"]))
 
     def test_full_pipeline_persists_reflection_and_relationship(self):
         result, counts = self.invoke(self.base_responses())

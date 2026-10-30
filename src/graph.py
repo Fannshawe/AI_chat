@@ -728,7 +728,7 @@ def node_reply_critic(state: WorkflowState) -> dict[str, Any]:
         "_debug_llm": llm_debug,
     }
     if not review.get("passed", True) and attempts >= CRITIC_MAX_ATTEMPTS:
-        result["warnings"] = [*warnings, "Reply Critic两次重写后仍未通过，已返回最佳候选并记录告警。"]
+        result["warnings"] = [*warnings, f"Reply Critic已达到{CRITIC_MAX_ATTEMPTS}次评审上限仍未通过，已返回最佳候选并记录告警。"]
     return result
 
 
@@ -787,7 +787,7 @@ def build_graph():
     graph.add_edge("self_emotion", "guidance")
     graph.add_edge("guidance", "dialogue_composer")
     graph.add_edge("dialogue_composer", "prompt_composer")
-    graph.add_edge("prompt_composer", "critic")
+    graph.add_edge("prompt_composer", "critic" if CRITIC_MAX_ATTEMPTS > 0 else "reflection")
     graph.add_edge("rewrite", "critic")
     graph.add_conditional_edges("critic", route_after_critic, {
         "rewrite": "rewrite", "reflection": "reflection",

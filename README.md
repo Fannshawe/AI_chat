@@ -44,8 +44,10 @@
    - `AGENT_REFLECTION_BASE_URL` / `AGENT_REFLECTION_API_KEY` / `AGENT_REFLECTION_MODEL`
    - `AGENT_PROACTIVE_BASE_URL` / `AGENT_PROACTIVE_API_KEY` / `AGENT_PROACTIVE_MODEL`
    - 可选：每个节点独立 `AGENT_<NAME>_ENABLE_THINKING=true|false`
+   - 可选：`DEFAULT_TEMPERATURE=0.7` 设置全局温度；`AGENT_<NAME>_TEMPERATURE` 单独覆盖，例如 `AGENT_PROMPT_COMPOSER_TEMPERATURE=0.8`。
+   - 温度优先级：Agent 配置 > 全局配置 > `0.7`；空值视为未配置。数值须在 `0` 到 `2` 之间且有限，具体模型可能有更严格的限制。修改 `.env` 后需重启服务。
    - `WORKFLOW_DEBUG`：是否在终端输出 `prompt_composer` 候选词、`critic` 分析结果、`prompt_rewriter` 输出候选词
-   - `CRITIC_MAX_ATTEMPTS`：Reply Critic 最大评审次数，默认 `3`
+   - `CRITIC_MAX_ATTEMPTS`：Reply Critic 最大评审次数（包含首次评审），默认 `3`。`0` 跳过评审；`1` 只评审一次、不重写；`2` 最多评审两次、中间最多重写一次。修改后需重启服务。
 2. 安装依赖：`pip install -r requirements.txt`
 3. 启动：`python app.py`
 4. 浏览器打开 `http://127.0.0.1:8000`
@@ -94,7 +96,7 @@ Contact Memory 导入保留敏感标记，重新生成记录 ID 和时间，不�
 
 AI Emotion Update 读取 Previous AI Emotion、User Emotion、Relationship、Persona emotionProfile、Conversation Event 与时间衰减信息。User Emotion 只描述对方，不直接修改 AI。
 
-Reply Critic 会增加一次模型调用；若首轮不通过，会在 `CRITIC_MAX_ATTEMPTS` 限制内继续执行“修改建议 → Prompt Composer 重写 → 复评”。仍不通过时返回综合评分最高的候选，并在页面显示质量预警。若 `WORKFLOW_DEBUG=true`，终端还会打印 `prompt_composer` 候选词、`critic` 结构化分析结果，以及重写轮次的 `prompt_rewriter` 候选词。
+`CRITIC_MAX_ATTEMPTS=0` 时，Prompt Composer 生成候选后直接进入 Reflection，不调用 Critic 或重写节点。启用 Reply Critic 时，每次评审会增加一次模型调用；若首轮不通过，会在 `CRITIC_MAX_ATTEMPTS` 限制内继续执行“修改建议 → Prompt Composer 重写 → 复评”。仍不通过时返回综合评分最高的候选，并在页面显示质量预警。若 `WORKFLOW_DEBUG=true`，终端还会打印 `prompt_composer` 候选词、`critic` 结构化分析结果，以及重写轮次的 `prompt_rewriter` 候选词。
 
 Reflection 只保存有长期价值且有明确证据的内容。Habit 会自动写回 `persona.yaml`；Core 修改只进入待确认提案；Personality 禁止自动修改。
 

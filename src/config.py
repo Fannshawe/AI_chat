@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -31,14 +32,16 @@ class ModelProvider:
     base_url: str | None
     api_key: str | None
     enable_thinking: bool | None = None
+    temperature: float = 0.7
 
-    def public_dict(self) -> dict[str, str | bool | None]:
+    def public_dict(self) -> dict[str, str | bool | float | None]:
         return {
             "name": self.name,
             "model": self.model,
             "base_url": self.base_url,
             "configured": bool(self.api_key),
             "enable_thinking": self.enable_thinking,
+            "temperature": self.temperature,
         }
 
 
@@ -85,8 +88,21 @@ def _read_bool_env(name: str, default: bool = False) -> bool:
     return value.lower() in {"1", "true", "yes", "on"}
 
 
+def _read_temperature_env(name: str, default: float = 0.7) -> float:
+    value = _read_env(name)
+    if value is None:
+        return default
+    try:
+        temperature = float(value)
+    except ValueError:
+        raise ValueError(f"{name} must be a finite number between 0 and 2") from None
+    if not math.isfinite(temperature) or not 0 <= temperature <= 2:
+        raise ValueError(f"{name} must be a finite number between 0 and 2")
+    return temperature
+
+
 WORKFLOW_DEBUG = _read_bool_env("WORKFLOW_DEBUG", default=False)
-CRITIC_MAX_ATTEMPTS = max(1, int(os.getenv("CRITIC_MAX_ATTEMPTS", "3")))
+CRITIC_MAX_ATTEMPTS = max(0, int(os.getenv("CRITIC_MAX_ATTEMPTS", "3")))
 
 
 def _agent_env_prefix(agent_name: str) -> str:
@@ -125,6 +141,7 @@ def _extra_providers() -> dict[str, ModelProvider]:
                 if item.get("enable_thinking_env")
                 else None
             ),
+            temperature=_read_temperature_env("DEFAULT_TEMPERATURE"),
         )
     return providers
 
@@ -137,6 +154,7 @@ def _default_provider_from_agent_env() -> ModelProvider:
         base_url=_read_env("DEFAULT_BASE_URL"),
         api_key=_read_env("DEFAULT_API_KEY"),
         enable_thinking=_read_bool_env("DEFAULT_ENABLE_THINKING", default=False),
+        temperature=_read_temperature_env("DEFAULT_TEMPERATURE"),
     )
 
 
@@ -163,6 +181,9 @@ def get_agent_model_provider(agent_name: str, provider_name: str = "default") ->
     base_url = _read_env(f"{prefix}_BASE_URL")
     api_key = _read_env(f"{prefix}_API_KEY")
     enable_thinking = _read_bool_env(f"{prefix}_ENABLE_THINKING", default=False)
+    temperature = _read_temperature_env(
+        f"{prefix}_TEMPERATURE", default=_read_temperature_env("DEFAULT_TEMPERATURE"),
+    )
 
     # Apply runtime overrides from the admin UI (model name / enable_thinking).
     override = _agent_overrides.get(normalized, {})
@@ -189,4 +210,5 @@ def get_agent_model_provider(agent_name: str, provider_name: str = "default") ->
         base_url=base_url,
         api_key=api_key,
         enable_thinking=enable_thinking,
+        temperature=temperature,
     )

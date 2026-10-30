@@ -1,7 +1,14 @@
+import os
 import unittest
+from unittest.mock import patch
 
+from langchain.agents.structured_output import ProviderStrategy
+from langchain_core.messages import HumanMessage
+from langchain_openai import ChatOpenAI
 from pydantic import ValidationError
 
+from src.config import get_agent_model_provider, get_model_providers
+from src.llm_service import OpenAICompatibleChatModel, _build_model, get_model
 from src.agents import (
     DialogueComposerAnalysis,
     EmotionAnalysis,
@@ -13,6 +20,114 @@ from src.agents import (
     clear_agent_cache,
     get_agent,
 )
+
+
+class TemperatureConfigTests(unittest.TestCase):
+    def setUp(self):
+        env_patch = patch.dict(os.environ, {
+            "AGENT_PROMPT_COMPOSER_MODEL": "test-model",
+            "AGENT_PROMPT_COMPOSER_BASE_URL": "https://example.test/v1",
+            "AGENT_PROMPT_COMPOSER_API_KEY": "test-key",
+        }, clear=True)
+        env_patch.start()
+        self.addCleanup(env_patch.stop)
+
+    def test_unconfigured_temperature_defaults_to_point_seven(self):
+        self.assertEqual(get_model_providers()["default"].temperature, 0.7)
+        self.assertEqual(get_agent_model_provider("prompt_composer").temperature, 0.7)
+
+    def test_global_temperature_is_inherited(self):
+        os.environ.update({
+            "DEFAULT_TEMPERATURE": "0.8",
+            "DEFAULT_MODEL": "test-model",
+            "DEFAULT_BASE_URL": "https://example.test/v1",
+            "DEFAULT_API_KEY": "test-key",
+        })
+        self.assertEqual(get_model_providers()["default"].temperature, 0.8)
+        self.assertEqual(get_model(agent_name="prompt_composer").temperature, 0.8)
+        self.assertEqual(get_model().temperature, 0.8)
+
+    def test_agent_temperature_overrides_global_including_zero(self):
+        os.environ["DEFAULT_TEMPERATURE"] = "0.8"
+        os.environ["AGENT_PROMPT_COMPOSER_TEMPERATURE"] = "0"
+        provider = get_agent_model_provider("prompt_composer")
+        self.assertEqual(provider.temperature, 0.0)
+        self.assertEqual(provider.public_dict()["temperature"], 0.0)
+        self.assertEqual(get_model(agent_name="prompt_composer").temperature, 0.0)
+
+    def test_blank_agent_temperature_inherits_global(self):
+        os.environ["DEFAULT_TEMPERATURE"] = "0.8"
+        os.environ["AGENT_PROMPT_COMPOSER_TEMPERATURE"] = "  "
+        self.assertEqual(get_agent_model_provider("prompt_composer").temperature, 0.8)
+
+    def test_invalid_temperatures_are_rejected(self):
+        for name in ("DEFAULT_TEMPERATURE", "AGENT_PROMPT_COMPOSER_TEMPERATURE"):
+            for value in ("invalid", "nan", "inf", "-0.1", "2.1"):
+                with self.subTest(name=name, value=value), patch.dict(os.environ, {name: value}):
+                    with self.assertRaisesRegex(ValueError, name):
+                        get_agent_model_provider("prompt_composer")
+
+    def test_temperature_is_part_of_model_cache_key(self):
+        os.environ["AGENT_PROMPT_COMPOSER_TEMPERATURE"] = "0.3"
+        first = get_model(agent_name="prompt_composer")
+        self.assertIs(first, get_model(agent_name="prompt_composer"))
+        os.environ["AGENT_PROMPT_COMPOSER_TEMPERATURE"] = "0.9"
+        second = get_model(agent_name="prompt_composer")
+        self.assertIsNot(first, second)
+        self.assertEqual(second.temperature, 0.9)
+
+
+class CompatibleModelPayloadTests(unittest.TestCase):
+    def setUp(self):
+        self.model = OpenAICompatibleChatModel(
+            model="qwen-plus-character",
+            api_key="test-key",
+            base_url="https://example.test/v1",
+        )
+        self.messages = [HumanMessage(content="hello")]
+
+    def test_provider_strategy_omits_empty_tools(self):
+        response_kwargs = ProviderStrategy(
+            schema=ResponseCandidates, strict=True,
+        ).to_model_kwargs()
+        bound = self.model.bind_tools([], **response_kwargs)
+        payload = bound.bound._get_request_payload(self.messages, **bound.kwargs)
+        original_payload = ChatOpenAI._get_request_payload(
+            self.model, self.messages, **bound.kwargs,
+        )
+        self.assertEqual(original_payload["tools"], [])
+        self.assertNotIn("tools", payload)
+        self.assertNotIn("tool_choice", payload)
+        self.assertEqual(payload["response_format"], original_payload["response_format"])
+
+    def test_empty_tools_also_omit_tool_choice(self):
+        payload = self.model._get_request_payload(
+            self.messages, tools=[], tool_choice="auto",
+        )
+        self.assertNotIn("tools", payload)
+        self.assertNotIn("tool_choice", payload)
+
+    def test_nonempty_tools_are_preserved(self):
+        tools = [{
+            "type": "function",
+            "function": {
+                "name": "lookup",
+                "parameters": {"type": "object", "properties": {}},
+            },
+        }]
+        payload = self.model._get_request_payload(
+            self.messages, tools=tools, tool_choice="auto",
+        )
+        self.assertEqual(payload["tools"], tools)
+        self.assertEqual(payload["tool_choice"], "auto")
+
+    def test_custom_endpoint_uses_compatible_model(self):
+        model = _build_model(
+            "payload-test", "qwen-plus-character", "https://example.test/v1",
+            "test-key", False,
+        )
+        self.assertIsInstance(model, OpenAICompatibleChatModel)
+        self.assertEqual(model.extra_body, {"enable_thinking": False})
 
 
 class AgentHarnessTests(unittest.TestCase):

@@ -14,6 +14,21 @@ from langchain_openai import ChatOpenAI
 from .config import ModelProvider, get_agent_model_provider, get_model_providers
 
 
+class OpenAICompatibleChatModel(ChatOpenAI):
+    def _get_request_payload(
+        self,
+        input_: Any,
+        *,
+        stop: list[str] | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        payload = super()._get_request_payload(input_, stop=stop, **kwargs)
+        if payload.get("tools") == []:
+            payload.pop("tools")
+            payload.pop("tool_choice", None)
+        return payload
+
+
 @lru_cache(maxsize=16)
 def _build_model(
     name: str,
@@ -21,6 +36,7 @@ def _build_model(
     base_url: str | None,
     api_key: str | None,
     enable_thinking: bool | None,
+    temperature: float = 0.7,
 ) -> ChatOpenAI:
     if not api_key:
         raise RuntimeError(f"模型供应商 {name} 尚未配置 API Key")
@@ -34,11 +50,12 @@ def _build_model(
     extra_body: dict[str, Any] | None = None
     if enable_thinking is not None:
         extra_body = {"enable_thinking": enable_thinking}
-    return ChatOpenAI(
+    model_class = OpenAICompatibleChatModel if base_url else ChatOpenAI
+    return model_class(
         model=model,
         api_key=api_key,
         base_url=base_url,
-        temperature=0.7,
+        temperature=temperature,
         profile=profile,
         extra_body=extra_body,
     )
@@ -53,6 +70,7 @@ def get_model(provider_name: str = "default", agent_name: str | None = None) -> 
             provider.base_url,
             provider.api_key,
             provider.enable_thinking,
+            provider.temperature,
         )
 
     providers = get_model_providers()
@@ -63,6 +81,7 @@ def get_model(provider_name: str = "default", agent_name: str | None = None) -> 
         provider.base_url,
         provider.api_key,
         provider.enable_thinking,
+        provider.temperature,
     )
 
 

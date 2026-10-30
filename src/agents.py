@@ -282,7 +282,7 @@ def get_agent(agent_name: str, provider_name: str = "default"):
         raise KeyError(f"未知 Agent: {agent_name}")
     return create_agent(
         model=get_model(provider_name, agent_name=agent_name),
-        tools=[],
+        # tools=[],
         system_prompt=load_prompt(agent_name),
         response_format=ProviderStrategy(schema=schema, strict=True),
         middleware=_middleware(),
