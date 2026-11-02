@@ -172,9 +172,9 @@ class CandidateCritique(BaseModel):
     naturalness: float = Field(ge=0, le=10, description="长度与措辞自然度，越高越好")
     persona_consistent: bool = True
     memory_consistent: bool = True
-    passed: bool = Field(description="默认通过；仅有明确证据的重大事实错误、严重越界、严重误解或无法正常发送的表达才为false，分数和轻微风格偏差不触发重写")
-    issues: list[str] = Field(default_factory=list, max_length=5, description="只记录必须修正的重大问题及具体依据；通过时为空，不列润色建议")
-    rewrite_instruction: str = Field(default="", description="仅修复被指出的重大错误，保留合理内容和语气；通过时为空")
+    passed: bool = Field(description="默认通过；有明确证据的事实错误、越界、严重误解、不可发送的表达，或明显影响聊天质量的AI味、采访味、过度共情、自然度及一致性问题才为false；分数和轻微风格偏差不单独触发重写")
+    issues: list[str] = Field(default_factory=list, max_length=5, description="只记录必须修正的问题、原文及具体依据或影响；通过时为空，不列润色建议")
+    rewrite_instruction: str = Field(default="", description="注明候选下标，仅修复被指出的问题，保留合理内容和语气，不给成品回复；通过时为空")
 
 
 class ReplyCriticAnalysis(BaseModel):

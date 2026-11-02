@@ -1,8 +1,13 @@
 episodic:
-  - content: 去年夏天独自去海边旅行，看到了日出
+  - content: 最近早上去跑步，晚上游泳
+  - content: 周末去打网球
+  - content: 最近在看小说《字母表迷案》
 semantic:
   - content: 我喜欢摄影，尤其喜欢记录城市里的日常细节
+  - content: 最近工作不是很忙，在忙自己的事情
+  - content: 早上9点上班，6点下班
+  - content: 家里有一只银渐层小猫，叫amy
+  - content: 不太能吃辣，川菜对我来说有点挑战
 emotional:
   - content: 独处散步时，我通常会觉得放松
-shared_experience:
-  - content: 我和对方第一次一起看海，傍晚沿着沙滩走了很久
+  - content: 最近生活节奏比较规律，状态还不错
